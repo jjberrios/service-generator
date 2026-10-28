@@ -1,0 +1,465 @@
+schemaVersion: 1
+identity:
+  name: claro-spring-java-8
+  version: 1.0.0
+  operation: revise
+  status: extraction-complete-decisions-approved
+  approved: true
+  approvalScope: reference-based-extraction-baseline-only
+  frozen: false
+  generationEnabled: true
+  readyToFreeze: false
+provenance:
+  extractedOn: '2026-10-20'
+  reference: input/reference/rest-sb-claro-post-atencion
+  target: archetypes/claro-spring-java-8/v1.0.0
+  policy: AGENTS.md
+  methodology: extract-archetype
+  decisionFile: decisions.md
+  revisedOn: '2026-10-20'
+  approvedDecisionRefs: [J8-D-001, J8-D-002, J8-D-003, J8-D-004, J8-D-005, J8-D-006, J8-D-007]
+  inheritedDecisions: []
+  entireReferenceTreeReadOnly: true
+  initialTargetAbsent: true
+  futureContractsInspected: false
+  sparxInspected: false
+  baseline:
+    algorithm: SHA-256
+    recordFormat: 'sorted [repository-relative POSIX path, size, mtime_ns, content_sha256_or_null] JSON arrays'
+    scope: entire-input-reference-tree
+    fileCount: 199
+    contentHashedFileCount: 194
+    contentExcludedFileCount: 5
+    aggregateSha256: 4588b25350bba8725adee6ef590a2b149a0da638cd7603d6014f1c965ad3a7cd
+    permittedRecordsSha256: c85d82bc54b47d3ba891f1a4e8925057eecad1c496cf80c3e513ae64b99afb45
+    filePathsSha256: ff1e0fcb72202178bcc3e59a056491e0b07f6be134410e7e784570f3e9979eca
+    protectedContentPattern: '**/application*.properties'
+    limitation: 'Protected content never read/hashed/compared; protected-file metadata is not compared either. Integrity claims cover permitted records and file-path inventory only.'
+  referencePomSha256: f52d72f871c892cea260e7b6494db627f08e1147f9a8bdf918002e2d30a7286c
+platform:
+  status: approved-reference-baseline
+  decisionRefs: [J8-D-002, J8-D-006]
+  evidence: [E-POM, E-HELP]
+  java: '1.8'
+  javaDistribution: unknown
+  springBoot: 2.0.5.RELEASE
+  packaging: war
+  servletNamespace: javax
+  mavenVersion: unknown
+  server: WebLogic
+  serverVersion: unknown
+  contradictoryDocumentation: 'HELP references Boot 3.2.1-SNAPSHOT; not used as runtime baseline.'
+build:
+  status: approved-reference-baseline
+  decisionRefs: [J8-D-002, J8-D-005, J8-D-006]
+  evidence: E-POM
+  modules: []
+  parent: {groupId: org.springframework.boot, artifactId: spring-boot-starter-parent, version: 2.0.5.RELEASE, relativePath: ''}
+  encoding: UTF-8
+  sourceDirectory: src/main/java
+  wrapper: absent
+  settingsXml: absent
+  profiles: []
+  dependencyManagement: inherited-not-resolved
+  pluginManagement: inherited-not-resolved
+  effectivePomResolved: false
+  properties:
+    project.build.sourceEncoding: UTF-8
+    project.reporting.outputEncoding: UTF-8
+    java.version: '1.8'
+    com.google.code.gson: '2.3.1'
+    assertj: '2.6.0'
+    junit.version: '4.11'
+    powermock.version: '1.6.2'
+    mockito.core: 2.0.5-beta
+    javassist: 3.23.1-GA
+    org.hibernate.javax.persistence: 1.0.0.Final
+    org.hibernate: 5.2.17.Final
+    sonar.coverage.exclusions: ''
+    sonar.exclusions: ''
+  propertyCaveats:
+    - 'These are declared values, not resolved effective versions.'
+    - 'com.google.code.gson and org.hibernate* properties are not explicit version expressions in their direct dependencies.'
+    - 'Only the two domain-specific Sonar exclusion values are emptied; approved domain-removal transformation, J8-D-005. No generic exclusions replace them.'
+  dependencyInventorySemantics:
+    scopeWhenAbsent: compile
+    versionWhenAbsent: inherited-unresolved
+    status: approved-full-declared-baseline
+    count: 24
+    preservation: all-active-direct-dependencies
+    justification: 'J8-D-005 preserves all declared items without pruning, modernization or forced use. Declaration does not prove source use or necessity.'
+    sourceUsageMethod: 'Java source imports/API references only; no effective-POM or transitive resolution. No direct use observed does not prove unused at runtime.'
+  dependencies:
+    - {groupId: org.springframework.boot, artifactId: spring-boot-starter-tomcat, scope: provided, purpose: war-container}
+    - {groupId: org.springframework.boot, artifactId: spring-boot-starter-web, purpose: spring-mvc}
+    - {groupId: org.springframework.boot, artifactId: spring-boot-starter-web-services, purpose: declared-web-services-preserved}
+    - {groupId: org.springframework.boot, artifactId: spring-boot-starter-jdbc, purpose: observed-jdbc-infrastructure}
+    - {groupId: org.springframework.boot, artifactId: spring-boot-configuration-processor, optional: true, purpose: configuration-metadata}
+    - {groupId: com.oracle, artifactId: ojdbc14, version: 9.0.2.0.0, purpose: legacy-oracle-driver-review}
+    - {groupId: javax.el, artifactId: javax.el-api, version: 3.0.0, purpose: declared-el-api-preserved}
+    - {groupId: org.eclipse.persistence, artifactId: javax.persistence, version: 2.1.1, purpose: declared-persistence-api-preserved}
+    - {groupId: javax, artifactId: javaee-api, version: '7.0', scope: provided, purpose: container-javaee-api}
+    - {groupId: com.google.code.gson, artifactId: gson, purpose: declared-serialization-library-preserved}
+    - {groupId: org.apache.commons, artifactId: commons-collections4, version: '4.4', purpose: declared-collection-library-preserved}
+    - {groupId: org.apache.commons, artifactId: commons-lang3, version: '3.0', purpose: declared-language-library-preserved}
+    - {groupId: org.assertj, artifactId: assertj-core, version: '${assertj}', purpose: test-library-observed-compile-scope}
+    - {groupId: junit, artifactId: junit, version: '${junit.version}', purpose: junit4-observed-compile-scope}
+    - {groupId: org.mockito, artifactId: mockito-core, version: '${mockito.core}', purpose: mocking-observed-compile-scope}
+    - {groupId: org.powermock, artifactId: powermock-core, version: '${powermock.version}', purpose: declared-test-library-preserved}
+    - {groupId: org.powermock, artifactId: powermock-api-mockito, version: '${powermock.version}', purpose: declared-test-library-preserved}
+    - {groupId: org.hibernate.javax.persistence, artifactId: hibernate-jpa-2.1-api, purpose: declared-persistence-api-preserved}
+    - {groupId: org.hibernate, artifactId: hibernate-entitymanager, purpose: hibernate-oracle-cursor-helper-observed}
+    - {groupId: org.powermock, artifactId: powermock-module-junit4, version: '${powermock.version}', purpose: declared-test-library-preserved}
+    - {groupId: org.powermock, artifactId: powermock-module-junit4-rule-agent, version: '${powermock.version}', purpose: declared-test-library-preserved}
+    - {groupId: org.powermock, artifactId: powermock-module-javaagent, version: '${powermock.version}', purpose: declared-test-library-preserved}
+    - {groupId: org.powermock, artifactId: powermock-classloading-xstream, version: '${powermock.version}', purpose: declared-test-library-preserved}
+    - {groupId: org.javassist, artifactId: javassist, version: '${javassist}', purpose: declared-bytecode-library-preserved}
+  dependencyUsage:
+    spring-boot-starter-tomcat: {status: declared-container-provider, evidence: [E-POM, E-INITIALIZER], observation: 'provided WAR container support; no embedded Tomcat-specific API use observed'}
+    spring-boot-starter-web: {status: used-main-framework, evidence: [E-CONTROLLER, E-UTIL-LOGGING], observation: 'Spring MVC annotations and Jackson serialization; dependency provider not resolved'}
+    spring-boot-starter-web-services: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No Spring WS import; JAXB utilities do not establish a SOAP integration'}
+    spring-boot-starter-jdbc: {status: used-main-framework, evidence: [E-JDBC], observation: 'JndiDataSourceLookup; actual persistence JDBC CallableStatement'}
+    spring-boot-configuration-processor: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No ConfigurationProperties-annotated type observed; processor execution not verified'}
+    ojdbc14: {status: declared-runtime-driver, evidence: [E-POM, E-REPOSITORY], observation: 'Oracle cursor helper and JDBC usage; no oracle driver class import or runtime resolution verified'}
+    javax.el-api: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No javax.el import observed'}
+    javax.persistence: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No javax.persistence import or entities observed; not evidence of JPA persistence'}
+    javaee-api: {status: used-api-provider-unresolved, evidence: [E-UTIL-LOGGING], observation: 'javax.ws.rs.core.HttpHeaders present; javax XML APIs may overlap JDK/container, no provider resolution'}
+    gson: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No com.google.gson import; logging serialization actually uses Jackson'}
+    commons-collections4: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No org.apache.commons.collections4 import observed'}
+    commons-lang3: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No org.apache.commons.lang3 import observed'}
+    assertj-core: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'Tests use JUnit assertions; no org.assertj import observed'}
+    junit: {status: used-tests, evidence: [E-TESTS], observation: 'JUnit4 Before/Test/Assert; compile scope preserved'}
+    mockito-core: {status: used-tests, evidence: [E-TESTS], observation: 'Mock/InjectMocks/initMocks/when; compile scope preserved'}
+    powermock-core: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No org.powermock import observed'}
+    powermock-api-mockito: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No PowerMockito import observed'}
+    hibernate-jpa-2.1-api: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No javax.persistence import observed'}
+    hibernate-entitymanager: {status: transitive-helper-use-provider-unresolved, evidence: [E-REPOSITORY], observation: 'org.hibernate.dialect.OracleTypesHelper used; no EntityManager API; helper provider transitive unresolved'}
+    powermock-module-junit4: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No PowerMockRunner use observed'}
+    powermock-module-junit4-rule-agent: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No PowerMock rule use observed'}
+    powermock-module-javaagent: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No agent use established from source or direct plugins'}
+    powermock-classloading-xstream: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No PowerMock classloading use observed'}
+    javassist: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No javassist import observed'}
+  plugins:
+    - {groupId: org.springframework.boot, artifactId: spring-boot-maven-plugin, versionResolution: inherited-unresolved}
+    - groupId: org.apache.maven.plugins
+      artifactId: maven-war-plugin
+      versionResolution: inherited-unresolved
+      configuration: {failOnMissingWebXml: false}
+    - groupId: org.jacoco
+      artifactId: jacoco-maven-plugin
+      version: 0.7.7.201606060606
+      executions:
+        - {id: jacoco-initialize, phase: initialize, goals: [prepare-agent]}
+        - {id: jacoco-site, phase: test, goals: [report]}
+    - {groupId: org.sonarsource.scanner.maven, artifactId: sonar-maven-plugin, version: 3.9.1.2184}
+  repositories:
+    - {id: maven-releases, name: maven-releases, url: '@@CORPORATE_REPOSITORY_URL@@', authentication: external-settings-not-included}
+  pluginRepositories:
+    - {id: spring-milestones, name: Spring Milestones, url: 'https://repo.spring.io/milestone', snapshots: {enabled: false}}
+    - {id: spring-snapshots, name: Spring Snapshots, url: 'https://repo.spring.io/snapshot', releases: {enabled: false}}
+structure:
+  status: observed
+  evidence: [E-BOOTSTRAP, E-CONTROLLER, E-SERVICE, E-JDBC, E-TESTS]
+  mainJava: src/main/java
+  testJava: src/test/java
+  resources: src/main/resources
+  webapp: src/main/webapp
+  packageRoot: '@@BASE_PACKAGE@@'
+  bootstrapPackage: servlet.config
+  extensionPackages: [controller, service, repository, canonical.request, canonical.response, canonical.type, common.bean, common.exception, common.property, common.util]
+  extensionPackagesMaterialized: false
+  observedPatterns:
+    controllers: spring-mvc-rest-controller
+    services: concrete-component-field-injection
+    persistence: dao-interface-jdbc-callable-statement-jndi-oracle
+    dto: mutable-pojo-getters-setters
+    mapping: manual-no-mapping-framework-observed
+    exceptions: checked-hierarchy-not-templated
+quality:
+  status: approved-reference-baseline
+  decisionRefs: [J8-D-004, J8-D-005]
+  evidence: [E-POM, E-TESTS]
+  tests: {framework: JUnit4, mockFramework: Mockito, setup: MockitoAnnotations.initMocks, naming: '*Test', execution: not-run}
+  jacoco: {version: 0.7.7.201606060606, threshold: null, checkGoalObserved: false, execution: not-run}
+  sonar: {pluginVersion: 3.9.1.2184, referenceDomainExclusionsCopied: false, execution: not-run}
+  checkstyle:
+    referenceConfigurationObserved: false
+    policyRequired: false
+    status: not-present-in-reference
+    requiredScopes: []
+    configurationDecision: J8-D-004
+    execution: not-applicable
+  otherStaticAnalysisObserved: false
+runtime:
+  status: approved-reference-baseline-execution-unverified
+  decisionRefs: [J8-D-003, J8-D-006]
+  evidence: [E-INITIALIZER, E-LOGBACK, E-CONFIG, E-JNDI, E-CONTROLLER, E-SERVICE, E-UTIL-LOGGING, E-LOG-CONSTANTS]
+  configuration:
+    mechanism: servlet-initializer-spring.config.location-external-file
+    protectedFileContentsInspected: false
+    applicationPropertiesTemplated: false
+    mainUsesServletExternalLoader: false
+    valuesOwner: environment-operator
+  logging:
+    api: SLF4J
+    backend: Logback
+    appender: RollingFileAppender
+    level: INFO
+    rollover: daily
+    maxHistory: 30
+    totalSizeCap: 3GB
+    activation: external-environment-required
+    activityPatternDecision: J8-D-003
+    loggerDeclaration: 'private static final Logger logger = LoggerFactory.getLogger(CurrentClass.class)'
+    controllerPattern: 'INFO method separators/start, pretty JSON header/body, response and attempted elapsed System.currentTimeMillis logging (format has no placeholder); ERROR message with exception'
+    servicePattern: 'INFO compact JSON request through utility and inicioActividad/finActividad; ERROR detail with exception'
+    transactionPrefix: 'method-local string containing method name and idTx, spacing varies; no universal fallback or record'
+    activityMarkerPattern: 'three INFO lines: prefix+separator, prefix+start-or-end+activity+activitySeparator, prefix+separator'
+    jsonSerialization: 'Jackson ObjectMapper, local timezone date formatter, WRITE_DATES_AS_TIMESTAMPS=false; pretty controller, compact utility; compact serialization failure logs message and returns empty string'
+    helperTemplated: false
+    helperExclusionReason: 'Source utility mixes logging, contract validation and business error translation. Reuse documented pattern, not class or invented adapter.'
+    activityNamesOwner: Sparx
+    headerAndPayloadOwner: OpenAPI
+    payloadLoggingRisk: observed-without-masking-evidence-review-risk-not-silently-fixed
+  security: {configurationObserved: false, guarantee: none, inferredPolicy: false}
+  openapiTooling: {observed: false, added: false}
+deployment:
+  evidence: [E-WEBLOGIC, E-DISPATCHER, E-CI, E-JNDI]
+  target: WebLogic-WAR-observed
+  contextRoot: '@@CONTEXT_ROOT@@'
+  serverVersion: unknown
+  externalJndi: observed-not-templated
+  decisionRefs: [J8-D-006]
+  ci:
+    type: Jenkins
+    evidence: E-CI
+    sharedLibraryImplementationAvailable: false
+    executableTemplateIncluded: false
+    behaviorVerified: false
+    observedCall: springBootPipelineV3
+    parameterKeys: [nombreDeCompilado, projectKeySonar, dominio, nombre_aplicacion, publicado_raiz_produccion, publicado_carpeta_produccion, applicationproperties, dir_properties]
+    exclusionReason: 'Call delegates all stages to missing library and requests local configuration publication; preserve evidence/parameter structure only, no executable surrogate or protected configuration publisher.'
+  dockerObserved: false
+  kubernetesObserved: false
+  deploymentExecuted: false
+generationOwnership:
+  platformAndEngineering: archetype-approved-reference-baseline
+  apiContract: OpenAPI
+  requestResponseSchemas: OpenAPI
+  httpValidation: OpenAPI
+  businessBehavior: Sparx
+  businessProcesses: Sparx
+  integrations: Sparx
+  externalClients: Sparx
+  persistenceBehavior: Sparx
+  mappings: OpenAPI+Sparx
+  localConfigurationAndSecrets: environment-operator
+  inventedFutureBehavior: false
+parameters:
+  GROUP_ID:
+    source: target-technical-identity
+    required: true
+    pattern: '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$'
+    replacementScope: xml-text
+    affectedFiles: [pom.xml]
+  ARTIFACT_ID:
+    source: target-technical-identity
+    required: true
+    pattern: '^[a-z][a-z0-9-]*$'
+    replacementScope: xml-text-and-log-basename
+    affectedFiles: [pom.xml, config/logback.xml]
+  PROJECT_VERSION:
+    source: target-technical-version
+    required: true
+    pattern: '^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$'
+    replacementScope: xml-text
+    affectedFiles: [pom.xml]
+  BASE_PACKAGE:
+    source: target-technical-identity
+    required: true
+    pattern: '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$'
+    replacementScope: java-package-and-scan-string
+    affectedFiles:
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/servlet/config/@@APPLICATION_CLASS@@.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/servlet/config/ServletInitializer.java'
+  BASE_PACKAGE_PATH:
+    source: derived
+    derivedFrom: BASE_PACKAGE
+    transformation: replace-dot-with-slash
+    required: true
+    pattern: '^[a-z][a-z0-9_]*(/[a-z][a-z0-9_]*)+$'
+    replacementScope: template-relative-path-only
+    affectedFiles:
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/servlet/config/@@APPLICATION_CLASS@@.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/servlet/config/ServletInitializer.java'
+  APPLICATION_CLASS:
+    source: target-bootstrap-class-name
+    required: true
+    pattern: '^[A-Z][A-Za-z0-9]*Application$'
+    replacementScope: java-identifier-and-template-filename
+    affectedFiles:
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/servlet/config/@@APPLICATION_CLASS@@.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/servlet/config/ServletInitializer.java'
+  CONFIG_ROOT_PROPERTY:
+    source: target-environment-technical-configuration
+    required: true
+    pattern: '^[a-z][a-z0-9]*(\.[a-z][a-z0-9-]*)+$'
+    replacementScope: java-string-literal
+    affectedFiles: ['src/main/java/@@BASE_PACKAGE_PATH@@/servlet/config/ServletInitializer.java']
+  CONFIG_SUBDIRECTORY:
+    source: target-environment-technical-configuration
+    required: true
+    pattern: '^[a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*$'
+    replacementScope: java-string-relative-path
+    affectedFiles: ['src/main/java/@@BASE_PACKAGE_PATH@@/servlet/config/ServletInitializer.java']
+  LOG_DIRECTORY:
+    source: target-environment-log-directory
+    required: true
+    pattern: '^/[a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*$'
+    replacementScope: xml-text-absolute-unix-path
+    affectedFiles: [config/logback.xml]
+  CONTEXT_ROOT:
+    source: target-war-context
+    required: true
+    pattern: '^[a-z][a-z0-9-]*$'
+    replacementScope: xml-text
+    affectedFiles: [src/main/webapp/WEB-INF/weblogic.xml]
+  CORPORATE_REPOSITORY_URL:
+    source: approved-infrastructure-repository-url
+    required: true
+    pattern: '^https?://[a-zA-Z0-9.-]+(:[0-9]+)?(/[a-zA-Z0-9._~/-]*)?$'
+    replacementScope: xml-text-no-userinfo-query-or-secrets
+    affectedFiles: [pom.xml]
+templateInventory:
+  - {path: pom.xml, classification: parameterized, evidence: [E-POM], status: approved-reference-baseline, decisionRefs: [J8-D-002, J8-D-005, J8-D-006]}
+  - {path: 'src/main/java/@@BASE_PACKAGE_PATH@@/servlet/config/@@APPLICATION_CLASS@@.java', classification: parameterized, evidence: [E-BOOTSTRAP], status: approved-reference-baseline, decisionRefs: [J8-D-002]}
+  - {path: 'src/main/java/@@BASE_PACKAGE_PATH@@/servlet/config/ServletInitializer.java', classification: parameterized, evidence: [E-INITIALIZER], status: approved-reference-baseline, decisionRefs: [J8-D-006]}
+  - {path: src/main/webapp/WEB-INF/weblogic.xml, classification: parameterized, evidence: [E-WEBLOGIC], status: approved-reference-baseline, decisionRefs: [J8-D-006]}
+  - {path: src/main/webapp/WEB-INF/dispatcherServlet-servlet.xml, classification: reusable/static, evidence: [E-DISPATCHER], status: approved-reference-baseline, decisionRefs: [J8-D-006]}
+  - {path: config/logback.xml, classification: parameterized, evidence: [E-LOGBACK], status: approved-reference-baseline, decisionRefs: [J8-D-003]}
+  - {path: .gitignore, classification: reusable/static, evidence: [E-GITIGNORE], status: approved-reference-baseline, decisionRefs: [J8-D-002]}
+  - {path: 'src/main/java/@@BASE_PACKAGE_PATH@@/common/util/ClaroUtil.java', classification: parameterized, evidence: [E-UTIL-LOGGING], status: approved-human-decision, decisionRefs: [J8-D-009]}
+  - {path: config/properties.config.j2, classification: parameterized, evidence: [E-CONFIG], status: approved-human-decision, decisionRefs: [J8-D-009]}
+  - {path: 'jndi/@@ARTIFACT_ID@@.yml', classification: parameterized, evidence: [E-JNDI], status: approved-human-decision, decisionRefs: [J8-D-009]}
+exclusions:
+  - 'application*.properties: content never read, analyzed, reported, compared, copied or hashed'
+  - 'Concrete controllers, paths, headers, DTOs, error envelopes/codes and declared validations'
+  - 'Business services, decisions, mappings, activity names and request validators'
+  - 'Concrete DAOs, repositories, JNDI names, database identities, SQL, procedures and cursor mappings'
+  - 'Business-specific common utilities (request validators, error-envelope builders), concrete constants, properties beans and exception classes; technical utilities are templated (J8-D-009)'
+  - 'Domain test cases, fixtures and example payloads'
+  - 'Domain Sonar exclusion patterns and commented alternative dependency'
+  - 'Executable Jenkins shared-library call, deployment identity values/paths and protected-local-configuration publishing; structural evidence retained'
+  - 'Domain keys of properties.config.j2 (stored procedures, per-operation codes) and service-specific JNDI names beyond the corporate CRMLITE datasource pair; generic parts are templated (J8-D-009)'
+  - 'HELP links inconsistent with POM, local state, build outputs, credentials and private repository host'
+evidence:
+  pathBase: input/reference/rest-sb-claro-post-atencion
+  entries:
+    E-POM: {path: pom.xml, lines: '1-250', observed: 'Java8/Boot2.0.5/WAR; 24 active dependencies, four plugins, repositories, declared properties', confidence: high}
+    E-BOOTSTRAP: {path: src/main/java/pe/com/claro/post/atencion/servlet/config/ClaroPostAtencionApplication.java, lines: '1-15', observed: 'Nested bootstrap package and explicit component scan', confidence: high}
+    E-INITIALIZER: {path: src/main/java/pe/com/claro/post/atencion/servlet/config/ServletInitializer.java, lines: '1-25', observed: 'WAR servlet initialization and external configuration location', confidence: high}
+    E-JDBC: {path: src/main/java/pe/com/claro/post/atencion/repository/JdbcConfig.java, lines: '1-43', observed: 'JndiDataSourceLookup bean and external property injection', confidence: high}
+    E-REPOSITORY: {path: src/main/java/pe/com/claro/post/atencion/repository/CRMLITERepository.java, lines: '39-110', observed: 'DAO implementation, JDBC CallableStatement and Oracle cursor helper; concrete behavior excluded', confidence: high}
+    E-CONTROLLER: {path: src/main/java/pe/com/claro/post/atencion/controller/AtencionController.java, lines: '1-92', observed: 'Spring MVC, field injection, SLF4J, local error translation; contract excluded', confidence: high}
+    E-SERVICE: {path: src/main/java/pe/com/claro/post/atencion/service/AtencionService.java, lines: '1-85,159-163,423-433', observed: 'Concrete Component service, SLF4J, local transaction prefix and activity methods; business excluded', confidence: high}
+    E-DTO: {path: src/main/java/pe/com/claro/post/atencion/canonical/request/ConsultarAtencionRequestType.java, lines: '1-68', observed: 'Mutable POJO accessors; concrete schema excluded', confidence: high}
+    E-EXCEPTIONS: {path: src/main/java/pe/com/claro/post/atencion/common/exception, lines: 'BaseException.java:1-97; DBException.java:1-38; WSException.java:1-30', observed: 'Checked hierarchy with metadata; concrete implementation not templated', confidence: high}
+    E-TESTS: {path: src/test/java/pe/com/claro/post/atencion/service/AtencionServiceTest.java, lines: '1-63', observed: 'JUnit4 Before/Test; Mockito Mock/InjectMocks/initMocks', confidence: high}
+    E-LOGBACK: {path: config/logback.xml, lines: '1-16', observed: 'RollingFileAppender daily, INFO, 30 days, 3GB; filesystem identity removed', confidence: high}
+    E-CONFIG: {path: config/properties.config.j2, lines: 'structure only', observed: 'External logging configuration mixed with domain keys; values not retained', confidence: high}
+    E-JNDI: {path: jndi/claro-post-atencion.yml, lines: 'YAML keys only', observed: 'jndis list with bd_name and jndi_name; concrete values excluded', confidence: high}
+    E-WEBLOGIC: {path: src/main/webapp/WEB-INF/weblogic.xml, lines: '1-17', observed: 'WAR classloader preferences and context-root; server version unknown', confidence: high}
+    E-DISPATCHER: {path: src/main/webapp/WEB-INF/dispatcherServlet-servlet.xml, lines: '1-4', observed: 'Empty Spring beans descriptor', confidence: high}
+    E-CI: {path: Jenkinsfile, lines: '1-10', observed: 'External shared-library delegation and environment-specific parameters, implementation unavailable', confidence: high}
+    E-GITIGNORE: {path: .gitignore, lines: '1-33', observed: 'Build and IDE ignores; wrapper exception is not wrapper evidence', confidence: high}
+    E-HELP: {path: HELP.md, lines: '5-13', observed: 'Boot 3.2.1-SNAPSHOT documentation conflicts with declared POM parent', confidence: high}
+    E-UTIL-LOGGING: {path: src/main/java/pe/com/claro/post/atencion/common/util/ClaroUtil.java, lines: '17-34,55-85', observed: 'SLF4J/Jackson request logging, local timezone formatter, compact/pretty serialization; mixed utility excluded', confidence: high}
+    E-LOG-CONSTANTS: {path: src/main/java/pe/com/claro/post/atencion/common/property/Constantes.java, lines: '6-8,27-39,186-189,236,296', observed: 'Technical logging separators/labels/date pattern; business constants excluded', confidence: high}
+    E-JAVA-USAGE: {path: src, lines: 'all 51 Java source files; import/API scan only', observed: 'Direct dependency use distinguished from declaration; no effective/transitive provider resolution', confidence: high}
+resolvedQuestions:
+  - {id: J8-Q-001, status: resolved-by-current-human-instruction, decisionRefs: [J8-D-002]}
+  - {id: J8-Q-002, status: resolved-by-current-human-instruction, decisionRefs: [J8-D-003], remainingRisk: payload-logging-without-masking}
+  - {id: J8-Q-003, status: resolved-by-current-human-instruction, decisionRefs: [J8-D-004]}
+  - {id: J8-Q-004, status: resolved-by-current-human-instruction, decisionRefs: [J8-D-005], remainingObservation: HELP-POM-version-discrepancy}
+  - {id: J8-Q-005, status: resolved-by-current-human-instruction, decisionRefs: [J8-D-006], remainingVerification: external-runtime-repository-and-CI}
+unresolvedAmbiguities: []
+readiness:
+  extractionComplete: true
+  baselineDecisionsApproved: true
+  freezeAuthorized: false
+  generatorBackend: not-tested-for-this-profile
+  runtimeCompatibility: unverified
+  dependencyResolution: unverified
+  serviceGenerationAuthorized: false
+  limitations:
+    - 'Unknown Maven, JDK distribution and WebLogic versions; no invention or migration approval required for extraction.'
+    - 'External repository access, JNDI/configuration and unavailable Jenkins library must be established before actual build/deployment.'
+    - 'Backend support for Java8/Boot2/WAR/JDBC-JNDI/JUnit4 must be verified separately; do not rewrite the baseline to fit another backend.'
+    - 'Payload/parameter logging and legacy versions remain review risks, not implied security approval.'
+validation:
+  report: extraction-report.md
+  reproducibleStaticChecks: validate-extraction.py
+  mode: static-only
+  maven: not-run
+  tests: not-run
+  checkstyle: not-applicable
+  jacoco: not-run
+  database: not-accessed
+  deployment: not-run
+  protectedConfigurationContentIntegrity: not-compared-by-policy
+
+generation:
+  status: approved-human-decision
+  decisionRefs: [J8-D-002, J8-D-003, J8-D-004, J8-D-007]
+  profile: war-jdbc-callablestatement-junit4
+  profileOwner: this-archetype
+  utilities:
+    decisionRefs: [J8-D-009]
+    evidence: E-UTIL-LOGGING
+    items:
+      - template: 'src/main/java/@@BASE_PACKAGE_PATH@@/common/util/ClaroUtil.java'
+        class: common.util.ClaroUtil
+        scope: 'technical helpers only (JSON printing, local date format, exception message, parameter null/empty check, value mapping, server IP); request-specific validators and error-envelope builders are generated per service'
+        requiredConstants:
+          FORMATOFECHACABECERA: "yyyy-MM-dd'T'HH:mm:ss'Z'"
+          LOG_REQUEST_HEADER: 'Header: {}'
+          LOG_REQUEST_BODY: 'Body: {}'
+          SEPARADOR_REGISTROS_REGEX: '\|'
+          SEPARADOR_PAR: ','
+          CERO_INT: 0
+          UNO_INT: 1
+          DOS_INT: 2
+    mustBeUsedByGeneratedCode: true
+  configuration:
+    decisionRefs: [J8-D-009]
+    evidence: [E-CONFIG, E-JNDI]
+    items:
+      - template: config/properties.config.j2
+        kind: external-properties-template
+        generatedKeysAppended: 'service-specific keys (stored procedures, timeouts, per-operation response codes/messages) are appended by the materializer; keys already present in the template are never duplicated'
+      - template: 'jndi/@@ARTIFACT_ID@@.yml'
+        kind: jndi-inventory
+    secrets: none
+  rulesSource: reference-project-observed-conventions
+  persistence: {mechanism: jdbc-callable-statement-jndi-oracle, jpa: not-applicable, repositoriesStyle: dao-interface-plus-implementation}
+  logging: {pattern: slf4j-per-class-reference-pattern, activityLogger: not-applicable, requestHeadersRecord: not-applicable, source: runtime.logging}
+  quality: {checkstyle: not-applicable, mandatoryStyleGate: false}
+  packaging: {type: war, server: WebLogic, bootstrap: servlet-initializer}
+  tests: {framework: JUnit4, mock: Mockito, setup: MockitoAnnotations.initMocks}
+  mavenAssembler: archetype-token-render-at-at
+  unsupportedBehavior: stop-never-invent
+  style:
+    source: reference-project-observed-conventions
+    decisionRefs: [J8-D-008]
+    constantsClass: common.property.Constantes
+    externalPropertiesClass: common.property.PropertiesExternos
+    jndiPropertyKey: bd.crmlite.jndi
+    hardcodedLiterals: forbidden
+    dataSourceBean: dataSourceCRMLITE
+    propertyKeys:
+      procedureOwner: "bd.crmlite.owner"
+      procedurePackage: "bd.crmlite.package.<package>"
+      procedure: "bd.crmlite.sp.<prefix>.<name>"
+      executionTimeout: "bd.crmlite.timeout.ejecucion.<prefix>.<name>"
+      responseCode: "ws.codigoIdf0, ws.codigoIdf1, ws.<operation>.codigoIdf2, ws.codigoIdt1, ws.codigoIdt2"
+      responseMessage: "ws.mensajeIdf1, ws.<operation>.mensajeIdf2, ws.mensajeIdt1, ws.mensajeIdt2"

@@ -1,0 +1,63 @@
+# Estado local y artefactos generados del generador
+/.factory/*
+!/.factory/.gitkeep
+/output/*
+!/output/.gitkeep
+/reports/*
+!/reports/.gitkeep
+
+# Fuentes de referencia y exportaciones corporativas: revisar antes de publicar
+/input/reference/*
+!/input/reference/.gitkeep
+/input/sparx/*
+!/input/sparx/.gitkeep
+
+# IDE y sistema operativo
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Dependencias, compilacion y cobertura
+node_modules/
+target/
+build/
+.gradle/
+coverage/
+.coverage
+htmlcov/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Configuracion de entorno y secretos locales
+.env
+.env.*
+!.env.example
+!.env.sample
+**/src/main/resources/application*.properties
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+settings-local.xml
+
+# Logs y archivos temporales
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+~$*

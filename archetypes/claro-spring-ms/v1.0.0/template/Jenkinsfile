@@ -1,0 +1,6 @@
+@Library('master-library-bitbucket-new')_
+
+MicroserviciosPipeline(
+    nombreDeCompilado: '__SERVICE_NAME__',
+    nombreVault: '__VAULT_NAME__',
+)

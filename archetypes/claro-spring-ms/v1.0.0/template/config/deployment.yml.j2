@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: __SERVICE_NAME__
+  namespace: __K8S_NAMESPACE__
+  labels:
+    app: __SERVICE_NAME__
+    app.kubernetes.io/name: __SERVICE_NAME__
+    app.kubernetes.io/instance: __SERVICE_NAME__
+    app.kubernetes.io/part-of: __K8S_PART_OF__
+    app.kubernetes.io/component: microservice
+    app.kubernetes.io/managed-by: __K8S_MANAGED_BY__
+    claro.pe/environment: __ENVIRONMENT__
+    claro.pe/owner: __K8S_OWNER__
+spec:
+  replicas: __REPLICA_COUNT__
+  revisionHistoryLimit: 3
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app: __SERVICE_NAME__
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: __SERVICE_NAME__
+        app.kubernetes.io/name: __SERVICE_NAME__
+        app.kubernetes.io/instance: __SERVICE_NAME__
+        app.kubernetes.io/part-of: __K8S_PART_OF__
+        app.kubernetes.io/component: microservice
+        claro.pe/environment: __ENVIRONMENT__
+        claro.pe/owner: __K8S_OWNER__
+        claro.pe/tier: __K8S_TIER__
+      annotations:
+        claro.pe/source-repository: __SOURCE_REPOSITORY_URL__
+        claro.pe/version: __IMAGE_TAG__
+    spec:
+      serviceAccountName: __SERVICE_ACCOUNT_NAME__
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: config-volume
+          configMap:
+            name: __CONFIG_MAP_NAME__
+      containers:
+        - name: __SERVICE_NAME__
+          image: __CONTAINER_REGISTRY__/__IMAGE_REPOSITORY__:__IMAGE_TAG__
+          imagePullPolicy: __IMAGE_PULL_POLICY__
+          ports:
+            - name: http
+              containerPort: __CONTAINER_PORT__
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: __SECRET_NAME__
+          volumeMounts:
+            - name: config-volume
+              mountPath: __CONFIG_MOUNT_PATH__
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault

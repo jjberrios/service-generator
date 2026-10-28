@@ -1,0 +1,838 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "",
+    "description": "",
+    "contact": {
+      "name": "Erik Cucho",
+      "email": "cuchoea@hitss.com"
+    },
+    "license": {
+      "name": "Licence1"
+    },
+    "version": "3.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://{ambiente}.subdominio.com/{basePath}",
+      "description": "",
+      "variables": {
+        "ambiente": {
+          "default": "d",
+          "description": "",
+          "enum": [
+            "desarrollo",
+            "test",
+            "preproduccion",
+            "produccion"
+          ]
+        },
+        "basePath": {
+          "default": "v1",
+          "description": ""
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/claro-post-atencion/api/post/atencion/v1.0.0/consultarCodigoAtencion": {
+      "post": {
+        "tags": [
+          ""
+        ],
+        "parameters": [
+          {
+            "name": "idTransaccion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "msgid",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "timestamp",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "nullable": true
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "aplicacion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "accept",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "consultarCheckNotificaRequest": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsultarCheckNotificaRequestType"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsultarAtencionResponseType"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/claro-post-atencion/api/post/atencion/v1.0.0/consultarCheckNotifica": {
+      "post": {
+        "tags": [
+          ""
+        ],
+        "parameters": [
+          {
+            "name": "idTransaccion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "msgid",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "timestamp",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "nullable": true
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "aplicacion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "accept",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "consultarCheckNotificaRequest": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsultarCheckNotificaRequestType"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsultarCheckNotificaResponseType"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/claro-post-atencion/api/post/atencion/v1.0.0/registraReglaNotificacion": {
+      "post": {
+        "tags": [
+          ""
+        ],
+        "parameters": [
+          {
+            "name": "idTransaccion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "msgid",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "timestamp",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "aplicacion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "accept",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "registraReglaNotificacionRequest": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistraReglaNotificacionRequestType"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistraReglaNotificacionResponseType"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/claro-post-atencion/api/post/atencion/v1.0.0/consultarDetNivel": {
+      "post": {
+        "tags": [
+          ""
+        ],
+        "parameters": [
+          {
+            "name": "idTransaccion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "msgid",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "timestamp",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "nullable": true
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          {
+            "name": "accept",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "ConsultarDetNivelRequest": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsultarDetNivelRequestType"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsultarDetNivelResponseType"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConsultarCheckNotificaRequestType": {
+        "type": "object",
+        "properties": {
+          "nivel1": {
+            "type": "string"
+          },
+          "nivel2": {
+            "type": "string"
+          },
+          "nivel3": {
+            "type": "string"
+          },
+          "nivel4": {
+            "type": "string"
+          },
+          "nivel5": {
+            "type": "string"
+          },
+          "listaOpcional": {
+            "type": "array",
+            "items": {
+              "properties": {
+                "clave": {
+                  "type": "string"
+                },
+                "valor": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ConsultarAtencionResponseAuditType": {
+        "type": "object",
+        "properties": {
+          "idTransaccion": {
+            "type": "string"
+          },
+          "codigoRespuesta": {
+            "enum": [
+              "0",
+              "1",
+              "2",
+              "-1",
+              "-2",
+              "-3"
+            ],
+            "type": "string",
+            "description": ""
+          },
+          "mensajeRespuesta": {
+            "type": "string"
+          }
+        }
+      },
+      "ConsultarAtencionResponseDataType": {
+        "type": "object",
+        "properties": {
+          "listaCodigoAtencion": {
+            "type": "array",
+            "items": {
+              "properties": {
+                "listaCodigoAtencion": {
+                  "properties": {
+                    "codigoAtencion": {
+                      "type": "string"
+                    },
+                    "tipoCodAtencion": {
+                      "type": "string"
+                    },
+                    "fechaAtencion": {
+                      "type": "string"
+                    },
+                    "nombreTramite": {
+                      "type": "string"
+                    },
+                    "codigoPDV": {
+                      "type": "string"
+                    },
+                    "nombrePDV": {
+                      "type": "string"
+                    },
+                    "razonSocialPDV": {
+                      "type": "string"
+                    },
+                    "cuentaAsesor": {
+                      "type": "string"
+                    },
+                    "nombreAsesor": {
+                      "type": "string"
+                    },
+                    "numServicio": {
+                      "type": "string"
+                    },
+                    "tipoDocCliente": {
+                      "type": "string"
+                    },
+                    "numDocCliente": {
+                      "type": "string"
+                    },
+                    "nombreCliente": {
+                      "type": "string"
+                    },
+                    "canalAtencion": {
+                      "type": "string"
+                    },
+                    "nombreTipificacion": {
+                      "type": "string"
+                    },
+                    "nombreAplicacion": {
+                      "type": "string"
+                    },
+                    "medioNotificacion": {
+                      "type": "string"
+                    },
+                    "fechaNotiSMS": {
+                      "type": "string"
+                    },
+                    "fechaNotiCorreo": {
+                      "type": "string"
+                    },
+                    "fechaNotiMiClaro": {
+                      "type": "string"
+                    },
+                    "numReporte": {
+                      "type": "string"
+                    },
+                    "numReclamo": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "listaOpcional": {
+            "type": "array",
+            "items": {
+              "properties": {
+                "clave": {
+                  "type": "string"
+                },
+                "valor": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ConsultarAtencionResponseType": {
+        "type": "object",
+        "properties": {
+          "responseAudit": {
+            "$ref": "#/components/schemas/ConsultarAtencionResponseAuditType"
+          },
+          "responseData": {
+            "$ref": "#/components/schemas/ConsultarAtencionResponseDataType"
+          }
+        }
+      },
+      "ConsultarCheckNotificaResponseAuditType": {
+        "type": "object",
+        "properties": {
+          "idTransaccion": {
+            "type": "string"
+          },
+          "codigoRespuesta": {
+            "enum": [
+              "0",
+              "1",
+              "2",
+              "-1",
+              "-2",
+              "-3"
+            ],
+            "type": "string",
+            "description": ""
+          },
+          "mensajeRespuesta": {
+            "type": "string"
+          }
+        }
+      },
+      "CheckNotificaType": {
+        "type": "object",
+        "properties": {
+          "nivel1": {
+            "type": "string"
+          },
+          "nivel2": {
+            "type": "string"
+          },
+          "nivel3": {
+            "type": "string"
+          },
+          "nivel4": {
+            "type": "string"
+          },
+          "nivel5": {
+            "type": "string"
+          },
+          "producto": {
+            "type": "string"
+          },
+          "modalidad": {
+            "type": "string"
+          },
+          "operacion": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "nombreComercial": {
+            "type": "string"
+          }
+        }
+      },
+      "ConsultarCheckNotificaResponseDataType": {
+        "type": "object",
+        "properties": {
+          "checkNotifica": {
+            "$ref": "#/components/schemas/CheckNotificaType"
+          },
+          "listaOpcional": {
+            "type": "array",
+            "items": {
+              "properties": {
+                "clave": {
+                  "type": "string"
+                },
+                "valor": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ConsultarCheckNotificaResponseType": {
+        "type": "object",
+        "properties": {
+          "responseAudit": {
+            "$ref": "#/components/schemas/ConsultarCheckNotificaResponseAuditType"
+          },
+          "responseData": {
+            "$ref": "#/components/schemas/ConsultarCheckNotificaResponseDataType"
+          }
+        }
+      },
+      "RegistraReglaNotificacionRequestType": {
+        "type": "object",
+        "properties": {
+          "nivel1": {
+            "type": "string"
+          },
+          "nivel2": {
+            "type": "string"
+          },
+          "nivel3": {
+            "type": "string"
+          },
+          "nivel4": {
+            "type": "string"
+          },
+          "nivel5": {
+            "type": "string"
+          },
+          "operacion": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "tipoRegistro": {
+            "type": "string"
+          },
+          "listaOpcional": {
+            "type": "array",
+            "items": {
+              "properties": {
+                "clave": {
+                  "type": "string"
+                },
+                "valor": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "nombreComercial": {
+            "type": "string"
+          }
+        }
+      },
+      "RegistraReglaNotificacionResponseAuditType": {
+        "type": "object",
+        "properties": {
+          "idTransaccion": {
+            "type": "string",
+            "nullable": true
+          },
+          "codigoRespuesta": {
+            "enum": [
+              "0",
+              "1",
+              "2",
+              "-1",
+              "-2",
+              "-3"
+            ],
+            "type": "string",
+            "description": ""
+          },
+          "mensajeRespuesta": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "RegistraReglaNotificacionResponseDataType": {
+        "type": "object",
+        "properties": {
+          "listaOpcional": {
+            "type": "array",
+            "items": {
+              "properties": {
+                "clave": {
+                  "type": "string"
+                },
+                "valor": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "RegistraReglaNotificacionResponseType": {
+        "type": "object",
+        "properties": {
+          "responseAudit": {
+            "$ref": "#/components/schemas/RegistraReglaNotificacionResponseAuditType"
+          },
+          "responseData": {
+            "$ref": "#/components/schemas/RegistraReglaNotificacionResponseDataType"
+          }
+        }
+      },
+      "ConsultarDetNivelRequestType": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "integer"
+          },
+          "clase": {
+            "type": "integer"
+          },
+          "subclase": {
+            "type": "integer"
+          },
+          "nivel": {
+            "type": "integer"
+          },
+          "listaOpcional": {
+            "type": "array",
+            "items": {
+              "properties": {
+                "clave": {
+                  "type": "string"
+                },
+                "valor": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ConsultarDetNivelResponseAudiType": {
+        "type": "object",
+        "properties": {
+          "idTransaccion": {
+            "type": "string"
+          },
+          "codigoRespuesta": {
+            "type": "string"
+          },
+          "mensajeRespuesta": {
+            "type": "string"
+          }
+        }
+      },
+      "ConsultarDetNivelResponseDataType": {
+        "type": "object",
+        "properties": {
+          "lstDetTipi": {
+            "type": "array",
+            "items": {
+              "properties": {
+                "lstDetTipi": {
+                  "properties": {
+                    "codTipi": {
+                      "type": "integer"
+                    },
+                    "estadoRegla": {
+                      "type": "string"
+                    },
+                    "tipoRegistro": {
+                      "type": "string"
+                    },
+                    "flagNotifSms": {
+                      "type": "integer"
+                    },
+                    "flagNotifCorreo": {
+                      "type": "integer"
+                    },
+                    "flagNotifApp": {
+                      "type": "integer"
+                    },
+                    "estadoNotif": {
+                      "type": "string"
+                    },
+                    "tipoProducto": {
+                      "type": "string"
+                    },
+                    "descripcion": {
+                      "type": "string"
+                    },
+                    "nombreComercial": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "listaOpcional": {
+            "type": "array",
+            "items": {
+              "properties": {
+                "clave": {
+                  "type": "string"
+                },
+                "valor": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ConsultarDetNivelResponseType": {
+        "type": "object",
+        "properties": {
+          "responseAudit": {
+            "$ref": "#/components/schemas/ConsultarDetNivelResponseAudiType"
+          },
+          "responseData": {
+            "$ref": "#/components/schemas/ConsultarDetNivelResponseDataType"
+          }
+        }
+      }
+    }
+  }
+}

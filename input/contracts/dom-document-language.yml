@@ -1,0 +1,392 @@
+openapi: 3.0.1
+
+info:
+  title: dom-document-language
+  description: |-
+    Microservicio responsable de gestionar la trazabilidad del mantenimiento
+    de los idiomas.
+
+    Permite realizar el mantenimiento de los idiomas mediante operaciones de
+    registro, consulta y actualización de los idiomas en base de datos.
+  version: 1.0.0
+  contact:
+    name: Félix Escandón
+    email: fescandon@hitss.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: /
+
+tags:
+  - name: DocumentLanguage
+    description: Operaciones relacionadas con los idiomas.
+
+paths:
+
+  /api/v1/languages:
+
+    get:
+      tags:
+        - DocumentLanguage
+
+      summary: Busca los idiomas y retorna sus datos.
+
+      description: |-
+        Permite consultar los idiomas registrados.
+
+        El servicio soporta los siguientes tipos de procesos:
+          - Gestión de Documentos.
+          - Gestión de Idiomas de Documentos.
+
+      operationId: getDocumentLanguage
+
+      parameters:
+
+        - $ref: '#/components/parameters/X-Correlation-Id'
+        - $ref: '#/components/parameters/X-Client-Version-Id'
+        - $ref: '#/components/parameters/X-App-Id'
+        - $ref: '#/components/parameters/X-Channel'
+        - $ref: '#/components/parameters/X-Request-Id'
+        - $ref: '#/components/parameters/X-User-Id'
+        - $ref: '#/components/parameters/Traceparent'
+
+        - name: id
+          in: query
+          required: false
+          description: Identificador único del idioma.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 1
+
+        - name: code
+          in: query
+          required: false
+          description: Código único del idioma.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 10
+          example: "ES"
+
+        - name: name
+          in: query
+          required: false
+          description: Nombre del idioma.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          example: "Español"
+
+        - name: status
+          in: query
+          required: false
+          description: Estado del idioma.
+          schema:
+            type: integer
+            enum:
+              - 0
+              - 1
+          example: 1
+
+      responses:
+
+        '200':
+          description: Consulta ejecutada correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDocumentLanguageResponse'
+              example:
+                code: 200
+                message: "Operación exitosa"
+                data:
+                  languages:
+                    - id: 1
+                      code: "EN"
+                      name: "Inglés"
+                      status: 1
+                    - id: 2
+                      code: "ES"
+                      name: "Español"
+                      status: 1
+
+        '400':
+          description: Solicitud incorrecta.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "BAD_REQUEST"
+                code: 400
+                subType: "IDF1"
+                type: "MissingParameters"
+                message: "PROCESGETLANGUAGE_SERVICE_ERROR"
+                detail: "Parámetros obligatorios incompletos. Ingrese al menos un valor en los campos."
+
+        '404':
+          description: No se encontraron resultados.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "NOT_FOUND"
+                code: 404
+                subType: "IDF2"
+                type: "ParameterValueNotFound"
+                message: "PROCESGETLANGUAGE_SERVICE_ERROR"
+                detail: "No se encontraron resultados con los datos ingresados."
+
+        '500':
+          description: Error interno del servidor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "INTERNAL_SERVER_ERROR"
+                code: 500
+                subType: "IDT3"
+                type: "InternalError"
+                message: "PROCESGETLANGUAGE_SERVICE_ERROR"
+                detail: "Error interno al procesar la transacción: [ERROR_DETAIL]"
+
+        '503':
+          description: Servicio no disponible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "SERVICE_UNAVAILABLE"
+                code: 503
+                subType: "IDT2"
+                type: "ServiceUnavailable"
+                message: "PROCESGETLANGUAGE_SERVICE_ERROR"
+                detail: >-
+                  Error de disponibilidad en [SERVICE_NAME] - Detalle:
+                  [ERROR_DETAIL]
+
+        '504':
+          description: Tiempo de espera agotado en el gateway.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "GATEWAY_TIMEOUT"
+                code: 504
+                subType: "IDT1"
+                type: "TimeoutException"
+                message: "PROCESGETLANGUAGE_SERVICE_ERROR"
+                detail: >-
+                  Error de timeout en [SERVICE_NAME] -
+                  Detalle: [ERROR_DETAIL]
+
+
+components:
+
+  parameters:
+
+    X-Correlation-Id:
+      name: x-correlation-id
+      in: header
+      required: true
+      description: Identificador único de correlación generado por el API Gateway.
+      schema:
+        type: string
+        format: uuid
+      example: "df39ead2-4c3a-4680-855f-f3dba1b1610c"
+
+    X-Client-Version-Id:
+      name: x-client-version-id
+      in: header
+      required: true
+      description: Versión de la aplicación cliente.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 20
+      example: "1.0.0"
+
+    X-App-Id:
+      name: x-app-id
+      in: header
+      required: true
+      description: Identificador de la aplicación cliente registrado en Keycloak.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 100
+      example: "CRM_POS"
+
+    X-Channel:
+      name: x-channel
+      in: header
+      required: true
+      description: Canal desde el cual se realiza la invocación.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 50
+      example: "WEB"
+
+    X-Request-Id:
+      name: x-request-id
+      in: header
+      required: true
+      description: Identificador único de la solicitud.
+      schema:
+        type: string
+        format: uuid
+      example: "35e6ec23-d2c6-42e4-a7b1-fc3977a76be2"
+
+    X-User-Id:
+      name: x-user-id
+      in: header
+      required: true
+      description: Identificador del usuario que inicia la invocación.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 100
+      example: "C500457"
+
+    Traceparent:
+      name: traceparent
+      in: header
+      required: true
+      description: Identificador de trazabilidad distribuida conforme al estándar W3C Trace Context.
+      schema:
+        type: string
+        pattern: '^00-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$'
+      example: "00-4d186321c1a7f0f354b297e8914ab240-4b2a9f18c30eb2f1-01"
+
+
+  schemas:
+
+    GetDocumentLanguageResponse:
+      type: object
+      description: Respuesta de consulta de idiomas.
+      required:
+        - code
+        - message
+        - data
+      properties:
+
+        code:
+          type: integer
+          format: int32
+          description: Código HTTP de la respuesta.
+          example: 200
+
+        message:
+          type: string
+          description: Mensaje descriptivo del resultado.
+          example: "Operación exitosa"
+
+        data:
+          $ref: '#/components/schemas/GetDocumentLanguageData'
+
+
+    GetDocumentLanguageData:
+      type: object
+      description: Información de los idiomas encontrados.
+      required:
+        - languages
+      properties:
+
+        languages:
+          type: array
+          description: Lista de idiomas.
+          items:
+            $ref: '#/components/schemas/GetDocumentLanguageListLanguage'
+
+
+    GetDocumentLanguageListLanguage:
+      type: object
+      description: Datos de un idioma.
+      required:
+        - id
+        - code
+        - name
+        - status
+      properties:
+
+        id:
+          type: integer
+          format: int64
+          description: Identificador único del idioma.
+          example: 6584
+
+        code:
+          type: string
+          description: Código único del idioma.
+          minLength: 1
+          maxLength: 10
+          example: "EN"
+
+        name:
+          type: string
+          description: Nombre del idioma.
+          minLength: 1
+          maxLength: 100
+          example: "Inglés"
+
+        status:
+          type: integer
+          description: Estado del idioma. 1 = Activo, 0 = Inactivo.
+          enum:
+            - 0
+            - 1
+          example: 1
+
+
+    ErrorResponse:
+      type: object
+      description: Estructura estándar para respuestas de error.
+      required:
+        - status
+        - code
+        - subType
+        - type
+        - message
+        - detail
+      properties:
+
+        status:
+          type: string
+          description: Estado HTTP asociado al error.
+          example: "BAD_REQUEST"
+
+        code:
+          type: integer
+          format: int32
+          description: Código HTTP del error.
+          example: 400
+
+        subType:
+          type: string
+          description: Subtipo o código interno del error.
+          example: "IDF1"
+
+        type:
+          type: string
+          description: Tipo de error.
+          example: "MissingParameters"
+
+        message:
+          type: string
+          description: Mensaje técnico asociado al error.
+          example: "PROCESGETLANGUAGE_SERVICE_ERROR"
+
+        detail:
+          type: string
+          description: Detalle específico del error.
+          example: "Parámetros obligatorios incompletos."

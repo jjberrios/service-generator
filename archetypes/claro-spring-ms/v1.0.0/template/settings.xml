@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <mirrors>
+        <mirror>
+            <id>claro-nexus</id>
+            <mirrorOf>central</mirrorOf>
+            <url>http://172.19.90.65:8081/repository/maven-public/</url>
+        </mirror>
+        <mirror>
+            <id>claro-nexus-list</id>
+            <mirrorOf>*</mirrorOf>
+            <url>http://172.19.90.65:8081/repository/maven-releases/</url>
+        </mirror>
+    </mirrors>
+
+    <profiles>
+        <profile>
+            <id>custom-repos</id>
+            <repositories>
+                <repository>
+                    <id>maven-public</id>
+                    <name>Claro Maven Public</name>
+                    <url>http://172.19.90.65:8081/repository/maven-releases/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                </repository>
+                <repository>
+                    <id>maven-releases</id>
+                    <name>Claro Maven Releases</name>
+                    <url>http://172.19.90.65:8081/repository/maven-releases/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                </repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>maven-plugins</id>
+                    <name>Claro Maven Plugins</name>
+                    <url>http://172.19.90.65:8081/repository/maven-public/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>true</enabled></snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+        <profile>
+            <id>public-repos</id>
+            <repositories>
+                <repository>
+                    <id>central</id>
+                    <name>Maven Central</name>
+                    <url>https://repo.maven.apache.org/maven2/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>false</enabled></snapshots>
+                </repository>
+                <repository>
+                    <id>spring-releases</id>
+                    <name>Spring Releases</name>
+                    <url>https://repo.spring.io/release/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>false</enabled></snapshots>
+                </repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>central</id>
+                    <name>Maven Central</name>
+                    <url>https://repo.maven.apache.org/maven2/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>false</enabled></snapshots>
+                </pluginRepository>
+                <pluginRepository>
+                    <id>spring-plugins</id>
+                    <name>Spring Plugins</name>
+                    <url>https://repo.spring.io/plugins-release/</url>
+                    <releases><enabled>true</enabled></releases>
+                    <snapshots><enabled>false</enabled></snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
+
+    <activeProfiles>
+        <activeProfile>custom-repos</activeProfile>
+        <activeProfile>public-repos</activeProfile>
+    </activeProfiles>
+</settings>

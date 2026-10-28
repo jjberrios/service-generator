@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>2.0.5.RELEASE</version>
+    <relativePath/>
+  </parent>
+  <groupId>@@GROUP_ID@@</groupId>
+  <artifactId>@@ARTIFACT_ID@@</artifactId>
+  <version>@@PROJECT_VERSION@@</version>
+  <packaging>war</packaging>
+  <name>@@ARTIFACT_ID@@</name>
+  <description>@@ARTIFACT_ID@@ for Spring Boot</description>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <java.version>1.8</java.version>
+    <com.google.code.gson>2.3.1</com.google.code.gson>
+    <assertj>2.6.0</assertj>
+    <junit.version>4.11</junit.version>
+    <powermock.version>1.6.2</powermock.version>
+    <mockito.core>2.0.5-beta</mockito.core>
+    <javassist>3.23.1-GA</javassist>
+    <org.hibernate.javax.persistence>1.0.0.Final</org.hibernate.javax.persistence>
+    <org.hibernate>5.2.17.Final</org.hibernate>
+    <sonar.coverage.exclusions/>
+    <sonar.exclusions/>
+  </properties>
+  <dependencies>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-tomcat</artifactId><scope>provided</scope></dependency>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web-services</artifactId></dependency>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-jdbc</artifactId></dependency>
+    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-configuration-processor</artifactId><optional>true</optional></dependency>
+    <dependency><groupId>com.oracle</groupId><artifactId>ojdbc14</artifactId><version>9.0.2.0.0</version></dependency>
+    <dependency><groupId>javax.el</groupId><artifactId>javax.el-api</artifactId><version>3.0.0</version></dependency>
+    <dependency><groupId>org.eclipse.persistence</groupId><artifactId>javax.persistence</artifactId><version>2.1.1</version></dependency>
+    <dependency><groupId>javax</groupId><artifactId>javaee-api</artifactId><version>7.0</version><scope>provided</scope></dependency>
+    <dependency><groupId>com.google.code.gson</groupId><artifactId>gson</artifactId></dependency>
+    <dependency><groupId>org.apache.commons</groupId><artifactId>commons-collections4</artifactId><version>4.4</version></dependency>
+    <dependency><groupId>org.apache.commons</groupId><artifactId>commons-lang3</artifactId><version>3.0</version></dependency>
+    <dependency><groupId>org.assertj</groupId><artifactId>assertj-core</artifactId><version>${assertj}</version></dependency>
+    <dependency><groupId>junit</groupId><artifactId>junit</artifactId><version>${junit.version}</version></dependency>
+    <dependency><groupId>org.mockito</groupId><artifactId>mockito-core</artifactId><version>${mockito.core}</version></dependency>
+    <dependency><groupId>org.powermock</groupId><artifactId>powermock-core</artifactId><version>${powermock.version}</version></dependency>
+    <dependency><groupId>org.powermock</groupId><artifactId>powermock-api-mockito</artifactId><version>${powermock.version}</version></dependency>
+    <dependency><groupId>org.hibernate.javax.persistence</groupId><artifactId>hibernate-jpa-2.1-api</artifactId></dependency>
+    <dependency><groupId>org.hibernate</groupId><artifactId>hibernate-entitymanager</artifactId></dependency>
+    <dependency><groupId>org.powermock</groupId><artifactId>powermock-module-junit4</artifactId><version>${powermock.version}</version></dependency>
+    <dependency><groupId>org.powermock</groupId><artifactId>powermock-module-junit4-rule-agent</artifactId><version>${powermock.version}</version></dependency>
+    <dependency><groupId>org.powermock</groupId><artifactId>powermock-module-javaagent</artifactId><version>${powermock.version}</version></dependency>
+    <dependency><groupId>org.powermock</groupId><artifactId>powermock-classloading-xstream</artifactId><version>${powermock.version}</version></dependency>
+    <dependency><groupId>org.javassist</groupId><artifactId>javassist</artifactId><version>${javassist}</version></dependency>
+  </dependencies>
+  <build>
+    <sourceDirectory>src/main/java</sourceDirectory>
+    <plugins>
+      <plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId><artifactId>maven-war-plugin</artifactId>
+        <configuration><failOnMissingWebXml>false</failOnMissingWebXml></configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId><artifactId>jacoco-maven-plugin</artifactId><version>0.7.7.201606060606</version>
+        <executions>
+          <execution><id>jacoco-initialize</id><phase>initialize</phase><goals><goal>prepare-agent</goal></goals></execution>
+          <execution><id>jacoco-site</id><phase>test</phase><goals><goal>report</goal></goals></execution>
+        </executions>
+      </plugin>
+      <plugin><groupId>org.sonarsource.scanner.maven</groupId><artifactId>sonar-maven-plugin</artifactId><version>3.9.1.2184</version></plugin>
+    </plugins>
+  </build>
+  <repositories>
+    <repository><id>maven-releases</id><name>maven-releases</name><url>@@CORPORATE_REPOSITORY_URL@@</url></repository>
+  </repositories>
+  <pluginRepositories>
+    <pluginRepository><id>spring-milestones</id><name>Spring Milestones</name><url>https://repo.spring.io/milestone</url><snapshots><enabled>false</enabled></snapshots></pluginRepository>
+    <pluginRepository><id>spring-snapshots</id><name>Spring Snapshots</name><url>https://repo.spring.io/snapshot</url><releases><enabled>false</enabled></releases></pluginRepository>
+  </pluginRepositories>
+</project>

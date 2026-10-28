@@ -1,0 +1,204 @@
+"""Generic validator of a generated service, driven by its implementation plan (no fixed class names or counts).
+
+Checks: expected inventory vs disk, unplanned Java, manifest integrity (rows, hashes, tree hash, input hashes), Java structure (package vs path,
+type name vs file, imports), planned JPA/Spring components, corporate logging components, correspondence with the approved spec/decisions
+(inactive operations never generated), and that no Java exists while the consistency gate is not cleared. It also embeds the preventive style
+lint but NEVER states the official Checkstyle gate as passed: that stays `unverified` until maven-checkstyle-plugin runs.
+`application*.properties` is never read, hashed or reported.
+"""
+from pathlib import Path
+import argparse
+import hashlib
+import re
+import sys
+import yaml
+
+HERE = Path(__file__).resolve().parent
+SKILLS = HERE.parents[1]
+sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(SKILLS / 'service-workspace' / 'scripts'))
+import consistency_gate as gate  # noqa: E402
+import file_protection as fp  # noqa: E402
+import style_lint  # noqa: E402
+import test_support as ts  # noqa: E402
+import validation_evidence as ve  # noqa: E402
+import renderers as rd  # noqa: E402
+
+MANIFEST = '.generation-manifest.yml'
+
+
+def sha(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def tree_hash(rows: dict) -> str:
+    return sha(''.join(f'{p}\0{h}\n' for p, h in sorted(rows.items())).encode('utf-8'))
+
+
+def java_structure(rel: str, text: str) -> list[str]:
+    problems = []
+    package = re.search(r'^\s*package\s+([\w.]+)\s*;', text, re.M)
+    if not package:
+        problems.append('missing package declaration')
+    else:
+        try:
+            if package.group(1) != rd.package_of(rel):
+                problems.append(f'package {package.group(1)} does not match the path')
+        except rd.Unsupported:
+            problems.append('java file outside src/main/java or src/test/java')
+    stem = rel.rsplit('/', 1)[-1].removesuffix('.java')
+    if not re.search(rf'\b(?:class|interface|record|enum|@interface)\s+{re.escape(stem)}\b', text):
+        problems.append(f'no type named {stem}')
+    code = '\n'.join(style_lint.strip_code(text.split('\n')))
+    if code.count('{') != code.count('}'):
+        problems.append('unbalanced braces')
+    seen = set()
+    for m in re.finditer(r'^\s*import\s+(?:static\s+)?([\w.]+)(\.\*)?\s*;', text, re.M):
+        if m.group(2):
+            problems.append('star import')
+        elif m.group(1) in seen:
+            problems.append(f'duplicate import {m.group(1)}')
+        seen.add(m.group(1))
+    return problems
+
+
+def validate(repo: Path, service: str) -> dict:
+    repo = Path(repo).resolve()
+    ws = repo / '.factory' / 'services' / service
+    violations, checks = [], {}
+
+    def check(name, ok, detail=None):
+        checks[name] = bool(ok)
+        if not ok:
+            violations.append({'check': name, 'detail': detail})
+
+    plan = yaml.safe_load((ws / 'implementation-plan.yml').read_bytes()) if (ws / 'implementation-plan.yml').is_file() else None
+    check('planPresent', plan is not None, 'implementation-plan.yml missing')
+    if plan is None:
+        return {'status': 'failed', 'checks': checks, 'violations': violations, 'checkstyleOfficial': 'unverified'}
+    out = repo / plan['service']['outputDirectory']
+    check('outputDirectoryBelongsToService', plan['service']['outputDirectory'] == f'output/{service}' and out.is_dir(), plan['service']['outputDirectory'])
+    planned = {f['path']: f for f in plan['files']['generate']}
+    manifest_path = out / MANIFEST
+    manifest = yaml.safe_load(manifest_path.read_bytes()) if manifest_path.is_file() else None
+    check('manifestPresent', manifest is not None, MANIFEST)
+    partial = bool(manifest) and manifest.get('complete') is False
+    rows = {r['path']: r for r in (manifest or {}).get('fileInventory') or []}
+    # inventory: files the plan creates/updates must exist (all of them unless the run was declared partial)
+    expected = [p for p, f in planned.items() if f['action'] in ('create', 'update') and p != MANIFEST and not fp.is_excluded(p)]
+    if partial:
+        unsupported = {u['path'] for u in manifest.get('unsupportedComponents') or []}
+        expected = [p for p in expected if p not in unsupported]
+        check('partialRunDeclaresUnsupported', bool(unsupported), 'partial manifest without unsupported components')
+    missing = [p for p in expected if not (out / p).is_file()]
+    check('plannedFilesPresent', not missing, missing[:10])
+    java_on_disk = sorted(p.relative_to(out).as_posix() for sub in ('src/main/java', 'src/test/java') if (out / sub).is_dir() for p in (out / sub).rglob('*.java'))
+    unplanned = [p for p in java_on_disk if p not in planned and p not in rows]
+    check('noUnplannedJava', not unplanned, unplanned[:10])
+    # manifest integrity
+    if manifest is not None:
+        check('manifestRowsMatchDisk', all((out / p).is_file() and sha((out / p).read_bytes()) == r['sha256'] for p, r in rows.items() if not fp.is_excluded(p)),
+              [p for p, r in rows.items() if not (out / p).is_file() or sha((out / p).read_bytes()) != r['sha256']][:10])
+        check('manifestTreeHash', manifest.get('payloadTreeSha256') == tree_hash({p: r['sha256'] for p, r in rows.items()}))
+        plan_file, spec_file = ws / 'implementation-plan.yml', ws / 'service-spec.yml'
+        inputs = manifest.get('inputs') or {}
+        check('manifestInputsCurrent', inputs.get('implementationPlanSha256') == sha(plan_file.read_bytes()) and spec_file.is_file()
+              and inputs.get('serviceSpecSha256') == sha(spec_file.read_bytes()), 'the plan or spec changed after generation')
+        check('javaTrackedByManifest', all(p in rows for p in java_on_disk if p in planned and planned[p]['action'] != 'retain'), [p for p in java_on_disk if p in planned and p not in rows][:10])
+    # structure of each generated Java file
+    problems = {p: java_structure(p, (out / p).read_text(encoding='utf-8')) for p in java_on_disk}
+    check('javaStructure', not any(problems.values()), {p: v for p, v in problems.items() if v})
+    sources = {p: (out / p).read_text(encoding='utf-8') for p in java_on_disk}
+    # planned components
+    for path, entry in planned.items():
+        kind, text = entry['componentType'], sources.get(path)
+        if text is None or fp.is_excluded(path):
+            continue
+        if kind == 'jpa-entity':
+            model = plan['persistenceModel']
+            ok = '@Entity' in text and f'@Table(name = "{model["table"]}")' in text and all(f'@Column(name = "{f["physicalColumn"]}")' in text and f' {f["property"]};' in text for f in model['fields'])
+            ok = ok and text.count('@Id') == 1
+            check(f'jpaEntity:{path}', ok, 'entity does not match the planned table and columns')
+        elif kind == 'spring-data-jpa-repository':
+            check(f'jpaRepository:{path}', 'JpaRepository<' in text and plan['persistenceModel']['entityClass'] in text, 'repository does not extend JpaRepository of the planned entity')
+        elif kind == 'activity-constants':
+            wanted = [c['constant'] for c in (entry.get('activityConstants') or [])]
+            check(f'activityConstants:{path}', all(f'String {c} =' in text for c in wanted), [c for c in wanted if f'String {c} =' not in text])
+        elif kind == 'archetype-activity-logger':
+            check(f'activityLogger:{path}', all(m in text for m in ('inicioActividad', 'finActividad', 'logContenido')), 'ActivityLogger lacks its corporate methods')
+        elif kind == 'request-headers-model':
+            check(f'requestHeaders:{path}', 'record ' in text and all(f'String {c}' in text for c in entry.get('components') or []), 'RequestHeaders components differ from the plan')
+        elif kind == 'application-service-implementation':
+            check(f'serviceLogging:{path}', 'ActivityLogger.' in text and 'RequestHeaders' in text, 'service does not use ActivityLogger/RequestHeaders')
+        elif kind == 'controller-implementation':
+            ops = [o['operationId'] for o in (plan.get('api') or {}).get('operations') or []]
+            check(f'controllerOperations:{path}', all(f' {o}(' in text for o in ops), [o for o in ops if f' {o}(' not in text])
+    if manifest is not None and manifest.get('complete'):
+        check('assumptionsRegisterPresent', (ws / 'assumptions-register.yml').is_file(), 'a complete generation records where every rule comes from')
+    validation_scope = {}
+    generated_tests = [path for path, entry in planned.items() if entry['componentType'] in ('unit-mapping-persistence-test', 'controller-contract-test', 'activity-logging-test') and (out / path).is_file()]
+    if generated_tests:
+        trace, scope = ws / 'tests-traceability.yml', ws / 'coverage-scope.yml'
+        check('testRegistersPresent', trace.is_file() and scope.is_file(), 'generated tests need tests-traceability.yml and coverage-scope.yml')
+        check('everyGeneratedTestHasTests', all('@Test' in (out / path).read_text(encoding='utf-8') for path in generated_tests), [p for p in generated_tests if '@Test' not in (out / p).read_text(encoding='utf-8')])
+        if trace.is_file() and scope.is_file():
+            register = yaml.safe_load(trace.read_bytes()) or {}
+            names = {f'{Path(p).stem}#{m}' for p in generated_tests for m in re.findall(r'void (\w+)\(\)', (out / p).read_text(encoding='utf-8'))}
+            referenced = {t for r in register.get('rules', []) if r.get('status') == 'covered' for t in r.get('tests', [])}
+            check('traceabilityPointsToExistingTests', referenced <= names, sorted(referenced - names)[:10])
+            check('uncoveredRulesHaveReasons', all(r.get('reason') for r in register.get('rules', []) if r.get('status') == 'uncovered'), 'uncovered rule without a reason')
+            scope_data = yaml.safe_load(scope.read_bytes()) or {}
+            tools = scope_data.get('tools') or {}
+            old = yaml.safe_load((ws / ts.EVIDENCE).read_bytes()) if (ws / ts.EVIDENCE).is_file() else None
+            official = yaml.safe_load((ws / ts.OFFICIAL).read_bytes()) if (ws / ts.OFFICIAL).is_file() else None
+            expected = ts.tool_status(old, ve.project_hash(out)[0], scope_data.get('threshold') or {}, official)
+            diverging = sorted(k for k in expected if (tools.get(k) or {}).get('status') != expected[k]['status'])
+            check('toolStatusesAreHonest', not diverging, f'coverage-scope tool states {diverging} do not match the recorded evidence for the current project tree (no evidence = not-executed/unverified/not-verified; changed project = stale)')
+            check('coverageNeverClaimed', scope_data.get('status') == ts.scope_status(expected)[0], 'coverage-scope status must be not-verified unless a fresh Maven build recorded JaCoCo as passed')
+            validation_scope.update({'tools': tools, 'pendingTests': scope_data.get('pendingTests'), 'limitations': scope_data.get('limitations'), 'packages': scope_data.get('packages'),
+                                     'rules': {k: scope_data['rules'][k] for k in ('covered', 'uncovered')} if scope_data.get('rules') else None, 'componentsWithGeneratedTests': scope_data.get('componentsWithGeneratedTests')})
+    # correspondence with approved specification / decisions: inactive operations are never generated
+    inactive = [o for o in (plan.get('api') or {}).get('inactiveOperationsExcluded') or []]
+    decisions = (yaml.safe_load((ws / 'sparx-reviewed-decisions.yml').read_bytes()) or {}).get('decisions') if (ws / 'sparx-reviewed-decisions.yml').is_file() else []
+    for d in decisions or []:
+        t = d.get('target') or {}
+        if t.get('disposition') == 'inactive' and t.get('path'):
+            inactive.append({'method': t.get('method'), 'path': t['path']})
+    def exposes(o, text):
+        verb = str(o.get('method') or '').capitalize()
+        if verb:      # the same path may be served by another, active method: look for the mapping of THIS method
+            return re.search(rf'@{verb}Mapping\([^)]*"{re.escape(o["path"])}"', text) is not None
+        return f'"{o["path"]}"' in text
+    leaked = sorted({f'{o.get("method")} {o["path"]}' for o in inactive for text in sources.values() if o.get('path') and exposes(o, text)})
+    check('inactiveOperationsNotGenerated', not leaked, leaked)
+    # generation only exists behind a cleared gate
+    gate_state = None
+    try:
+        gate.check_cleared(ws, repo, service)
+        gate_state = gate.CLEARED
+    except gate.GateError as error:
+        gate_state = error.status
+    check('javaOnlyWhileGateCleared', gate_state == gate.CLEARED or not java_on_disk, f'{len(java_on_disk)} Java file(s) present while the gate is {gate_state}')
+    lint = style_lint.lint_project(out) if out.is_dir() else None
+    status = 'passed' if not violations else 'failed'
+    return {'status': status, 'service': service, 'complete': not partial, 'gate': gate_state, 'checks': checks, 'violations': violations,
+            'preventiveStyleLint': {k: lint[k] for k in ('preventiveResult', 'byRule', 'filesChecked')} if lint else None,
+            'checkstyleOfficial': 'unverified', 'checkstyleNote': 'Run maven-checkstyle-plugin (offline validate); the validator never marks the official gate as passed.',
+            'validationScope': validation_scope or None, 'applicationPropertiesRead': False}
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('service')
+    parser.add_argument('--write-report', action='store_true')
+    args = parser.parse_args(argv)
+    repo = Path.cwd().resolve()
+    result = validate(repo, args.service)
+    if args.write_report:
+        (repo / '.factory' / 'services' / args.service / 'generated-service-validation.yml').write_text(yaml.safe_dump(result, sort_keys=False, allow_unicode=True, width=200), encoding='utf-8')
+    print(yaml.safe_dump(result, sort_keys=False, allow_unicode=True, width=200))
+    return 0 if result['status'] == 'passed' else 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

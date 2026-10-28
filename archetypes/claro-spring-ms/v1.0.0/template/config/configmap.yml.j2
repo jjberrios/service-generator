@@ -1,0 +1,18 @@
+# application.properties payload mounted through __CONFIG_MAP_NAME__
+spring.threads.virtual.enabled=true
+spring.application.name=__SERVICE_NAME__
+
+springdoc.packagesToScan=__BASE_PACKAGE__
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.swagger-ui.disable-swagger-default-url=true
+
+management.health.defaults.enabled=true
+management.health.livenessstate.enabled=true
+management.health.readinessstate.enabled=true
+management.endpoints.web.exposure.include=health
+management.endpoint.health.show-details=always
+
+security.jwt.secret-key=${JWT_SECRET_KEY}
+security.jwt.roles-claim=__JWT_ROLES_CLAIM__
+
+# __SPECIFICATION_OWNED_APPLICATION_PROPERTIES__

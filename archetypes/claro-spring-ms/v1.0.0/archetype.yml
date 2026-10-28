@@ -1,0 +1,717 @@
+schema_version: "1.0"
+
+archetype:
+  id: claro-spring-ms
+  version: "1.0.0"
+  status: reconciled-ready-to-freeze
+  description: Evidence-backed Java and Spring Boot microservice baseline.
+
+governance:
+  repository_policy: AGENTS.md
+  approved_decisions: archetypes/claro-spring-ms/v1.0.0/decisions.md
+  decision_precedence:
+    - explicit current user instruction
+    - approved decision in decisions.md
+    - AGENTS.md
+    - reference-project evidence
+    - agent inference
+  approved_decision_ids: [D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-011, D-012, D-013, D-014]
+  specifications_inspected: false
+  generation_ownership:
+    openapi:
+      - HTTP contract and operations
+      - request and response schemas
+      - API-declared validation
+      - server declarations and base URLs
+    sparx:
+      - behavior and business processes
+      - integrations and external clients
+      - persistence behavior
+    joint_openapi_sparx:
+      - mappings between contract and behavioral models
+    archetype:
+      - runtime and framework baseline
+      - technical project structure
+      - build, quality, logging, and delivery tooling
+
+provenance:
+  reference_root: input/reference/ms-individual
+  extraction_method: extract-archetype
+  reference_read_only: true
+  reference_state_at_revision_preflight:
+    git_status:
+      - "M .checkstyle"
+      - "M src/main/resources/application.properties"
+    note: These reference changes predated this authorized revision; no reference file was written.
+  deferred_inputs:
+    - external OpenAPI/Swagger contracts
+    - Sparx exports
+
+platform:
+  java:
+    version: "21"
+    evidence: E-001
+  spring_boot:
+    version: "3.4.1"
+    parent: org.springframework.boot:spring-boot-starter-parent
+    evidence: E-001
+  build:
+    system: Maven
+    packaging: jar
+    modules:
+      - id: root
+        path: .
+        packaging: jar
+    wrapper:
+      wrapper_version: "3.3.4"
+      maven_version: "3.9.12"
+      distribution_type: only-script
+      checksum_declared: false
+    evidence: E-002
+
+maven:
+  reference_pom_baseline:
+    mandatory: true
+    approved_decision: D-012
+    source: input/reference/ms-individual/pom.xml
+    reference_sha256: 7fa2be88ba16d29843d0f861bb0c135cac027a2c53309d1dcc0b2f9a0ea0a5dc
+    template: template/pom.xml
+    template_sha256: 105db2589bf9c7cde9e20495df8cbda31b4fca5e8fe301ad6a2ff9a573f3edb6
+    template_derivation: The template is the reference pom.xml byte-for-byte (line endings included) with only the declared substitutions. Reference literals are recorded so the reference model can be reconstructed
+      without reading the reference project.
+    policy:
+      baseline_items: parent, Java/Spring baseline, properties, repositories (repository-url convention), dependencies with reference scopes/versions, build plugins and their configuration, quality configuration,
+        profiles
+      pruning_baseline_items: forbidden (never remove a baseline item because the target does not appear to use it)
+      altering_baseline_values: forbidden (versions, scopes, repository URL composition, plugin configuration)
+      target_specific_additions: allowed only as justified dependency additions recorded in the implementation plan; rendered after the baseline and never replacing it
+      additional_jacoco_or_sonar_exclusions: allowed only as explicit justified additions; baseline exclusions stay
+      applies_to: archetype planning, full generation and every @service-generator run
+    substitutions:
+    - id: project-group-id
+      parameter: group_id
+      token: __GROUP_ID__
+      reference_value: com.claro.biometria.individual.support
+      reference_snippets:
+      - <groupId>com.claro.biometria.individual.support</groupId>
+    - id: project-artifact-id-and-name
+      parameter: artifact_id
+      token: __ARTIFACT_ID__
+      reference_value: ms-individual
+      reference_snippets:
+      - <artifactId>ms-individual</artifactId>
+      - <name>ms-individual</name>
+    - id: project-version
+      parameter: project_version
+      token: __PROJECT_VERSION__
+      reference_value: 1.0.0-SNAPSHOT
+      reference_snippets:
+      - <version>1.0.0-SNAPSHOT</version>
+    - id: sonar-application-class
+      parameter: application_class
+      token: __APPLICATION_CLASS__
+      reference_value: IndividualApplication
+      reference_snippets:
+      - '**/IndividualApplication.java,'
+    - id: jacoco-root-package-classes
+      parameter: base_package_path
+      token: __BASE_PACKAGE_PATH__
+      reference_value: com/claro/biometria/individual/support
+      reference_snippets:
+      - com/claro/biometria/individual/support/*.class
+    inventory:
+      properties:
+      - checkstyle-maven-plugin.version
+      - claro-common-logger.version
+      - claro-common-utilities-version
+      - commons-io.version
+      - doxia-core.version
+      - httpclient5.version
+      - jackson.databind.nullable.version
+      - jacoco-maven-plugin.version
+      - java.version
+      - json.version
+      - logstash-logback-encoder.version
+      - maven-compiler-plugin.version
+      - maven-surefire-plugin.version
+      - repository-url
+      - sonar.coverage.exclusions
+      - springdoc.version
+      - tomcat.version
+      repositories:
+      - local-claro-release
+      - local-claro-snapshot
+      - release
+      dependencies:
+      - com.claro.common:claro-common-logger
+      - com.claro.common:claro-common-utilities
+      - com.oracle.database.jdbc:ojdbc11
+      - commons-io:commons-io
+      - io.jsonwebtoken:jjwt-api
+      - io.jsonwebtoken:jjwt-impl
+      - io.jsonwebtoken:jjwt-jackson
+      - io.micrometer:micrometer-tracing-bridge-brave
+      - net.logstash.logback:logstash-logback-encoder
+      - org.apache.httpcomponents.client5:httpclient5
+      - org.apache.tomcat.embed:tomcat-embed-core
+      - org.json:json
+      - org.projectlombok:lombok
+      - org.springdoc:springdoc-openapi-starter-webmvc-ui
+      - org.springframework.boot:spring-boot-starter-actuator
+      - org.springframework.boot:spring-boot-starter-data-jpa
+      - org.springframework.boot:spring-boot-starter-security
+      - org.springframework.boot:spring-boot-starter-test
+      - org.springframework.boot:spring-boot-starter-validation
+      - org.springframework.boot:spring-boot-starter-web
+      - org.springframework.kafka:spring-kafka
+      plugins:
+      - org.apache.maven.plugins:maven-checkstyle-plugin
+      - org.apache.maven.plugins:maven-compiler-plugin
+      - org.apache.maven.plugins:maven-surefire-plugin
+      - org.jacoco:jacoco-maven-plugin
+      - org.springframework.boot:spring-boot-maven-plugin
+      profiles:
+      - local
+  settings_file: template/settings.xml
+  credentials_embedded: false
+  coordinates:
+    group_id_rule: same-as-base_package
+    project_version_default: 1.0.0-SNAPSHOT
+    target_version_override_allowed: true
+    approved_decision: D-010
+  corporate_repositories:
+    enabled: true
+    parameterized: false
+    pom_convention: "reference convention: <repository-url> property plus repositories release, local-claro-snapshot and local-claro-release composed as ${repository-url}/<path>/ (D-012)"
+    settings_baseline_static: true
+    pom_repositories:
+      - release
+      - local-claro-snapshot
+      - local-claro-release
+    settings_features:
+      - mirror
+      - active custom-repos and public-repos profiles
+      - release repository
+      - snapshot repository
+      - plugin repository
+    approved_decision: D-009
+    evidence: E-003
+  approved_corporate_baseline:
+    approved_decision: D-009
+    pom_repository_base: http://artifactory.claro.pe/artifactory
+    pom_repository_property: repository-url
+    pom_repositories:
+      - {id: release, url_composition: "${repository-url}/virtual-claro-maven/", url: http://artifactory.claro.pe/artifactory/virtual-claro-maven/, tokenized: false}
+      - {id: local-claro-snapshot, url_composition: "${repository-url}/local-claro-maven-snapshot/", url: http://artifactory.claro.pe/artifactory/local-claro-maven-snapshot/, tokenized: false}
+      - {id: local-claro-release, url_composition: "${repository-url}/local-claro-maven-release/", url: http://artifactory.claro.pe/artifactory/local-claro-maven-release/, tokenized: false}
+    mirrors:
+      - {id: claro-nexus, mirror_of: central, url: http://172.19.90.65:8081/repository/maven-public/}
+      - {id: claro-nexus-list, mirror_of: '*', url: http://172.19.90.65:8081/repository/maven-releases/}
+    settings_profiles:
+      - id: custom-repos
+        active: true
+        repositories:
+          - {id: maven-public, url: http://172.19.90.65:8081/repository/maven-releases/}
+          - {id: maven-releases, url: http://172.19.90.65:8081/repository/maven-releases/}
+        plugin_repositories:
+          - {id: maven-plugins, url: http://172.19.90.65:8081/repository/maven-public/}
+      - id: public-repos
+        active: true
+        repositories:
+          - {id: central, url: https://repo.maven.apache.org/maven2/}
+          - {id: spring-releases, url: https://repo.spring.io/release/}
+        plugin_repositories:
+          - {id: central, url: https://repo.maven.apache.org/maven2/}
+          - {id: spring-plugins, url: https://repo.spring.io/plugins-release/}
+    active_profiles: [custom-repos, public-repos]
+    server_credentials: absent-in-approved-reference-settings
+    execution_prerequisite: network or VPN access to the internal Maven mirror endpoints
+
+dependencies:
+  - {coordinate: org.springframework.boot:spring-boot-starter-web, version_source: spring-boot-parent, purpose: Spring MVC transport, evidence: E-004}
+  - {coordinate: org.springframework.boot:spring-boot-starter-actuator, version_source: spring-boot-parent, purpose: health endpoints, evidence: E-004}
+  - {coordinate: org.springframework.boot:spring-boot-starter-validation, version_source: spring-boot-parent, purpose: Jakarta Validation tooling, evidence: E-004}
+  - {coordinate: org.springdoc:springdoc-openapi-starter-webmvc-ui, version: "2.7.0", purpose: OpenAPI UI tooling, evidence: E-004}
+  - {coordinate: org.projectlombok:lombok, version_source: spring-boot-parent, optional: true, purpose: source generation, evidence: E-004}
+  - {coordinate: net.logstash.logback:logstash-logback-encoder, version: "7.4", purpose: JSON Logback encoder, approved_decision: D-001, evidence: E-005}
+  - {coordinate: com.claro.common:claro-common-logger, version: "3.6.3", purpose: corporate logging appender and scan, approved_decision: D-001, evidence: E-005}
+  - {coordinate: org.springframework.boot:spring-boot-starter-security, version_source: spring-boot-parent, purpose: temporary security baseline, approved_decision: D-002, evidence: E-006}
+  - {coordinate: io.jsonwebtoken:jjwt-api, version: "0.11.5", purpose: JWT API, approved_decision: D-002, evidence: E-006}
+  - {coordinate: io.jsonwebtoken:jjwt-impl, version: "0.11.5", scope: runtime, purpose: JWT implementation, approved_decision: D-002, evidence: E-006}
+  - {coordinate: io.jsonwebtoken:jjwt-jackson, version: "0.11.5", scope: runtime, purpose: JWT JSON binding, approved_decision: D-002, evidence: E-006}
+  - {coordinate: org.springframework.boot:spring-boot-starter-test, version_source: spring-boot-parent, scope: test, purpose: JUnit and Mockito tests, evidence: E-007}
+  - {coordinate: com.claro.common:claro-common-utilities, version: "1.1.6", version_property: claro-common-utilities-version, purpose: reference baseline dependency, approved_decision: D-012, evidence: E-024}
+  - {coordinate: org.apache.tomcat.embed:tomcat-embed-core, version: "10.1.25", version_property: tomcat.version, purpose: reference baseline dependency (overrides the Spring Boot managed Tomcat version), approved_decision: D-012, evidence: E-024}
+  - {coordinate: io.micrometer:micrometer-tracing-bridge-brave, version_source: spring-boot-parent, purpose: reference baseline dependency, approved_decision: D-012, evidence: E-024}
+  - {coordinate: commons-io:commons-io, version: "2.11.0", version_property: commons-io.version, purpose: reference baseline dependency, approved_decision: D-012, evidence: E-024}
+  - {coordinate: org.json:json, version: "20231013", version_property: json.version, purpose: reference baseline dependency, approved_decision: D-012, evidence: E-024}
+  - {coordinate: org.springframework.kafka:spring-kafka, version_source: spring-boot-parent, purpose: reference baseline dependency, approved_decision: D-012, evidence: E-024}
+  - {coordinate: org.apache.httpcomponents.client5:httpclient5, version: "5.4.1", version_property: httpclient5.version, purpose: reference baseline dependency, approved_decision: D-012, evidence: E-024}
+  - {coordinate: org.springframework.boot:spring-boot-starter-data-jpa, version_source: spring-boot-parent, purpose: Spring Data JPA / Hibernate / HikariCP persistence architecture, approved_decision: D-011, evidence: E-023}
+  - {coordinate: com.oracle.database.jdbc:ojdbc11, version: "21.11.0.0", scope: runtime, purpose: Oracle JDBC driver for the JPA datasource, approved_decision: D-011, evidence: E-023}
+
+plugins:
+  - coordinate: org.apache.maven.plugins:maven-compiler-plugin
+    version: "3.8.1"
+    configuration: {release: "21"}
+    evidence: E-008
+  - coordinate: org.apache.maven.plugins:maven-surefire-plugin
+    version: "2.22.2"
+    configuration: {reuseForks: true}
+    evidence: E-007
+  - coordinate: org.springframework.boot:spring-boot-maven-plugin
+    version_source: spring-boot-parent
+    configuration: {exclude_from_package: [org.projectlombok:lombok]}
+    evidence: E-008
+  - coordinate: org.apache.maven.plugins:maven-checkstyle-plugin
+    version: "3.3.1"
+    phase: validate
+    goals: [check]
+    configuration:
+      include_test_sources: true
+      rules: src/main/resources/checkstyle.xml
+    evidence: E-009
+  - coordinate: org.jacoco:jacoco-maven-plugin
+    version: "0.8.11"
+    phases:
+      prepare-agent: default
+      report_and_check: test
+    plugin_dependencies:
+      - {coordinate: org.apache.maven.doxia:doxia-core, version: "1.11.1"}
+    approved_decision: D-004
+    evidence: E-010
+
+quality:
+  checkstyle:
+    enabled: true
+    line_length: 250
+    indentation_spaces: 4
+    evidence: E-009
+    approved_decision: D-014
+    mandatory_generation_gate: true
+    config: src/main/resources/checkstyle.xml
+    include_test_source_directory: true
+    sources: [src/main/java, src/test/java]
+    authority: the complete reference checkstyle.xml (not a list of known rules)
+    suppressions_allowed: false
+    generated_code_exclusions_allowed: false
+    weakening_allowed: false
+    syntax_parse_substitutes_checkstyle: false
+    unexecutable_status: unverified
+    pass_requires: 0 violations
+    known_violating_patterns:
+      - annotation-array children indented outside {6, 12} (basic 4 + arrayInitIndent 2, or line wrap 8 + 4)
+      - switch expression directly after an opening parenthesis (WhitespaceAround)
+      - local variable declared more than 3 statements before first use (VariableDeclarationUsageDistance)
+      - numeric literal outside -1, 0, 1, 2, 4, 200, 201, 400, 401, 403, 404, 418, 500, 1000 (MagicNumber, also in tests; use meaningful constants)
+  jacoco:
+    enabled: true
+    counter: INSTRUCTION
+    value: COVEREDRATIO
+    element: PACKAGE
+    minimumCoverage: 80
+    baseline: reference pom.xml (D-012); only the target package path is substituted
+    default_exclusions:
+      - "**/client/**"
+      - "**/configuration/**"
+      - "**/controller/**"
+      - "**/dto/**"
+      - "**/exception/**"
+      - "**/model/**"
+      - "**/security/**"
+      - "**/kafka/**"
+      - "**/repository/**"
+      - "__BASE_PACKAGE_PATH__/*.class"
+    approved_decision: D-004
+    evidence: E-010
+  sonar:
+    baseline: reference pom.xml sonar.coverage.exclusions (D-012); only the application class name is substituted
+    independently_configurable_from_jacoco: true
+    default_exclusions:
+      - "**/client/**"
+      - "**/configuration/**"
+      - "**/controller/**"
+      - "**/dto/**"
+      - "**/exception/**"
+      - "**/model/**"
+      - "**/security/**"
+      - "**/kafka/**"
+      - "**/__APPLICATION_CLASS__.java"
+    approved_decision: D-004
+    evidence: E-010
+
+testing:
+  framework: JUnit Jupiter
+  mocking: Mockito
+  conventions:
+    - tests mirror production package paths
+    - unit tests use the Test suffix
+    - isolated tests use MockitoExtension, Mock, and InjectMocks
+    - Nested and DisplayName may group scenarios
+  generated_test_content_owner: OpenAPI and Sparx
+  evidence: E-007
+
+package_structure:
+  root: __BASE_PACKAGE__
+  reusable_static:
+    - configuration.openapi
+    - configuration.security
+    - security.filter
+    - security.service
+    - security.service.impl
+  generated_from_specification:
+    - controller
+    - controller.impl
+    - dto.request
+    - dto.response
+    - dto.mapper
+    - service
+    - service.impl
+    - client
+    - model
+    - repository
+    - exception
+  evidence: E-011
+
+package_naming:
+  base_package_template: com.claro.<normalized-service-identity>.support
+  corporate_namespace: com.claro
+  service_identity_normalization:
+    lowercase: true
+    hyphen_separator: dot-separated-package-segments
+    prefix_removal: only-when-explicitly-authorized-for-the-target
+  technical_suffix: support
+  base_package_path_rule: replace-dots-with-slashes
+  approved_decision: D-008
+
+activity_logging:
+  approved_decision: D-013
+  mandatory: true
+  evidence: E-025
+  origin: local reference utility (no corporate dependency); inspected in the approved reference project, not invented
+  reference_classes: [utils/ActivityLogger, utils/ConstanApi, dto/request/RequestHeaders, service implementation (ejecutarActividad, logGet/logCreate/logUpdate), utils/ActivityLoggerTest]
+  template_files:
+    - {path: template/src/main/java/__BASE_PACKAGE_PATH__/utils/ActivityLogger.java, sha256: fa1972dd8a91c9767dcad4560f42b7758ec835ba4de5f952802a6150671f05fb, role: ActivityLogger utility copied from the reference (package token only)}
+    - {path: template/src/main/java/__BASE_PACKAGE_PATH__/utils/ConstanApi.java, sha256: df95238e55038301ce117be92668ed6ba875240e75ebce6e4ad258a80fca8ce3, role: reusable technical constants (separators); activity and log-message constants are generated from the service specification after the ACTIVIDADES (LOGS) marker comment}
+    - {path: template/src/test/java/__BASE_PACKAGE_PATH__/utils/ActivityLoggerTest.java, sha256: b83401316e4f61a3c6c0f5c0ae82ea2c4be7e33e79bda00ed6e0bc19b4c62f20, role: reference ActivityLoggerTest}
+  dependencies_required: none beyond the Maven baseline (slf4j, Jackson databind and jsr310 via spring-boot-starter-web, Lombok @Slf4j)
+  activity_logger:
+    start: "ActivityLogger.inicioActividad(Logger, mensajeTransaccion, actividad): three info lines - SEPARADOR; mensajeTransaccion + INICIO_ACTIVIDAD + actividad + SEPARADOR_ACTIVIDAD; SEPARADOR"
+    end: "ActivityLogger.finActividad(Logger, mensajeTransaccion, actividad): same structure with FIN_ACTIVIDAD"
+    body: "ActivityLogger.logContenido(Logger, mensaje, Object contenido, Class<T> tipo): ObjectMapper(JavaTimeModule).convertValue(contenido, tipo), pretty-printed, log.info(mensaje, bodyJson); on any exception log.error(\"Error serializando body: {}\", message)"
+    masking: none - the reference filters and masks nothing; none is added by the archetype
+  transaction_prefix:
+    local_variables: "String tx = headers != null ? headers.transactionId() : null; String menTran = tx != null ? \"[\" + tx + \"] \" : NO_TRANSACTION_PREFIX;"
+    no_transaction_prefix: "[SIN-TRANSACTION] "
+    transaction_identifier: the transactionId component of the service RequestHeaders model, mapped explicitly from a declared target header (never from a business field)
+  request_headers_model:
+    location: dto/request/RequestHeaders (Java record)
+    reference_components: [transactionId, msgid, timestamp, userId, applicationName]
+    rule: one component per reference role that has a corresponding header declared by the target contract (transactionId mandatory); components without a target header are omitted, never invented
+    role_matching: "transactionId <- header named transactionId, else the single header whose name contains 'correlation'; userId <- header whose name without a leading x- is userid; applicationName <- header whose name without a leading x- is applicationname or appid; an explicit planning-input mapping overrides derivation; anything ambiguous or missing for transactionId fails planning"
+  service_methods: receive RequestHeaders as first parameter (reference signature style)
+  activity_wrapper:
+    name: ejecutarActividad
+    signature: "private <T> T ejecutarActividad(String menTran, String actividad, Supplier<T> accion)"
+    behavior: "ActivityLogger.inicioActividad(log, menTran, actividad); T result = accion.get(); ActivityLogger.finActividad(log, menTran, actividad); return result"
+    business_exception: "catch the service business exception: log.error(\"{} ERROR [{}] message={}\", menTran, actividad, ex.getMessage()); rethrow"
+    unexpected_exception: "catch Exception: log.error(\"{} ERROR [{}] unexpected exception={}\", menTran, actividad, ex.getMessage()); rethrow"
+    swallowing_exceptions: forbidden
+  request_logging:
+    helpers: "private void log<Operation>(RequestHeaders h, <supplied request values>) - one per active operation"
+    metadata_line: "<OperationName> applicationName={}, transactionId={}, msgid={}, timestamp={}, userId={}[, request values] (components absent from the target header model are omitted)"
+    body: "ActivityLogger.logContenido(log, \"<OperationName> body: {}\", body, <BodyType>.class) - never body.toString() or a direct serialization"
+    controller_entry: "log.info(\"<operation> - transactionId: {}[, usuario: {}]\", ...) in the controller (@Slf4j), as the reference controller does"
+  error_logging:
+    business: "inside the behavior activity: log.error(\"{} ERROR [{}] code={} detail={}\", menTran, ACT, status, detail) then throw the business exception"
+    technical_timeout: "catch QueryTimeoutException: log.error(\"{} {}: {}\", menTran, LOG_TIMEOUT_<ACT>, e.getMessage()); then the target's approved timeout mapping"
+    technical_data: "catch DataAccessException: log.error(\"{} {}: {}\", menTran, LOG_ERROR_DATOS_<ACT>, e.getMessage()); then the target's approved mapping"
+    validation_in_handler: "framework 400 failures are logged under the validation activity (inicioActividad, log.error, finActividad) when every active operation shares one validation activity constant"
+    note: logging is instrumentation around the approved behavior and never changes status mapping
+  activity_constants:
+    source: the authoritative activities of each operation in service-spec.yml (behavior.sources / process flow); never invented
+    name: "ACT<n>_<NORMALIZED_NAME> for the Sparx activity named '<n>. <Name>' (accents removed, uppercase, non-alphanumerics to underscore)"
+    value: "<NORMALIZED_NAME>"
+    log_messages: "LOG_TIMEOUT_<ACT> and LOG_ERROR_DATOS_<ACT> for each behavior activity that accesses persistence"
+    forbidden: reference-service constants and messages (for example Individual-specific names), artificial steps created only to produce logs
+
+persistence:
+  approved_decision: D-011
+  authority_order: [explicit user instruction, explicit target-specific approved technical requirement, approved archetype/reference architecture]
+  technology: spring-data-jpa
+  provider: hibernate
+  connection_pool: hikaricp
+  database: oracle
+  inherited_from_archetype: true
+  jdbc_replacement_allowed_only_when: explicit user instruction or explicit authoritative target technical requirement
+  planner_preference_or_simplicity_is_not_a_reason: true
+  conventions:
+    entity: "Lombok @Data/@NoArgsConstructor/@AllArgsConstructor; jakarta.persistence @Entity, @Table(name=...), @Id, @Column(name=...); entities live in the model package"
+    table_schema: "@Table schema is set only when the target specification defines one; the reference's schema value is never copied"
+    id_generation: "@GeneratedValue(strategy = GenerationType.IDENTITY) on the primary key (reference convention); real database mechanism remains an explicit runtime risk, no sequence is invented"
+    types: "Long for NUMBER keys, Integer for numeric flags, String for text, LocalDate/LocalDateTime for date columns, no Boolean conversion"
+    repository: "interface extending JpaRepository<Entity, Long> annotated @Repository, in the repository package; derived finders where possible"
+    dynamic_queries: "No dynamic-query mechanism appears in the reference. When a target behavior needs one, JpaSpecificationExecutor/Specification is the permitted extension of the same Spring Data JPA repository; manual SQL concatenation is forbidden"
+    audit_timestamps: "set in the service with LocalDateTime.now(ZoneId.systemDefault()) before save (reference convention)"
+    transactions: "no explicit @Transactional in the reference; Spring Data repository methods are transactional"
+    exceptions: "service catches QueryTimeoutException (-> timeout) and DataAccessException (-> unavailable) around repository calls; target specifications may refine the status mapping"
+  evidence: E-023
+
+runtime:
+  application_properties:
+    static:
+      spring.threads.virtual.enabled: true
+      server.port: 8085
+      logging.level.root: INFO
+      logging.level.org.apache.hc.client5.http: DEBUG
+      management.health.db.enabled: true
+      spring.datasource.driver-class-name: oracle.jdbc.OracleDriver
+      spring.datasource.hikari.maximum-pool-size: 5
+      spring.datasource.hikari.auto-commit: false
+      spring.datasource.hikari.connection-timeout: 1000
+      spring.datasource.hikari.minimum-idle: 3
+      spring.datasource.hikari.connection-test-query: select 1 from dual
+      spring.jpa.show-sql: false
+      spring.jpa.generate-ddl: false
+      spring.jpa.hibernate.ddl-auto: validate
+      spring.jpa.properties.hibernate.jdbc.timeout: 1
+      spring.cloud.compatibility-verifier.enabled: false
+      springdoc.swagger-ui.path: /swagger-ui.html
+      springdoc.swagger-ui.disable-swagger-default-url: true
+      management.health.defaults.enabled: true
+      management.health.livenessstate.enabled: true
+      management.health.readinessstate.enabled: true
+      management.endpoints.web.exposure.include: health
+      management.endpoint.health.show-details: always
+    parameterized:
+      spring.application.name: __SERVICE_NAME__
+      springdoc.packagesToScan: __BASE_PACKAGE__
+      logging.level.__BASE_PACKAGE__: DEBUG
+      security.jwt.roles-claim: __JWT_ROLES_CLAIM__
+    environment_only:
+      security.jwt.secret-key: JWT_SECRET_KEY
+      spring.datasource.url: DB_URL
+      spring.datasource.username: DB_USERNAME
+      spring.datasource.password: DB_PASSWORD
+    excluded_reference_sections:
+      - SUBTYPES IDF (subtype.*, detail.*, message.*): domain/service-specific properties
+    baseline_blocks: [APPLICATION, LOGGING, SWAGGER, ACTUATOR, DATA SOURCE, HIKARI, JPA / HIBERNATE, JWT TOKEN, SPRING CLOUD]
+    baseline_decision: D-011
+    jwt_secret_note: The reference declares a development-only default for JWT_SECRET_KEY; D-002 (no fallback) takes precedence and is retained. The conflict is recorded in D-011.
+  logging:
+    file: src/main/resources/logback.xml
+    excluded_file: src/main/resources/logback-spring.xml
+    strategy: JSON console plus corporate appender
+    approved_decision: D-001
+    evidence: E-005
+  security:
+    status: temporary-compatibility-baseline
+    filter_chain: permit-all
+    jwt_filter_registered_in_chain: false
+    secret_fallback_allowed: false
+    warning: The retained baseline does not enforce JWT authentication.
+    approved_decision: D-002
+    evidence: E-006
+  openapi:
+    tooling: Springdoc WebMVC UI
+    hardcoded_server_declaration: false
+    contract_metadata_in_template: false
+    approved_decision: D-007
+    evidence: E-012
+
+delivery:
+  jenkins:
+    shared_library: master-library-bitbucket-new
+    pipeline: MicroserviciosPipeline
+    evidence: E-013
+  docker:
+    included: true
+    strategy:
+      - multi-stage builder and runtime images
+      - Maven build with sanitized settings.xml
+      - separated classes and dependencies
+      - classpath entrypoint
+    approved_decision: D-005
+    evidence: E-014
+  kubernetes:
+    included: true
+    artifacts:
+      - template/config/deployment.yml.j2
+      - template/config/ExternalSecret.yml.j2
+      - template/config/configmap.yml.j2
+    patterns:
+      - rolling update
+      - parameterized ConfigMap mount and Secret envFrom
+      - ExternalSecret backed by a parameterized Vault store
+      - non-root container with dropped capabilities and RuntimeDefault seccomp
+    approved_decision: D-006
+    evidence: E-015
+
+parameter_token_policy:
+  syntax: "__[A-Z0-9_]+__"
+  non_parameter_wrapper_identifiers:
+    - __MVNW_ARG0_NAME__
+    - __MVNW_CMD__
+    - __MVNW_ERROR__
+  note: These three identifiers are internal variables in the unmodified official Maven Wrapper script.
+
+parameters:
+  - {name: group_id, token: __GROUP_ID__, source: derived from base_package by approved D-010, derivation_rule: base_package, valid_form: Maven groupId, affected_paths: [template/pom.xml], replacement_scope: exact-token}
+  - {name: artifact_id, token: __ARTIFACT_ID__, source: service-generation input, valid_form: lowercase kebab-case, affected_paths: [template/pom.xml], replacement_scope: exact-token}
+  - {name: project_version, token: __PROJECT_VERSION__, source: approved initial project version D-010, default_value: 1.0.0-SNAPSHOT, target_override_allowed: true, valid_form: Maven version, affected_paths: [template/pom.xml], replacement_scope: exact-token}
+  - {name: service_name, token: __SERVICE_NAME__, source: service-generation input, valid_form: lowercase kebab-case, affected_paths: [template/Jenkinsfile, template/src/main/resources/application.properties, template/src/main/resources/logback.xml, template/config/deployment.yml.j2, template/config/ExternalSecret.yml.j2, template/config/configmap.yml.j2], replacement_scope: exact-token}
+  - {name: base_package, token: __BASE_PACKAGE__, source: derived from approved service identity using package_naming unless an explicit target-specific package instruction applies, valid_form: lowercase dot-separated Java package, affected_paths: [template/src/main/java/__BASE_PACKAGE_PATH__/__APPLICATION_CLASS__.java, template/src/main/java/__BASE_PACKAGE_PATH__/configuration/openapi/OpenApiConfig.java, template/src/main/java/__BASE_PACKAGE_PATH__/configuration/security/SecurityConfig.java, template/src/main/java/__BASE_PACKAGE_PATH__/security/filter/JwtRequestFilter.java, template/src/main/java/__BASE_PACKAGE_PATH__/security/service/JwtValidatorService.java, template/src/main/java/__BASE_PACKAGE_PATH__/security/service/impl/JwtValidatorServiceImpl.java, template/src/main/resources/application.properties, template/src/main/resources/logback.xml, template/Dockerfile, template/config/configmap.yml.j2, template/src/main/java/__BASE_PACKAGE_PATH__/utils/ActivityLogger.java, template/src/main/java/__BASE_PACKAGE_PATH__/utils/ConstanApi.java, template/src/test/java/__BASE_PACKAGE_PATH__/utils/ActivityLoggerTest.java], replacement_scope: exact-token}
+  - {name: base_package_path, token: __BASE_PACKAGE_PATH__, source: derived from base_package, valid_form: slash-separated Java path, affected_paths: [template/pom.xml, template/src/main/java/__BASE_PACKAGE_PATH__], replacement_scope: exact-path-segment-or-token}
+  - {name: application_class, token: __APPLICATION_CLASS__, source: service-generation input, valid_form: UpperCamelCase ending in Application, affected_paths: [template/pom.xml, template/Dockerfile, template/src/main/java/__BASE_PACKAGE_PATH__/__APPLICATION_CLASS__.java], replacement_scope: exact-path-segment-or-token}
+  - {name: vault_name, token: __VAULT_NAME__, source: approved CI configuration, valid_form: organization-approved identifier, affected_paths: [template/Jenkinsfile], replacement_scope: exact-token}
+  - {name: jwt_roles_claim, token: __JWT_ROLES_CLAIM__, source: approved security/deployment configuration, valid_form: JWT claim name, affected_paths: [template/src/main/resources/application.properties, template/config/configmap.yml.j2], replacement_scope: exact-token}
+  - {name: root_log_level, token: __ROOT_LOG_LEVEL__, source: logging configuration input, valid_form: Logback level, affected_paths: [template/src/main/resources/logback.xml], replacement_scope: exact-token}
+  - {name: application_log_level, token: __APPLICATION_LOG_LEVEL__, source: logging configuration input, valid_form: Logback level, affected_paths: [template/src/main/resources/logback.xml], replacement_scope: exact-token}
+  - {name: corporate_logger_level, token: __CORPORATE_LOGGER_LEVEL__, source: logging configuration input, valid_form: Logback level, affected_paths: [template/src/main/resources/logback.xml], replacement_scope: exact-token}
+  - {name: http_log_level, token: __HTTP_LOG_LEVEL__, source: logging configuration input, valid_form: Logback level, affected_paths: [template/src/main/resources/logback.xml], replacement_scope: exact-token}
+  - {name: log_time_zone, token: __LOG_TIME_ZONE__, source: deployment configuration input, valid_form: Java time-zone identifier, affected_paths: [template/src/main/resources/logback.xml], replacement_scope: exact-token}
+  - {name: corporate_maven_mirror_id, source: approved static Maven settings baseline D-009, default_value: claro-nexus, baseline_only: true, valid_form: Maven mirror id, affected_paths: [], replacement_scope: static-template-value}
+  - {name: corporate_maven_mirror_of, source: approved static Maven settings baseline D-009, default_value: central, baseline_only: true, valid_form: Maven mirrorOf expression, affected_paths: [], replacement_scope: static-template-value}
+  - {name: corporate_maven_mirror_url, source: approved static Maven settings baseline D-009, default_value: http://172.19.90.65:8081/repository/maven-public/, baseline_only: true, valid_form: URL, affected_paths: [], replacement_scope: static-template-value}
+  - {name: corporate_maven_profile_id, source: approved static Maven settings baseline D-009, default_value: custom-repos, baseline_only: true, valid_form: Maven profile id, affected_paths: [], replacement_scope: static-template-value}
+  - {name: corporate_plugin_repository_id, source: approved static Maven settings baseline D-009, default_value: maven-plugins, baseline_only: true, valid_form: Maven repository id, affected_paths: [], replacement_scope: static-template-value}
+  - {name: corporate_plugin_repository_url, source: approved static Maven settings baseline D-009, default_value: http://172.19.90.65:8081/repository/maven-public/, baseline_only: true, valid_form: URL, affected_paths: [], replacement_scope: static-template-value}
+  - {name: builder_image, token: __BUILDER_IMAGE__, source: container platform input, valid_form: OCI image reference, affected_paths: [template/Dockerfile], replacement_scope: exact-token}
+  - {name: runtime_image, token: __RUNTIME_IMAGE__, source: container platform input, valid_form: OCI image reference, affected_paths: [template/Dockerfile], replacement_scope: exact-token}
+  - {name: container_port, token: __CONTAINER_PORT__, source: deployment configuration input, valid_form: integer 1-65535, affected_paths: [template/Dockerfile, template/config/deployment.yml.j2], replacement_scope: exact-token}
+  - {name: spring_config_location, token: __SPRING_CONFIG_LOCATION__, source: deployment configuration input, valid_form: Spring resource or filesystem location, affected_paths: [template/Dockerfile], replacement_scope: exact-token}
+  - {name: time_zone, token: __TIME_ZONE__, source: deployment configuration input, valid_form: Java time-zone identifier, affected_paths: [template/Dockerfile], replacement_scope: exact-token}
+  - {name: k8s_namespace, token: __K8S_NAMESPACE__, source: deployment configuration input, valid_form: Kubernetes DNS label, affected_paths: [template/config/deployment.yml.j2, template/config/ExternalSecret.yml.j2], replacement_scope: exact-token}
+  - {name: k8s_part_of, token: __K8S_PART_OF__, source: deployment configuration input, valid_form: Kubernetes label value, affected_paths: [template/config/deployment.yml.j2, template/config/ExternalSecret.yml.j2], replacement_scope: exact-token}
+  - {name: k8s_managed_by, token: __K8S_MANAGED_BY__, source: deployment configuration input, valid_form: Kubernetes label value, affected_paths: [template/config/deployment.yml.j2, template/config/ExternalSecret.yml.j2], replacement_scope: exact-token}
+  - {name: environment, token: __ENVIRONMENT__, source: deployment configuration input, valid_form: Kubernetes label value, affected_paths: [template/config/deployment.yml.j2, template/config/ExternalSecret.yml.j2], replacement_scope: exact-token}
+  - {name: k8s_owner, token: __K8S_OWNER__, source: deployment configuration input, valid_form: Kubernetes label value, affected_paths: [template/config/deployment.yml.j2, template/config/ExternalSecret.yml.j2], replacement_scope: exact-token}
+  - {name: replica_count, token: __REPLICA_COUNT__, source: deployment configuration input, valid_form: non-negative integer, affected_paths: [template/config/deployment.yml.j2], replacement_scope: exact-token}
+  - {name: k8s_tier, token: __K8S_TIER__, source: deployment configuration input, valid_form: Kubernetes label value, affected_paths: [template/config/deployment.yml.j2], replacement_scope: exact-token}
+  - {name: source_repository_url, token: __SOURCE_REPOSITORY_URL__, source: CI source metadata, valid_form: HTTPS repository URL, affected_paths: [template/config/deployment.yml.j2], replacement_scope: exact-token}
+  - {name: image_tag, token: __IMAGE_TAG__, source: CI build metadata, valid_form: OCI image tag, affected_paths: [template/config/deployment.yml.j2], replacement_scope: exact-token}
+  - {name: service_account_name, token: __SERVICE_ACCOUNT_NAME__, source: deployment configuration input, valid_form: Kubernetes resource name, affected_paths: [template/config/deployment.yml.j2], replacement_scope: exact-token}
+  - {name: config_map_name, token: __CONFIG_MAP_NAME__, source: deployment configuration input, valid_form: Kubernetes resource name, affected_paths: [template/config/deployment.yml.j2, template/config/configmap.yml.j2], replacement_scope: exact-token}
+  - {name: container_registry, token: __CONTAINER_REGISTRY__, source: container platform input, valid_form: registry host and optional path, affected_paths: [template/config/deployment.yml.j2], replacement_scope: exact-token}
+  - {name: image_repository, token: __IMAGE_REPOSITORY__, source: CI/container configuration input, valid_form: OCI repository path, affected_paths: [template/config/deployment.yml.j2], replacement_scope: exact-token}
+  - {name: image_pull_policy, token: __IMAGE_PULL_POLICY__, source: deployment configuration input, valid_form: Always IfNotPresent or Never, affected_paths: [template/config/deployment.yml.j2], replacement_scope: exact-token}
+  - {name: secret_name, token: __SECRET_NAME__, source: deployment configuration input, valid_form: Kubernetes resource name, affected_paths: [template/config/deployment.yml.j2, template/config/ExternalSecret.yml.j2], replacement_scope: exact-token}
+  - {name: config_mount_path, token: __CONFIG_MOUNT_PATH__, source: deployment configuration input, valid_form: absolute container path, affected_paths: [template/config/deployment.yml.j2], replacement_scope: exact-token}
+  - {name: external_secret_refresh_interval, token: __EXTERNAL_SECRET_REFRESH_INTERVAL__, source: deployment configuration input, valid_form: duration, affected_paths: [template/config/ExternalSecret.yml.j2], replacement_scope: exact-token}
+  - {name: vault_secret_store_name, token: __VAULT_SECRET_STORE_NAME__, source: secret platform input, valid_form: Kubernetes resource name, affected_paths: [template/config/ExternalSecret.yml.j2], replacement_scope: exact-token}
+  - {name: vault_secret_store_kind, token: __VAULT_SECRET_STORE_KIND__, source: secret platform input, valid_form: SecretStore or ClusterSecretStore, affected_paths: [template/config/ExternalSecret.yml.j2], replacement_scope: exact-token}
+  - {name: vault_secret_path, token: __VAULT_SECRET_PATH__, source: secret platform input, valid_form: approved Vault path, affected_paths: [template/config/ExternalSecret.yml.j2], replacement_scope: exact-token}
+  - {name: jwt_secret_property, token: __JWT_SECRET_PROPERTY__, source: secret platform input, valid_form: Vault property name, affected_paths: [template/config/ExternalSecret.yml.j2], replacement_scope: exact-token}
+  - {name: external_secret_additional_data, token: __EXTERNAL_SECRET_ADDITIONAL_DATA__, source: Sparx plus deployment configuration, valid_form: zero or more ExternalSecret data list items, affected_paths: [template/config/ExternalSecret.yml.j2], replacement_scope: replace-comment-marker}
+  - {name: specification_owned_application_properties, token: __SPECIFICATION_OWNED_APPLICATION_PROPERTIES__, source: OpenAPI and Sparx as applicable, valid_form: sanitized Java properties lines, affected_paths: [template/config/configmap.yml.j2], replacement_scope: replace-comment-marker}
+
+parameter_evidence:
+  - parameters: [group_id, artifact_id, project_version, service_name, base_package, base_package_path, application_class]
+    approved_decision: D-010
+    evidence: [E-001, E-017, E-018]
+  - parameters: [vault_name]
+    evidence: [E-013]
+  - parameters: [jwt_roles_claim]
+    approved_decision: D-002
+    evidence: [E-006]
+  - parameters: [root_log_level, application_log_level, corporate_logger_level, http_log_level, log_time_zone]
+    approved_decision: D-001
+    evidence: [E-005]
+  - parameters: [corporate_maven_mirror_id, corporate_maven_mirror_of, corporate_maven_mirror_url, corporate_maven_profile_id, corporate_plugin_repository_id, corporate_plugin_repository_url]
+    approved_decision: D-009
+    evidence: [E-003]
+  - parameters: [builder_image, runtime_image, container_port, spring_config_location, time_zone]
+    approved_decision: D-005
+    evidence: [E-014]
+  - parameters: [k8s_namespace, k8s_part_of, k8s_managed_by, environment, k8s_owner, replica_count, k8s_tier, source_repository_url, image_tag, service_account_name, config_map_name, container_registry, image_repository, image_pull_policy, secret_name, config_mount_path, external_secret_refresh_interval, vault_secret_store_name, vault_secret_store_kind, vault_secret_path, jwt_secret_property, external_secret_additional_data, specification_owned_application_properties]
+    approved_decision: D-006
+    evidence: [E-015]
+
+template_inventory:
+  - {path: template/.gitattributes, classification: reusable/static, evidence: E-016}
+  - {path: template/.gitignore, classification: reusable/static, evidence: E-016}
+  - {path: template/.mvn/wrapper/maven-wrapper.properties, classification: reusable/static, evidence: E-002}
+  - {path: template/Dockerfile, classification: parameterized, approved_decision: D-005, evidence: E-014}
+  - {path: template/Jenkinsfile, classification: parameterized, evidence: E-013}
+  - {path: template/config/ExternalSecret.yml.j2, classification: parameterized, approved_decision: D-006, evidence: E-015}
+  - {path: template/config/configmap.yml.j2, classification: parameterized, approved_decision: D-006, evidence: E-015}
+  - {path: template/config/deployment.yml.j2, classification: parameterized, approved_decision: D-006, evidence: E-015}
+  - {path: template/mvnw, classification: reusable/static, evidence: E-002}
+  - {path: template/mvnw.cmd, classification: reusable/static, evidence: E-002}
+  - {path: template/pom.xml, classification: parameterized, approved_decision: D-012, evidence: E-024}
+  - {path: template/src/main/java/__BASE_PACKAGE_PATH__/utils/ActivityLogger.java, classification: parameterized, approved_decision: D-013, evidence: E-025}
+  - {path: template/src/main/java/__BASE_PACKAGE_PATH__/utils/ConstanApi.java, classification: parameterized, approved_decision: D-013, evidence: E-025}
+  - {path: template/src/test/java/__BASE_PACKAGE_PATH__/utils/ActivityLoggerTest.java, classification: parameterized, approved_decision: D-013, evidence: E-025}
+  - {path: template/settings.xml, classification: reusable/static, approved_decision: D-009, evidence: E-003}
+  - {path: template/src/main/java/__BASE_PACKAGE_PATH__/__APPLICATION_CLASS__.java, classification: parameterized, evidence: E-017}
+  - {path: template/src/main/java/__BASE_PACKAGE_PATH__/configuration/openapi/OpenApiConfig.java, classification: reusable/static, approved_decision: D-007, evidence: E-012}
+  - {path: template/src/main/java/__BASE_PACKAGE_PATH__/configuration/security/SecurityConfig.java, classification: parameterized, approved_decision: D-002, evidence: E-006}
+  - {path: template/src/main/java/__BASE_PACKAGE_PATH__/security/filter/JwtRequestFilter.java, classification: parameterized, approved_decision: D-002, evidence: E-006}
+  - {path: template/src/main/java/__BASE_PACKAGE_PATH__/security/service/JwtValidatorService.java, classification: parameterized, approved_decision: D-002, evidence: E-006}
+  - {path: template/src/main/java/__BASE_PACKAGE_PATH__/security/service/impl/JwtValidatorServiceImpl.java, classification: parameterized, approved_decision: D-002, evidence: E-006}
+  - {path: template/src/main/resources/application.properties, classification: parameterized, evidence: E-018}
+  - {path: template/src/main/resources/checkstyle.xml, classification: reusable/static, evidence: E-009}
+  - {path: template/src/main/resources/logback.xml, classification: parameterized, approved_decision: D-001, evidence: E-005}
+
+generation_owned_areas:
+  - {path: src/main/java/__BASE_PACKAGE_PATH__/controller, owner: OpenAPI, content: HTTP contract and operations}
+  - {path: src/main/java/__BASE_PACKAGE_PATH__/dto, owner: OpenAPI, content: request and response schemas and API validation}
+  - {path: src/main/java/__BASE_PACKAGE_PATH__/service, owner: Sparx, content: behavior using OpenAPI boundary types}
+  - {path: src/main/java/__BASE_PACKAGE_PATH__/client, owner: Sparx, content: integrations and external clients}
+  - {path: src/main/java/__BASE_PACKAGE_PATH__/repository, owner: Sparx, content: persistence behavior and queries}
+  - {path: src/main/java/__BASE_PACKAGE_PATH__/model, owner: Sparx, content: persistence/domain data required by behavior}
+  - {path: src/main/java/__BASE_PACKAGE_PATH__/dto/mapper, owner: OpenAPI + Sparx, content: mappings between contract and behavior}
+  - {path: src/main/java/__BASE_PACKAGE_PATH__/exception, owner: OpenAPI + Sparx, content: declared API errors and behavior}
+  - {path: src/test/java/__BASE_PACKAGE_PATH__, owner: OpenAPI + Sparx, content: contract and behavior tests}
+
+exclusions:
+  - id: X-001
+    category: domain-code
+    includes: entities, tables, endpoint implementations, concrete DTOs, repository queries, mappings, services, business rules, domain tests, fixtures, and sample data from the reference
+    evidence: E-019
+  - id: X-002
+    category: credentials-and-private-infrastructure
+    includes: datasource credentials, JWT fallback secrets, private IP addresses, private registry names, and machine-local paths
+    evidence: E-020
+  - id: X-003
+    category: generated-and-local-state
+    includes: target output, IDE metadata, runtime data, and unexplained binaries
+    evidence: E-021
+  - id: X-004
+    category: future-specification-inputs
+    includes: external Swagger/OpenAPI contracts and Sparx/architecture exports
+    evidence: AGENTS.md
+  - id: X-005
+    category: unsupported-reference-dependencies
+    includes: "nothing - superseded by D-012: every reference POM dependency (Kafka, HTTP client, common utilities, Tomcat override, JSON, Commons IO, Micrometer tracing, Spring Data JPA, Oracle driver and the rest) is a mandatory baseline dependency and must not be pruned"
+    evidence: E-022
+
+evidence:
+  E-001: "pom.xml:3-16"
+  E-002: ".mvn/wrapper/maven-wrapper.properties:1-3; mvnw:21-29; mvnw.cmd:21-27"
+  E-003: "pom.xml:41-59; settings.xml:1-92; Dockerfile:17-28"
+  E-004: "pom.xml:60-90"
+  E-005: "pom.xml:18-19,91-106; src/main/resources/logback.xml:1-54"
+  E-006: "pom.xml:152-174; src/main/java/com/claro/biometria/individual/support/configuration/security/SecurityConfig.java:9-28; src/main/java/com/claro/biometria/individual/support/security/filter/JwtRequestFilter.java:28-102; src/main/java/com/claro/biometria/individual/support/security/service/JwtValidatorService.java:15-38; src/main/java/com/claro/biometria/individual/support/security/service/impl/JwtValidatorServiceImpl.java:25-91; src/main/resources/application.properties:51-54"
+  E-007: "pom.xml:70-74,187-194; src/test/java/com/claro/biometria/individual/support/service/impl/IndividualServiceImplTest.java:13-47,129-133"
+  E-008: "pom.xml:178-206"
+  E-009: "pom.xml:207-223; src/main/resources/checkstyle.xml:1-76"
+  E-010: "pom.xml:30-40,224-276"
+  E-011: "source package inventory; src/main/java/com/claro/biometria/individual/support/controller/IndividualController.java:33-69; src/main/java/com/claro/biometria/individual/support/service/IndividualService.java:19-33; src/main/java/com/claro/biometria/individual/support/repository/IndividualRepository.java:17-31"
+  E-012: "src/main/java/com/claro/biometria/individual/support/configuration/swagger/SwaggerConfig.java:13-24; src/main/resources/application.properties:14-18"
+  E-013: "Jenkinsfile:1-5"
+  E-014: "Dockerfile:1-44"
+  E-015: "config/deployment.yml.j2:1-70; config/ExternalSecret.yml.j2:1-29; config/configmap.yml.j2:1-76"
+  E-016: ".gitignore:1-33; .gitattributes:1-2"
+  E-017: "src/main/java/com/claro/biometria/individual/support/IndividualApplication.java:1-14"
+  E-018: "src/main/resources/application.properties:4-27,51-54"
+  E-019: "src/main/java/com/claro/biometria/individual/support/model/IndividualEntity.java:19-65; src/main/java/com/claro/biometria/individual/support/service/impl/IndividualServiceImpl.java:51-379; src/test/java/com/claro/biometria/individual/support/service/impl/IndividualServiceImplTest.java:36-703"
+  E-020: "src/main/resources/application.properties:29-54; settings.xml:6-90; Dockerfile:5-7,42-44"
+  E-021: ".gitignore:1-33; reference inventory paths target/, .settings/, .classpath, .project, libs/"
+  E-022: "pom.xml:97-150 and source import scan"
+  E-025: "src/main/java/com/claro/biometria/individual/support/utils/ActivityLogger.java:1-40; utils/ConstanApi.java (SEPARADOR, SEPARADOR_ACTIVIDAD, INICIO_ACTIVIDAD, FIN_ACTIVIDAD and the ACTIVIDADES (LOGS) section); dto/request/RequestHeaders.java; service/impl/IndividualServiceImpl.java (NO_TRANSACTION_PREFIX, menTran, ejecutarActividad, logGet/logCreate/logUpdate, ERROR_TECHNICAL_PATTERN, QueryTimeoutException/DataAccessException handling); exception/GlobalExceptionHandler.java (ACT1 start/end around validation failures); src/test/java/com/claro/biometria/individual/support/utils/ActivityLoggerTest.java"
+  E-026: "output/dom-document-mailing-info offline mvnw -o -s settings.xml validate: 35 Checkstyle violations before correction (Indentation 19, MagicNumber 13, VariableDeclarationUsageDistance 2, WhitespaceAround 1), 0 after; target/checkstyle-result.xml"
+  E-024: "pom.xml:1-end (complete reference Maven baseline: parent, 17 properties, 3 repositories, 21 dependencies, 5 build plugins with configuration, 1 profile)"
+  E-023: "pom.xml (spring-boot-starter-data-jpa, ojdbc11 21.11.0.0 runtime); src/main/java/com/claro/biometria/individual/support/model/IndividualEntity.java:15-40; src/main/java/com/claro/biometria/individual/support/repository/IndividualRepository.java:1-30; src/main/java/com/claro/biometria/individual/support/service/impl/IndividualServiceImpl.java (save/findById/findBy*, QueryTimeoutException/DataAccessException handling, LocalDateTime.now(ZONE_ID)); src/main/resources/application.properties (DATA SOURCE, Hikari, JPA / HIBERNATE, ACTUATOR, SPRING CLOUD blocks)"
+
+unresolved_ambiguities: []

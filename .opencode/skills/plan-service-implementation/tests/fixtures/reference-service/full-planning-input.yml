@@ -1,0 +1,64 @@
+version: 1
+mode: full
+provenance: Current user approval of Phase 8.5/8.6 planning; revised for the D-011 JPA persistence correction (explicit user instruction). Technical selections recorded during planning.
+revision:
+  reason: Archetype persistence correction D-011 - Spring Data JPA/Hibernate/Oracle/HikariCP inherited from the reference; plain JDBC selection was a planning deviation.
+  supersedes: .factory/archive/pre-jpa-correction/implementation-plan.yml
+  authority: explicit user instruction
+target:
+  service: dom-document-mailing-info
+  base_package: com.claro.document.mailing.info.support
+  group_id: com.claro.document.mailing.info.support
+  project_version: 1.0.0-SNAPSHOT
+  output_directory: output/dom-document-mailing-info
+  archetype: archetypes/claro-spring-ms/v1.0.0
+naming:
+  domain_prefix: MailingInformation
+  table_models:
+    MAILINGINFORMATION:
+      class_name: MailingInformationEntity
+      properties:
+        ID: id
+        EMAILTO: emailTo
+        EMAILFROM: emailFrom
+        EMAILSUBJECT: emailSubject
+        CC: cc
+        BCC: bcc
+        EMAILBODY: emailBody
+        SUCCESSFULDELIVERY: successfulDelivery
+        REQUESTID: requestId
+        CREATIONUSER: creationUser
+        CREATIONDATE: creationDate
+        LASTMODIFIEDUSER: lastModifiedUser
+        LASTMODIFIEDDATE: lastModifiedDate
+technical:
+  maven_additions:
+    - groupId: org.springframework.boot
+      artifactId: spring-boot-starter-webflux
+      scope: test
+      requiredBy: controller-contract-test
+      justification: The planned controller contract test uses WebTestClient and MockMvcWebTestClient (JUnit/Mockito/WebTestClient test architecture). Both live in spring-test but need spring-webflux and reactor on the test classpath, which the reference baseline does not provide. Test scope only; the application remains Spring MVC.
+  persistence_mechanism: spring-data-jpa
+  database_product: oracle
+  jdbc_url: jdbc:oracle:thin:@//scan-BURODB_DEV.claro.pe:1521/BURODB_DEV
+  generated_id_policy: jpa-identity-generation-reference-convention
+  generated_id_assumption: The reference GenerationType.IDENTITY convention is used; the real database must supply the key through an identity column (Oracle 12c+) or equivalent. No sequence name or new ID allocation algorithm is asserted; verify before database execution.
+  contains_case_policy: case-insensitive-using-criteria-lower-like-escaped
+  timestamp_policy: reference-convention-application-clock-LocalDateTime-now-systemDefault
+  dto_presence_policy: setter-tracked-json-property-presence
+  json_null_policy: reject-explicit-null-for-nonnullable-declared-input-fields
+  json_response_null_policy: omit-null-optional-properties
+  test_frameworks: [JUnit Jupiter, Mockito, MockMvcWebTestClient]
+  application_log_level: INFO
+  corporate_logger_level: INFO
+  http_log_level: INFO
+  root_log_level: INFO
+  log_time_zone: UTC
+  jwt_roles_claim: roles
+  explanation: Persistence technology is inherited from the archetype (D-011). The runtime is Spring MVC, with WebFlux test-scope only for WebTestClient support. UTC applies only to log rendering.
+boundaries:
+  java_generated_now: false
+  output_modified_now: false
+  maven_run_now: false
+  database_connection_test_now: false
+  deployment_files_planned: false

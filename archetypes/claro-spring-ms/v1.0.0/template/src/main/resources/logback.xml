@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true">
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <pattern>
+                    <pattern>{"service":"__SERVICE_NAME__"}</pattern>
+                </pattern>
+                <timestamp>
+                    <fieldName>timestamp</fieldName>
+                    <timeZone>__LOG_TIME_ZONE__</timeZone>
+                </timestamp>
+                <logLevel>
+                    <fieldName>level</fieldName>
+                </logLevel>
+                <threadName>
+                    <fieldName>thread</fieldName>
+                </threadName>
+                <mdc/>
+                <arguments>
+                    <includeNonStructuredArguments>false</includeNonStructuredArguments>
+                </arguments>
+                <message>
+                    <fieldName>context</fieldName>
+                </message>
+            </providers>
+        </encoder>
+    </appender>
+
+    <appender name="commonAppender"
+              class="com.claro.common.commonlogger.client.appender.CommonAppender">
+        <layout>
+            <pattern>%m</pattern>
+        </layout>
+    </appender>
+
+    <logger name="logAppender" level="__CORPORATE_LOGGER_LEVEL__">
+        <appender-ref ref="commonAppender"/>
+    </logger>
+
+    <logger name="org.springframework.web.filter.CommonsRequestLoggingFilter"
+            level="__HTTP_LOG_LEVEL__">
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <logger name="__BASE_PACKAGE__" level="__APPLICATION_LOG_LEVEL__"/>
+
+    <root level="__ROOT_LOG_LEVEL__">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

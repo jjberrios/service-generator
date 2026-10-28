@@ -1,0 +1,5 @@
+jndis:
+  - bd_name: CRMLITE
+    jndi_name: pe.com.claro.jdbc.datasources.noXA.crmlite
+  - bd_name: CRMLITE
+    jndi_name: pe.com.claro.jdbc.datasources.XA.crmlite
