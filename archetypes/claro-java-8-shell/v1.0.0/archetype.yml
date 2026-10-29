@@ -1,0 +1,630 @@
+schemaVersion: 1
+identity:
+  name: claro-java-8-shell
+  version: 1.0.0
+  operation: extract
+  profile: batch-shell
+  status: approved-frozen-generation-enabled
+  approved: true
+  approvalScope: reference-faithful-baseline-and-bounded-generation
+  frozen: true
+  generationEnabled: true
+  readyToFreeze: true
+provenance:
+  extractedOn: '2026-10-29'
+  reference: input/reference/SH_ObtenerTrasladarArchivosMTC
+  target: archetypes/claro-java-8-shell/v1.0.0
+  policy: AGENTS.md
+  methodology: extract-archetype
+  decisionFile: decisions.md
+  approvedDecisionRefs: [SH-D-001, SH-D-002, SH-D-003, SH-D-004, SH-D-005, SH-D-006, SH-D-007, SH-D-008, SH-D-009, SH-D-010]
+  proposedDecisionRefs: []
+  resolvedQuestionRefs: [SH-Q-001, SH-Q-002, SH-Q-003, SH-Q-004, SH-Q-005, SH-Q-006, SH-Q-007, SH-Q-008, SH-Q-009, SH-Q-010, SH-Q-011, SH-Q-012]
+  pendingQuestionRefs: []
+  inheritedDecisions: []
+  inheritedDecisionsNote: 'Decisions of claro-spring-ms/1.0.0 (D-0xx) and claro-spring-java-8/1.0.0 (J8-D-0xx) are NOT applied to this archetype.'
+  entireReferenceTreeReadOnly: true
+  initialTargetAbsent: true
+  futureContractsInspected: false
+  sparxInspected: false
+  baseline:
+    algorithm: SHA-256
+    recordFormat: 'sorted [repository-relative POSIX path, size, content_sha256_or_null] JSON arrays'
+    scope: entire-input-reference-tree-of-this-reference
+    fileCount: 51
+    contentHashedFileCount: 49
+    contentExcludedFileCount: 2
+    permittedRecordsSha256: b9cb6d71cd58753b99bb9cc16c6c59afd0d7fc016e6a51e13232b076188690e7
+    filePathsSha256: 8a496fbeb1f227be1b60352a38f4376ab9cb7f87f34cfe13cebe1a60ff75fdf9
+    protectedContentPatterns: ['**/application*.properties', 'reference-root *.properties (sh.properties, ObtenerTrasladarArchivosMTC.properties)']
+    protectedFileHandling: 'Contents never copied, hashed or reported. Only the property KEY NAMES (no values) of the two root *.properties files were inspected, to document the external-configuration contract (SH-D-004).'
+  referencePomSha256: 231d799595c00d253be883a0b333259afcf2e2146d90de305741ef9d9e81ef93
+platform:
+  status: observed-reference-baseline
+  decisionRefs: [SH-D-003]
+  evidence: [E-POM, E-README, E-MAIN]
+  java: '1.8'
+  javaDistribution: unknown
+  springBoot: not-used
+  springFramework: 3.1.0.RELEASE
+  springStyle: xml-context-plus-component-scan-annotations
+  packaging: jar
+  runnableArtifact: 'shaded jar (maven-shade-plugin) with manifest mainClass; dependencies also copied to target/LIB/ (jar manifest classpathPrefix LIB/)'
+  servletContainer: none
+  applicationServer: none
+  mavenVersion: unknown
+  httpEndpoints: none
+  bootstrap: 'public static void main(String[] args) in a @Component class; ClassPathXmlApplicationContext("applicationContext.xml")'
+  runtimeRisks:
+    - 'spring-core 3.1.0.RELEASE (embedded ASM) with maven.compiler target 1.8: possible incompatibility between Spring 3.1 classpath scanning and Java 8 class files. NOT verified (no execution performed). See SH-Q-010.'
+build:
+  status: observed-reference-baseline
+  decisionRefs: [SH-D-003, SH-D-007]
+  evidence: E-POM
+  modules: []
+  parent: none
+  encoding: UTF-8
+  sourceDirectory: src/main/java
+  wrapper: absent
+  settingsXml: absent
+  profiles: []
+  dependencyManagement: absent
+  pluginManagement: absent
+  effectivePomResolved: false
+  properties:
+    endorsed.dir: '${project.build.directory}/endorsed'
+    project.build.sourceEncoding: UTF-8
+    spring.version: 3.1.0.RELEASE
+    slf4j.version: 1.7.5
+    maven.compiler.source: '1.8'
+    maven.compiler.target: '1.8'
+    com.fasterxml.jackson.core: 2.4.2
+    junit.version: '4.12'
+    mockito.core: 2.23.4
+    assertj: 2.6.0
+    sonar.coverage.exclusions: '**/@@BASE_PACKAGE_PATH@@/{proxy,exception,util}/*.java and **/@@BASE_PACKAGE_PATH@@/@@MAIN_CLASS@@.java (package-parameterized; concrete proxy class pattern dropped as redundant)'
+    sonar.exclusions: 'same four patterns as sonar.coverage.exclusions (package-parameterized; redundant concrete util/proxy class patterns dropped)'
+  propertyCaveats:
+    - 'Declared values only; effective versions not resolved (no Maven run).'
+    - 'Properties endorsed.dir and com.fasterxml.jackson.core are declared but not referenced by any dependency/plugin in the POM; preserved untouched.'
+    - 'Sonar exclusion patterns were package-qualified in the reference; they are parameterized with the package, not emptied (SH-D-007, review SH-Q-008).'
+  dependencyInventorySemantics:
+    scopeWhenAbsent: compile
+    status: full-declared-baseline-preserved
+    count: 14
+    preservation: all-active-direct-dependencies
+    justification: 'AGENTS.md Reference-Based Extraction Policy: preserve POM baseline, no pruning or modernization. Declaration does not prove use.'
+    sourceUsageMethod: 'Java source import scan of src/main and src/test (XML bean usage noted separately); no effective-POM or transitive resolution.'
+  dependencies:
+    - {groupId: org.springframework, artifactId: spring-web, version: '${spring.version}', purpose: jaxws-proxy-factory-bean-in-excluded-xml}
+    - {groupId: org.springframework, artifactId: spring-core, version: '${spring.version}', purpose: spring-core}
+    - {groupId: org.springframework, artifactId: spring-beans, version: '${spring.version}', purpose: autowired-value-annotations}
+    - {groupId: org.springframework, artifactId: spring-context, version: '${spring.version}', purpose: application-context-component-stereotypes}
+    - {groupId: commons-logging, artifactId: commons-logging, version: 1.1.1, purpose: declared-preserved}
+    - {groupId: commons-lang, artifactId: commons-lang, version: '2.6', purpose: declared-preserved}
+    - {groupId: log4j, artifactId: log4j, version: 1.2.16, purpose: logging-api-and-backend}
+    - {groupId: org.slf4j, artifactId: slf4j-api, version: '${slf4j.version}', purpose: declared-preserved}
+    - {groupId: org.slf4j, artifactId: slf4j-log4j12, version: '${slf4j.version}', purpose: declared-slf4j-to-log4j-binding}
+    - {groupId: com.jcraft, artifactId: jsch, version: 0.1.55, purpose: sftp-client}
+    - {groupId: eai, artifactId: ebsConsultaClavesService-Client, version: 1.0.0, purpose: corporate-credential-decrypt-ws-client-from-local-Lib-repository}
+    - {groupId: junit, artifactId: junit, version: '${junit.version}', scope: test, purpose: junit4}
+    - {groupId: org.mockito, artifactId: mockito-core, version: '${mockito.core}', scope: test, purpose: mocking}
+    - {groupId: org.assertj, artifactId: assertj-core, version: '${assertj}', scope: test, purpose: fluent-assertions}
+  dependencyUsage:
+    spring-web: {status: declared-xml-only-use-in-excluded-file, evidence: [E-PROXY-XML], observation: 'No Java import; JaxWsPortProxyFactoryBean is referenced only by the excluded applicationProxyWS.xml'}
+    spring-core: {status: used, evidence: [E-PROXY-IMPL], observation: 'NestedRuntimeException (proxy, excluded from template); core of context'}
+    spring-beans: {status: used, evidence: [E-MAIN, E-PROPERTIES-CLASS], observation: '@Autowired, @Value'}
+    spring-context: {status: used, evidence: [E-MAIN, E-CONTEXT], observation: 'ClassPathXmlApplicationContext, @Component/@Service, component-scan, property-placeholder'}
+    commons-logging: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No import observed; may be a Spring transitive'}
+    commons-lang: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No import observed'}
+    log4j: {status: used-main-logging, evidence: [E-MAIN, E-SFTP-UTIL], observation: 'org.apache.log4j.Logger and PropertyConfigurator'}
+    slf4j-api: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'No org.slf4j import; logging code uses log4j directly'}
+    slf4j-log4j12: {status: declared-no-direct-use-observed, evidence: [E-JAVA-USAGE], observation: 'Binding only; no direct use'}
+    jsch: {status: used, evidence: [E-SFTP-UTIL, E-SFTP-MANAGER], observation: 'JSch/Session/ChannelSftp'}
+    ebsConsultaClavesService-Client: {status: used-by-excluded-integration, evidence: [E-PROXY-IMPL, E-SERVICE-IMPL], observation: 'Credential-decrypt SOAP client used only by excluded integration code; kept per POM-preservation policy, see SH-Q-004'}
+    junit: {status: used-tests, evidence: [E-TEST], observation: 'JUnit4 @Test/@Before/@RunWith'}
+    mockito-core: {status: used-tests, evidence: [E-TEST], observation: 'MockitoJUnitRunner.Silent, @Mock/@Spy/@InjectMocks, doReturn/when/verify'}
+    assertj-core: {status: used-tests, evidence: [E-TEST], observation: 'Fully-qualified org.assertj.core.api.Assertions.assertThat'}
+  plugins:
+    - groupId: org.apache.maven.plugins
+      artifactId: maven-compiler-plugin
+      version: 3.8.1
+      configuration: {source: '${maven.compiler.source}', target: '${maven.compiler.target}'}
+    - groupId: org.apache.maven.plugins
+      artifactId: maven-jar-plugin
+      version: '2.4'
+      configuration: {archive: {manifest: {addClasspath: true, mainClass: '@@BASE_PACKAGE@@.@@MAIN_CLASS@@', classpathPrefix: LIB/}}}
+    - groupId: org.apache.maven.plugins
+      artifactId: maven-resources-plugin
+      version: 3.1.0
+      executions:
+        - {id: copy-resources, phase: package, goals: [copy-resources]}
+      note: 'Copies templates/*, log4j.properties and <PROPERTIES_FILE_BASENAME>.properties from src/main/resources into target/ with filtering=true; none of those resources exist in the reference (SH-Q-003).'
+    - groupId: org.apache.maven.plugins
+      artifactId: maven-shade-plugin
+      version: 3.5.0
+      executions:
+        - {id: null, phase: package, goals: [shade]}
+      note: 'createDependencyReducedPom=false; ManifestResourceTransformer mainClass.'
+    - groupId: org.jacoco
+      artifactId: jacoco-maven-plugin
+      version: 0.8.2
+      executions:
+        - {id: null, phase: null, goals: [prepare-agent]}
+        - {id: report, phase: prepare-package, goals: [report]}
+    - groupId: org.apache.maven.plugins
+      artifactId: maven-dependency-plugin
+      version: 2.5.1
+      executions:
+        - {id: copy-dependencies, phase: package, goals: [copy-dependencies]}
+    - {groupId: org.sonarsource.scanner.maven, artifactId: sonar-maven-plugin, version: 3.7.0.1746}
+  repositories:
+    - {id: repo, url: 'file://${project.basedir}/Lib', releases: {enabled: true, checksumPolicy: ignore}, snapshots: {enabled: false}, note: 'Local file repository inside the project: external prerequisite (non-public corporate artifacts)'}
+  pluginRepositories: []
+  distributionManagement: {id: local-deploy, url: 'file://${project.build.directory}/deploy-repo'}
+execution:
+  status: observed
+  kind: batch-shell
+  httpEndpoints: none
+  evidence: [E-MAIN, E-README, E-SERVICE-IMPL, E-CONTEXT]
+  invocation:
+    command: 'java -Dproperties=<external .properties path> -jar <artifact>.jar <idTransaccion>'
+    commandEvidence: 'Derived from E-README (java -jar ... <idTransaccion>) plus E-CONTEXT (file:${properties}); the README omits the -Dproperties option. No launcher script, scheduler definition or Jenkinsfile exists in the reference.'
+    commandVerified: false
+    launcherScript: not-present-in-reference
+    scheduler: unknown
+  arguments:
+    - {index: 0, name: idTransaccion, required: true, validated: false, usage: 'traceability prefix "[idTx=<id>]" and passed to service.run'}
+  jvmProperties:
+    - {name: properties, purpose: 'path of the external properties file (resolved by <context:property-placeholder location="file:${properties}"/>)'}
+  externalFiles:
+    - {name: '<PROPERTIES_FILE_BASENAME>.properties', purpose: 'environment configuration, kept outside the jar; contains encrypted credentials in the reference (values never inspected)'}
+    - {name: 'log4j properties file', purpose: 'path given by key log4j.file.dir; configured via PropertyConfigurator AFTER the Spring context is created; file not present in the reference (SH-Q-003)'}
+  technicalFlow:
+    - 'main: args[0] -> idTransaction; msjTrx = "[idTx=<id>]"'
+    - 'create ClassPathXmlApplicationContext(applicationContext.xml) (component-scan + external property placeholder)'
+    - 'bean of main class -> loadLog4J() -> start(msjTrx, idTransaction)'
+    - 'start: delegate to <Service>.run(msjTrx, idTransaction); any Exception is logged, never propagated'
+    - 'finally: log total elapsed time and close the Spring context'
+    - 'service.run (generated from Sparx): reads external properties, performs the batch work, counts successes/errors, logs a summary and the idf0/idf1 (or idt*) code/message; catches exceptions by type (WS, SFTP, general)'
+  errorHandling:
+    pattern: 'catch-log-continue; exceptions typed WSException (code+message), SFTPException (server/path), general Exception with idt3 message; connections closed in finally'
+    technicalCodes: 'idt1 timeout, idt2 availability, idt3 general; idf0 success, idf1 partial/error; messages carry [RECURSO]/[DETALLE] placeholders replaced at runtime'
+  exitCode:
+    systemExitCalled: false
+    observed: 'Process always ends with JVM default status (0) unless args[0] is missing (uncaught ArrayIndexOutOfBounds before the try). idf0/idf1 codes are only logged.'
+    readmeClaim: 'README documents codes 0 (success) and 1 (error) as "Códigos de Respuesta"; the code does not call System.exit. Resolved by SH-Q-001 (user: follow the reference): generated batches keep the observed behavior (no System.exit; codes only logged); README discrepancy remains documented.'
+  fileHandling:
+    observed: 'download from a remote SFTP into a local temp directory, upload from temp to another SFTP (create remote directories recursively); empty downloads reported as ALERTA/ERROR; no local cleanup of temp files observed'
+    ownedBy: 'Sparx (which files, when, where); technical SFTP helpers are in template utilities'
+  database:
+    mechanism: not-present-in-reference
+    note: 'applicationDatasource.xml (DriverManagerDataSource) exists but is not imported by applicationContext.xml and no DAO/JDBC code exists; ojdbc6 jar in Lib/ is not declared in the POM. Not a persistence baseline (SH-Q-009).'
+  testingMode:
+    primary: 'manual running of the packaged jar with an external properties file (no HTTP, no integration harness in the reference)'
+    unit: 'JUnit4 + Mockito unit test of the service with mocked SFTP managers and mocked WS (see quality.tests)'
+    executedHere: false
+structure:
+  status: observed
+  evidence: [E-MAIN, E-SERVICE-IMPL, E-SFTP-MANAGER, E-EXCEPTIONS, E-TEST]
+  mainJava: src/main/java
+  testJava: src/test/java
+  resources: src/main/resources
+  packageRoot: '@@BASE_PACKAGE@@'
+  packageRootObservedPattern: 'pe.com.claro.shell.<lowercase-service-name> (SH-Q-011)'
+  packages:
+    - {name: '(root)', content: '<MainClass> (@Component with main)'}
+    - {name: service, content: 'service interface + implementation with run(messageTransaction, idTransaccion)'}
+    - {name: proxy, content: 'integration proxies (SOAP); generated from specification, not templated'}
+    - {name: util, content: 'Constantes, PropertiesExterno, SFTPConnectionManager, UtilSFTP'}
+    - {name: exception, content: 'BaseException, BaseExceptionSFTP, SFTPException, WSException, PropertiesException'}
+  extensionPackagesMaterialized: [service-interface-only]
+  observedPatterns:
+    entrypoint: main-class-static-main-with-spring-xml-context
+    services: interface-plus-impl-field-injection
+    configurationBinding: public-fields-with-Value-in-PropertiesExterno
+    logging: log4j-1.2-direct-Logger-getLogger
+    persistence: not-present-in-reference
+    dto: not-present-in-reference
+    mapping: not-present-in-reference
+    exceptions: mixed-checked-hierarchy-plus-one-runtime
+    testability: 'protected factory/delegation methods (crearConexionSFTP, invocarUtilSFTP*) overridden through @Spy, no PowerMock'
+quality:
+  status: observed-reference-baseline
+  decisionRefs: [SH-D-005, SH-D-007]
+  evidence: [E-POM, E-TEST, E-CHECKSTYLE-IDE]
+  tests:
+    framework: JUnit4
+    version: '4.12'
+    mockFramework: Mockito
+    mockVersion: 2.23.4
+    runner: 'org.mockito.junit.MockitoJUnitRunner.Silent'
+    assertions: 'AssertJ (fully-qualified) and Mockito verify'
+    naming: '<Class>Test; methods <method>_cuando<Condition>_debe<Result> (Spanish) with scenario/verification Javadoc'
+    layout: 'src/test/java mirrors main package; only the service class is tested'
+    execution: not-run
+  jacoco:
+    version: 0.8.2
+    threshold: null
+    checkGoalObserved: false
+    reportPhase: prepare-package
+    execution: not-run
+  sonar:
+    pluginVersion: 3.7.0.1746
+    coverageExclusions: 'layer-based, package-parameterized (SH-D-007)'
+    execution: not-run
+  checkstyle:
+    referenceConfigurationObserved: false
+    policyRequired: false
+    status: not-present-in-reference
+    ideOnlyObservation: 'IntelliJ CheckStyle-IDEA settings (bundled Sun/Google checks, IDE-only, no checkstyle.xml, no Maven plugin) - not a build gate'
+    requiredScopes: []
+    execution: not-applicable
+  otherStaticAnalysisObserved: 'SonarLint Eclipse prefs (IDE only)'
+runtime:
+  status: observed-reference-baseline-execution-unverified
+  decisionRefs: [SH-D-003, SH-D-004]
+  evidence: [E-MAIN, E-PROPERTIES-CLASS, E-SERVICE-IMPL, E-CONTEXT]
+  configuration:
+    mechanism: 'Spring <context:property-placeholder location="file:${properties}"/> + public @Value fields in PropertiesExterno'
+    protectedFileContentsInspected: false
+    keyNamesOnlyInspected: true
+    keyNaming: 'lowercase dotted keys (ftp.externo.host, idf0.codigo, ws.<service>.url ...)'
+    valuesOwner: environment-operator
+    credentialsInConfig: 'encrypted values (decrypted at runtime by a corporate WS in the reference); never copied'
+  logging:
+    api: log4j-1.2
+    backend: log4j
+    configuration: 'external log4j properties file whose path is in key log4j.file.dir; file absent from reference; configured after Spring context creation'
+    loggerDeclaration: 'private static Logger logger = Logger.getLogger(X.class) (Main), private final Logger (service), private static final Logger (utils)'
+    transactionPrefix: '"[idTx=<idTransaccion>]" then "[<method>] " appended per method'
+    methodMarkers: 'Constantes.INICIO_METODO / FIN_METODO / TIPO_TOTAL_PROCESO via java.text.MessageFormat'
+    separators: 'lines of "=" and "-" banners; per-item progress [i/n]'
+    errors: 'logger.error(msg, exception) and e.printStackTrace() in Main/service catch blocks'
+    observedRisks:
+      - 'hosts, ports and usernames are logged (passwords are not)'
+      - 'log4j is configured only after the Spring context starts: context start-up failures go to stdout/stderr only'
+      - 'java.text.SimpleDateFormat with default time zone; no Clock abstraction'
+  security:
+    observedRisks:
+      - 'StrictHostKeyChecking=no in every SFTP session (host key not verified)'
+      - 'fixed 60000 ms SFTP session timeout literal in SFTPConnectionManager'
+      - 'README of the reference embeds an environment IP address (excluded)'
+    policy: 'preserved as observed in utilities; flagged for review (SH-Q-005); not silently changed'
+  openapiTooling: {observed: false, added: false}
+deployment:
+  evidence: [E-POM, E-README, E-EDITORCONFIG]
+  target: standalone-jar-run-on-host
+  scheduler: unknown
+  dockerObserved: false
+  kubernetesObserved: false
+  ci:
+    jenkinsfileObserved: false
+    editorConfigMentionsJenkinsfile: true
+    behaviorVerified: false
+  externalPrerequisites:
+    - 'JDK 8 and Maven 3.x (README); exact versions unknown'
+    - 'Lib/ local file repository with non-public artifacts declared in the POM (eai:ebsConsultaClavesService-Client:1.0.0); binaries are not part of the archetype'
+    - 'External properties file and log4j properties file supplied by the operator'
+    - 'Network reachability of remote servers declared by the functional specification'
+  deploymentExecuted: false
+generationOwnership:
+  platformAndEngineering: archetype-observed-reference-baseline
+  apiContract: not-applicable-non-http-batch
+  openApi: 'not-applicable: invocation follows main(args[0]=idTransaccion) and JVM -Dproperties; no HTTP contract or optional OpenAPI is introduced (SH-Q-002).'
+  invocationArguments: 'Sparx (functional spec); technical shape (idTransaccion as args[0]) from archetype'
+  requestResponseSchemas: not-applicable
+  httpValidation: not-applicable
+  businessBehavior: Sparx
+  businessProcesses: Sparx
+  fileTransferRules: Sparx
+  integrations: Sparx
+  externalClients: Sparx
+  persistenceBehavior: Sparx
+  mappings: Sparx
+  responseCodesAndMessages: 'Sparx values supplied through external properties (idf*/idt*)'
+  localConfigurationAndSecrets: environment-operator
+  inventedFutureBehavior: false
+parameters:
+  GROUP_ID:
+    source: target-technical-identity
+    required: true
+    pattern: '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$'
+    observedExample: pe.com.claro.shell
+    replacementScope: xml-text
+    affectedFiles: [pom.xml]
+  ARTIFACT_ID:
+    source: target-technical-identity
+    required: true
+    pattern: '^[A-Za-z][A-Za-z0-9_-]*$'
+    observedPattern: 'SH_<ServiceName>'
+    replacementScope: xml-text-and-document-text
+    affectedFiles: [pom.xml, README.MD]
+  PROJECT_VERSION:
+    source: target-technical-version
+    required: true
+    pattern: '^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$'
+    replacementScope: xml-text-and-document-text
+    affectedFiles: [pom.xml, README.MD]
+  BASE_PACKAGE:
+    source: target-technical-identity
+    required: true
+    pattern: '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$'
+    replacementScope: java-package-xml-scan-and-manifest-text
+    affectedFiles:
+      - pom.xml
+      - README.MD
+      - src/main/resources/applicationContext.xml
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/@@MAIN_CLASS@@.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/service/@@SERVICE_INTERFACE@@.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/util/Constantes.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/util/PropertiesExterno.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/util/SFTPConnectionManager.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/util/UtilSFTP.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/BaseException.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/BaseExceptionSFTP.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/SFTPException.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/WSException.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/PropertiesException.java'
+  BASE_PACKAGE_PATH:
+    source: derived
+    derivedFrom: BASE_PACKAGE
+    transformation: replace-dot-with-slash
+    required: true
+    pattern: '^[a-z][a-z0-9_]*(/[a-z][a-z0-9_]*)+$'
+    replacementScope: template-relative-path-and-sonar-glob
+    affectedFiles:
+      - pom.xml
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/@@MAIN_CLASS@@.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/service/@@SERVICE_INTERFACE@@.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/util/Constantes.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/util/PropertiesExterno.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/util/SFTPConnectionManager.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/util/UtilSFTP.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/BaseException.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/BaseExceptionSFTP.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/SFTPException.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/WSException.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/PropertiesException.java'
+  MAIN_CLASS:
+    source: target-main-class-name
+    required: true
+    pattern: '^[A-Z][A-Za-z0-9]*$'
+    observedPattern: '<ServiceName>Main'
+    replacementScope: java-identifier-template-filename-and-manifest
+    affectedFiles: [pom.xml, README.MD, 'src/main/java/@@BASE_PACKAGE_PATH@@/@@MAIN_CLASS@@.java']
+  SERVICE_INTERFACE:
+    source: target-service-interface-name
+    required: true
+    pattern: '^[A-Z][A-Za-z0-9]*$'
+    replacementScope: java-identifier-and-template-filename
+    affectedFiles:
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/@@MAIN_CLASS@@.java'
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/service/@@SERVICE_INTERFACE@@.java'
+  SERVICE_FIELD:
+    source: derived
+    derivedFrom: SERVICE_INTERFACE
+    transformation: lower-first-character
+    required: true
+    pattern: '^[a-z][A-Za-z0-9]*$'
+    replacementScope: java-identifier
+    affectedFiles: ['src/main/java/@@BASE_PACKAGE_PATH@@/@@MAIN_CLASS@@.java']
+  PROPERTIES_FILE_BASENAME:
+    source: target-external-properties-file-name-without-extension
+    required: true
+    pattern: '^[A-Za-z][A-Za-z0-9_-]*$'
+    observedPattern: '<ServiceName>.properties'
+    replacementScope: xml-text-document-text-and-template-filename
+    affectedFiles: [pom.xml, README.MD, 'config/@@PROPERTIES_FILE_BASENAME@@.properties.j2']
+templateInventory:
+  - {path: pom.xml, classification: parameterized, evidence: [E-POM], status: observed-reference-baseline, decisionRefs: [SH-D-003, SH-D-007]}
+  - {path: .gitignore, classification: reusable/static, evidence: [E-GITIGNORE], status: observed-reference-baseline, decisionRefs: [SH-D-003]}
+  - {path: .editorConfig, classification: reusable/static, evidence: [E-EDITORCONFIG], status: observed-reference-baseline, decisionRefs: [SH-D-003]}
+  - {path: README.MD, classification: parameterized, evidence: [E-README], status: approved-reference-baseline, decisionRefs: [SH-D-008]}
+  - {path: 'src/main/java/@@BASE_PACKAGE_PATH@@/@@MAIN_CLASS@@.java', classification: parameterized, evidence: [E-MAIN], status: observed-reference-baseline, decisionRefs: [SH-D-002, SH-D-003]}
+  - {path: 'src/main/java/@@BASE_PACKAGE_PATH@@/service/@@SERVICE_INTERFACE@@.java', classification: parameterized, evidence: [E-SERVICE-IFACE], status: observed-reference-baseline, decisionRefs: [SH-D-002]}
+  - {path: 'src/main/java/@@BASE_PACKAGE_PATH@@/util/Constantes.java', classification: parameterized, evidence: [E-CONSTANTS], status: approved-reference-baseline, decisionRefs: [SH-D-006]}
+  - {path: 'src/main/java/@@BASE_PACKAGE_PATH@@/util/PropertiesExterno.java', classification: parameterized, evidence: [E-PROPERTIES-CLASS], status: approved-reference-baseline, decisionRefs: [SH-D-006, SH-D-004]}
+  - {path: 'src/main/java/@@BASE_PACKAGE_PATH@@/util/SFTPConnectionManager.java', classification: parameterized, evidence: [E-SFTP-MANAGER], status: approved-reference-baseline, decisionRefs: [SH-D-006]}
+  - {path: 'src/main/java/@@BASE_PACKAGE_PATH@@/util/UtilSFTP.java', classification: parameterized, evidence: [E-SFTP-UTIL], status: approved-reference-baseline, decisionRefs: [SH-D-006]}
+  - {path: 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/BaseException.java', classification: parameterized, evidence: [E-EXCEPTIONS], status: approved-reference-baseline, decisionRefs: [SH-D-006]}
+  - {path: 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/BaseExceptionSFTP.java', classification: parameterized, evidence: [E-EXCEPTIONS], status: approved-reference-baseline, decisionRefs: [SH-D-006]}
+  - {path: 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/SFTPException.java', classification: parameterized, evidence: [E-EXCEPTIONS], status: approved-reference-baseline, decisionRefs: [SH-D-006]}
+  - {path: 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/WSException.java', classification: parameterized, evidence: [E-EXCEPTIONS], status: approved-reference-baseline, decisionRefs: [SH-D-006]}
+  - {path: 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/PropertiesException.java', classification: parameterized, evidence: [E-EXCEPTIONS], status: approved-reference-baseline, decisionRefs: [SH-D-006]}
+  - {path: src/main/resources/applicationContext.xml, classification: parameterized, evidence: [E-CONTEXT], status: observed-reference-baseline, decisionRefs: [SH-D-003, SH-D-009]}
+  - {path: 'config/@@PROPERTIES_FILE_BASENAME@@.properties.j2', classification: parameterized, evidence: [E-PROPERTIES-CLASS], status: approved-reference-baseline, decisionRefs: [SH-D-004, SH-D-009]}
+referenceInventory:
+  note: 'Every file of the reference tree has exactly one disposition: template (copied/parameterized) or excluded (with reason). Globs allowed.'
+  rules:
+    - {path: pom.xml, disposition: template, template: pom.xml}
+    - {path: .gitignore, disposition: template, template: .gitignore}
+    - {path: .editorConfig, disposition: template, template: .editorConfig}
+    - {path: README.MD, disposition: template, template: README.MD, transformation: 'business description, environment IP and per-file-type list removed; sections kept; run command includes -Dproperties (required by applicationContext.xml)'}
+    - {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/ObtenerTrasladarArchivosMTCMain.java, disposition: template, template: 'src/main/java/@@BASE_PACKAGE_PATH@@/@@MAIN_CLASS@@.java'}
+    - {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/service/ObtenerTrasladarArchivosService.java, disposition: template, template: 'src/main/java/@@BASE_PACKAGE_PATH@@/service/@@SERVICE_INTERFACE@@.java'}
+    - {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/util/Constantes.java, disposition: template, template: 'src/main/java/@@BASE_PACKAGE_PATH@@/util/Constantes.java', transformation: 'removed MTC_, REPLACE_FECHA_*, ERROR_CONEXION_MTC (business) and WS-credential-service field constants DESENCRIPTAR/ID_TRANSACCION/CODIGO_APLICACION/USUARIO (integration-specific)'}
+    - {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/util/PropertiesExterno.java, disposition: template, template: 'src/main/java/@@BASE_PACKAGE_PATH@@/util/PropertiesExterno.java', transformation: 'kept log4jDir and idf0/idf1/idt1-3; removed FTP, route, date and WS-specific properties (generated from specification)'}
+    - {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/util/SFTPConnectionManager.java, disposition: template, template: 'src/main/java/@@BASE_PACKAGE_PATH@@/util/SFTPConnectionManager.java', transformation: 'removed the business 4-argument listarArchivos overload (5-minute pre-midnight window); 3-argument listarArchivos now holds the plain mtime-date filter'}
+    - {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/util/UtilSFTP.java, disposition: template, template: 'src/main/java/@@BASE_PACKAGE_PATH@@/util/UtilSFTP.java'}
+    - {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/exception/BaseException.java, disposition: template, template: 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/BaseException.java'}
+    - {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/exception/BaseExceptionSFTP.java, disposition: template, template: 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/BaseExceptionSFTP.java'}
+    - {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/exception/SFTPException.java, disposition: template, template: 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/SFTPException.java'}
+    - {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/exception/WSException.java, disposition: template, template: 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/WSException.java'}
+    - {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/exception/PropertiesException.java, disposition: template, template: 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/PropertiesException.java'}
+    - {path: src/main/resources/applicationContext.xml, disposition: template, template: src/main/resources/applicationContext.xml, transformation: 'component-scan package parameterized; <import resource="applicationProxyWS.xml"/> removed (integration-specific, generated from specification when declared)'}
+    - {path: src/main/resources/applicationProxyWS.xml, disposition: excluded, reason: 'Concrete SOAP integration (namespace, service/port names, timeouts keys) owned by Sparx; structural pattern documented in generation-rules.md (JaxWsPortProxyFactoryBean + util:map of com.sun.xml.ws.*.timeout bound to ws.<service>.max.*.timeout keys)'}
+    - {path: src/main/resources/applicationDatasource.xml, disposition: excluded, reason: 'Not imported by applicationContext.xml and without DAO code: dead configuration naming a concrete database identity (SH-Q-009); no persistence baseline'}
+    - {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/service/ObtenerTrasladarArchivosServiceImpl.java, disposition: excluded, reason: 'Business flow (file types, routes, date/mtime and name filters, counters, response codes): generated from Sparx; its technical patterns are documented in conventions.md'}
+    - {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/proxy/**, disposition: excluded, reason: 'Concrete credential-decrypt SOAP proxy: integration owned by Sparx (SH-Q-004); only the exception-classification pattern (timeout/availability/general -> idt1/idt2/idt3) is documented'}
+    - {path: src/test/java/**, disposition: excluded, reason: 'Business test scenarios and fixtures (and double-encoded accents); test conventions documented instead (JUnit4/Mockito2/@Spy/@InjectMocks)'}
+    - {path: sh.properties, disposition: excluded, reason: 'Environment configuration with credentials/hosts: protected by analogy with application*.properties (SH-D-004); only key names inspected; legacy key layout differs from the code-bound file'}
+    - {path: ObtenerTrasladarArchivosMTC.properties, disposition: excluded, reason: 'Environment configuration with credentials/hosts: protected (SH-D-004); only key names inspected; key contract reflected in PropertiesExterno and config/*.properties.j2 without values'}
+    - {path: 'Lib/**', disposition: excluded, reason: 'Binary jars of a local file repository (ebsConsultaClaves client, ojdbc6, EnvioCorreoSB client): proprietary binaries, provenance not verified; only the repository convention (file://${project.basedir}/Lib) is kept in the POM (SH-Q-004)'}
+    - {path: 'pe/**', disposition: excluded, reason: 'Compiled classes and WSDL of the credential-decrypt client placed at the project root (generated build/import artifact, not source)'}
+    - {path: '.idea/**', disposition: excluded, reason: 'IDE state/local paths; IntelliJ CheckStyle-IDEA settings recorded only as an observation (no Checkstyle gate)'}
+    - {path: '.settings/**', disposition: excluded, reason: 'Eclipse/SonarLint workspace preferences (IDE state)'}
+    - {path: .classpath, disposition: excluded, reason: 'Eclipse generated classpath (IDE state)'}
+    - {path: .project, disposition: excluded, reason: 'Eclipse project file (IDE state)'}
+    - {path: SH_ObtenerTrasladarArchivosMTC.iml, disposition: excluded, reason: 'IntelliJ module file (IDE state)'}
+generation:
+  status: approved-reference-baseline
+  decisionRefs: [SH-D-002, SH-D-006, SH-D-008, SH-D-009]
+  profile: batch-shell-jar-spring-xml-log4j-sftp-junit4
+  profileOwner: this-archetype
+  inputSpecification: 'Sparx functional specification (batch flow). OpenAPI HTTP contract is not applicable.'
+  utilities:
+    decisionRefs: [SH-D-006]
+    evidence: [E-SFTP-MANAGER, E-SFTP-UTIL, E-CONSTANTS, E-EXCEPTIONS]
+    items:
+      - template: 'src/main/java/@@BASE_PACKAGE_PATH@@/util/SFTPConnectionManager.java'
+        class: util.SFTPConnectionManager
+        scope: 'technical SFTP session manager (connect with password/timeout, list by mtime date, list by file-name date, get, put with recursive remote mkdir, isConnected, disconnect, getConnectionInfo). Excluded business method: 4-argument listarArchivos with the pre-midnight window.'
+        requiredConstants: {SFTP: sftp, SUCCESS: SUCCESS}
+      - template: 'src/main/java/@@BASE_PACKAGE_PATH@@/util/UtilSFTP.java'
+        class: util.UtilSFTP
+        scope: 'technical one-shot static SFTP operations (obtenerArchivo, enviarArchivo, listarArchivos). Observed callers are protected delegation methods of the excluded service not invoked by run(): review SH-Q-006.'
+        requiredConstants: {SFTP: sftp, SUCCESS: SUCCESS}
+      - template: 'src/main/java/@@BASE_PACKAGE_PATH@@/util/Constantes.java'
+        class: util.Constantes
+        scope: 'constants class: separators, SFTP, Spring config path, log message patterns, WS proxy trace patterns, error placeholders; service-specific constants appended by the generator'
+        requiredConstants: {CONFIG_PATH: applicationContext.xml, INICIO_METODO: '{0} [INICIO] - METODO: [{1}]', FIN_METODO: '{0} [FIN] - METODO: [{1}]', ERROR: '{0} Error: ', TIPO_TOTAL_PROCESO: '{0} Tiempo TOTAL Proceso: [{1} milisegundos]', ESPACIO: ' ', MILISEGUNDOS: milisegundos, PLACEHOLDER_RECURSO: '[RECURSO]', PLACEHOLDER_DETALLE: '[DETALLE]'}
+      - template: 'src/main/java/@@BASE_PACKAGE_PATH@@/util/PropertiesExterno.java'
+        class: util.PropertiesExterno
+        scope: 'external properties binding bean; technical keys only (log4j.file.dir, idf0/idf1, idt1/idt2/idt3); service keys appended by generator'
+        requiredConstants: {}
+      - template: 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/BaseException.java'
+        class: exception.BaseException
+        scope: 'technical exception base with SP/DB/WS/queue metadata (declared but unused in the reference)'
+        requiredConstants: {}
+      - template: 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/BaseExceptionSFTP.java'
+        class: exception.BaseExceptionSFTP
+        scope: 'SFTP exception base (server, path, file name, detail)'
+        requiredConstants: {}
+      - template: 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/SFTPException.java'
+        class: exception.SFTPException
+        scope: 'SFTP failure thrown by the service factory method'
+        requiredConstants: {}
+      - template: 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/WSException.java'
+        class: exception.WSException
+        scope: 'web-service failure carrying code and message'
+        requiredConstants: {}
+      - template: 'src/main/java/@@BASE_PACKAGE_PATH@@/exception/PropertiesException.java'
+        class: exception.PropertiesException
+        scope: 'runtime exception for configuration errors (declared but unused in the reference)'
+        requiredConstants: {}
+    mustBeUsedByGeneratedCode: true
+    excludedBusinessMethods:
+      - {class: SFTPConnectionManager, method: 'listarArchivos(String,String,String,boolean) midnight margin', reason: 'MTC-specific 5-minute pre-midnight acceptance window; business rule owned by Sparx'}
+      - {class: ObtenerTrasladarArchivosServiceImpl, method: 'run and helpers', reason: 'business flow'}
+      - {class: EbsConsultaClavesWSServiceImpl, method: 'desencriptar / buildWSException / clasificarExcepcionRed', reason: 'concrete integration; the network-exception classification pattern is documented (SH-Q-004)'}
+  configuration:
+    decisionRefs: [SH-D-004, SH-D-009]
+    evidence: [E-CONTEXT, E-PROPERTIES-CLASS, E-PROXY-XML]
+    items:
+      - template: src/main/resources/applicationContext.xml
+        kind: spring-xml-context
+        genericKeys: 'component-scan base package, annotation-config, property-placeholder file:${properties}'
+        generatedImportsAppended: 'import of integration contexts (for example applicationProxyWS.xml) appended when the specification declares an integration'
+      - template: 'config/@@PROPERTIES_FILE_BASENAME@@.properties.j2'
+        kind: external-properties-template
+        genericKeys: [log4j.file.dir, idf0.codigo, idf0.mensaje, idf1.codigo, idf1.mensaje, idt1.codigo, idt1.mensaje, idt2.codigo, idt2.mensaje, idt3.codigo, idt3.mensaje]
+        generatedKeysAppended: 'service-specific keys (ftp endpoints, routes, temp directory, execution date/format, ws urls/timeouts/application code) are appended by the materializer without duplicating generic keys'
+    notPresentInReference:
+      - 'log4j.properties (referenced by key log4j.file.dir and the resources plugin, absent): SH-Q-003'
+      - 'templates/* resources (referenced by the resources plugin, absent)'
+      - 'jndi/*.yml, *.j2 other than the one created here, Jenkinsfile, Dockerfile, Kubernetes, launcher .sh: not present'
+    secrets: none
+  rulesSource: reference-project-observed-conventions
+  persistence: {mechanism: not-present-in-reference, jpa: not-applicable, jdbc: not-applicable, note: 'SH-Q-009'}
+  logging: {pattern: log4j-1.2-per-class-reference-pattern, activityLogger: not-applicable, requestHeadersRecord: not-applicable, source: runtime.logging}
+  quality: {checkstyle: not-applicable, mandatoryStyleGate: false}
+  packaging: {type: jar, shade: true, copyDependenciesToLib: true, bootstrap: main-class}
+  tests: {framework: JUnit4, mock: Mockito-2, runner: MockitoJUnitRunner.Silent}
+  unsupportedBehavior: stop-never-invent
+  mavenAssembler: archetype-token-render-at-at
+  style:
+    source: reference-project-observed-conventions
+    decisionRefs: [SH-D-006, SH-Q-007]
+    constantsClass: util.Constantes
+    externalPropertiesClass: util.PropertiesExterno
+    externalPropertiesBinding: 'public mutable String fields annotated @Value("${key}") on a @Component; no getters; tests assign fields directly'
+    externalPropertiesNaming: 'fields mix UPPER_SNAKE (FTP_*, SFTP_*, RUTA_*) and lowerCamel (idf0Codigo, wsXxxUrl); keys are lowercase dotted'
+    hardcodedLiterals: allowed
+    hardcodedLiteralsNote: 'Observed MIXED: Constantes holds log patterns, separators, SFTP/SUCCESS and WS trace patterns, but service/utility code also uses inline literals (log texts, "ERROR: ", "ALERTA: ", map keys). Generator must at least register the technical constants required by utilities in Constantes and must not contradict observed usage. Resolved by SH-Q-007 (user: follow the reference strictly): mixed style is kept, hardcodedLiterals stays allowed.'
+    propertyKeys:
+      logConfig: 'log4j.file.dir'
+      responseCode: 'idf0.codigo, idf1.codigo, idt1.codigo, idt2.codigo, idt3.codigo'
+      responseMessage: 'idf0.mensaje, idf1.mensaje, idt1.mensaje, idt2.mensaje, idt3.mensaje'
+      ftpEndpoint: 'ftp.<externo|interno>.{username,host,puerto,password}'
+      tempDirectory: 'ruta.temp.<process>'
+      wsEndpoint: 'ws.<service>.{url,max.request.timeout,max.connection.timeout,codigo.aplicacion}'
+    classNaming: {main: '<Name>Main', serviceInterface: '<Name>Service', serviceImpl: '<Name>ServiceImpl', proxyInterface: '<WsName>WSService', proxyImpl: '<WsName>WSServiceImpl', test: '<Class>Test', constants: Constantes, properties: PropertiesExterno, exceptions: '*Exception'}
+    beanAndInjection: 'stereotype @Component/@Service + @Autowired field injection; no explicit bean names/qualifiers except the XML proxy bean'
+    exceptionHierarchy: 'BaseException(Exception), BaseExceptionSFTP(Exception) <- SFTPException, WSException(Exception), PropertiesException(RuntimeException)'
+    testability: 'protected factory/delegation methods so tests spy the service (@Spy + @InjectMocks); no PowerMock'
+    logMessages: 'Spanish text, "[idTx=<id>][method] " prefix, banners of = and -'
+evidence:
+  pathBase: input/reference/SH_ObtenerTrasladarArchivosMTC
+  entries:
+    E-POM: {path: pom.xml, lines: '1-265', observed: 'Java 8 jar, Spring 3.1.0, log4j, jsch, JaCoCo 0.8.2, shade, dependency copy, Sonar; 14 dependencies, 7 plugins', confidence: high}
+    E-README: {path: README.MD, lines: '1-76', observed: 'Run command java -jar <jar> <idTransaccion>, response codes 0/1 documented, prerequisites JDK8/Maven3', confidence: high}
+    E-MAIN: {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/ObtenerTrasladarArchivosMTCMain.java, lines: '1-82', observed: 'main(args) -> Spring XML context -> loadLog4J -> start -> service.run; try/catch/finally closing the context; no System.exit', confidence: high}
+    E-SERVICE-IFACE: {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/service/ObtenerTrasladarArchivosService.java, lines: '1-7', observed: 'single run(messageTransaction, idTransaccion)', confidence: high}
+    E-SERVICE-IMPL: {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/service/ObtenerTrasladarArchivosServiceImpl.java, lines: '1-385', observed: 'batch flow, typed exception handling, factory/delegation methods for tests; business excluded', confidence: high}
+    E-SFTP-MANAGER: {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/util/SFTPConnectionManager.java, lines: '1-316', observed: 'JSch session manager with timeout and StrictHostKeyChecking=no; list/get/put/disconnect', confidence: high}
+    E-SFTP-UTIL: {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/util/UtilSFTP.java, lines: '1-270', observed: 'static one-shot SFTP operations', confidence: high}
+    E-CONSTANTS: {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/util/Constantes.java, lines: '1-60', observed: 'constants for separators, SFTP, log patterns, WS trace, business names', confidence: high}
+    E-PROPERTIES-CLASS: {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/util/PropertiesExterno.java, lines: '1-122', observed: 'public @Value fields; key naming', confidence: high}
+    E-EXCEPTIONS: {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/exception, lines: 'BaseException 1-122; BaseExceptionSFTP 1-107; SFTPException 1-14; WSException 1-41; PropertiesException 1-22', observed: 'exception hierarchy', confidence: high}
+    E-PROXY-IMPL: {path: src/main/java/pe/com/claro/shell/trasladararchivosmtc/proxy/EbsConsultaClavesWSServiceImpl.java, lines: '1-107', observed: 'SOAP proxy with network exception classification into idt1/idt2/idt3', confidence: high}
+    E-PROXY-XML: {path: src/main/resources/applicationProxyWS.xml, lines: '1-53', observed: 'JaxWsPortProxyFactoryBean + timeout util:map from properties', confidence: high}
+    E-CONTEXT: {path: src/main/resources/applicationContext.xml, lines: '1-29', observed: 'annotation-config, component-scan, property-placeholder file:${properties}, import proxy context', confidence: high}
+    E-TEST: {path: src/test/java/pe/com/claro/shell/trasladararchivosmtc/service/ObtenerTrasladarArchivosServiceImplTest.java, lines: '1-774', observed: 'JUnit4+Mockito2 Silent runner, @Spy/@InjectMocks, 12 scenario tests + delegation tests; double-encoded accents', confidence: high}
+    E-GITIGNORE: {path: .gitignore, lines: '1-12', observed: 'Eclipse/Maven ignores', confidence: high}
+    E-EDITORCONFIG: {path: .editorConfig, lines: '1-20', observed: 'java 2-space, xml 3-space; Jenkinsfile section though no Jenkinsfile exists', confidence: high}
+    E-CHECKSTYLE-IDE: {path: .idea/checkstyle-idea.xml, lines: '1-16', observed: 'IDE-only CheckStyle-IDEA settings with bundled Sun/Google checks', confidence: high}
+    E-JAVA-USAGE: {path: src, lines: 'all Java sources; import scan only', observed: 'direct dependency use vs declaration', confidence: high}
+resolvedQuestions:
+  - {id: SH-Q-001, resolution: keep-observed-no-system-exit, basis: user-follow-reference}
+  - {id: SH-Q-002, resolution: main-args0-and-jvm-properties-no-openapi, basis: user-follow-reference}
+  - {id: SH-Q-003, resolution: absent-files-not-invented-log4j-external-prerequisite, basis: user-follow-reference}
+  - {id: SH-Q-004, resolution: retain-pom-dependency-exclude-concrete-integration-Lib-external, basis: user-follow-reference}
+  - {id: SH-Q-005, resolution: keep-observed-sftp-not-hardened, basis: user-follow-reference}
+  - {id: SH-Q-006, resolution: keep-UtilSFTP-in-template, basis: user-follow-reference}
+  - {id: SH-Q-007, resolution: hardcoded-literals-allowed, basis: user-follow-reference}
+  - {id: SH-Q-008, resolution: keep-layer-exclusions, basis: user-follow-reference}
+  - {id: SH-Q-009, resolution: no-implemented-persistence-no-imported-backend, basis: user-follow-reference}
+  - {id: SH-Q-010, resolution: preserve-spring-and-java-versions-compatibility-unverified, basis: user-follow-reference}
+  - {id: SH-Q-011, resolution: observed-naming-parameterized-not-universal-standard, basis: user-follow-reference}
+  - {id: SH-Q-012, resolution: manual-java-jar-no-invented-scheduler, basis: user-follow-reference}
+unresolvedAmbiguities: []
+readiness:
+  extractionComplete: true
+  baselineDecisionsApproved: true
+  freezeAuthorized: true
+  generationEnablementAuthorized: true
+  releaseDecision: SH-D-010
+  frozenOn: '2026-10-29'
+  generatorBackend: implemented-bounded-sftp-ir-v1
+  generatorBackendContract: .opencode/skills/materialize-full-service/docs/batch-shell-contract.md
+  generatorBackendValidation: synthetic-python-tests-passed-java-compilation-unverified
+  runtimeCompatibility: unverified
+  dependencyResolution: unverified
+  serviceGenerationAuthorized: false
+  limitations:
+    - 'Batch planner/materializer support a closed evidence-bound SFTP IR (connect, list, loop, download, upload, disconnect). SOAP/decryption, persistence and other steps fail closed. No automatic translation of raw Sparx prose is implemented by this backend.'
+    - 'SH-D-010 authorizes freezing and bounded generation. A real target still needs its own specification, consistency gate, semantic review and human resume authorization; serviceGenerationAuthorized remains false here.'
+    - 'Synthetic backend tests and Java 8 syntax parsing passed; generated-project compilation, Maven, JUnit execution, JaCoCo, Sonar, Spring 3.1/Java 8 runtime and Lib/ resolution remain unverified.'
+    - 'All baseline decisions follow the approved reference-only criterion; missing external artifacts and runtime compatibility remain unverified, not implicitly supplied or validated.'
+validation:
+  report: extraction-report.md
+  reproducibleStaticChecks: validate-extraction.py
+  mode: static-only
+  maven: not-run
+  tests: not-run
+  checkstyle: not-applicable
+  jacoco: not-run
+  database: not-accessed
+  deployment: not-run
+  protectedConfigurationContentIntegrity: not-compared-by-policy

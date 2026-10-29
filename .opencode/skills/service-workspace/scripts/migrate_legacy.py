@@ -126,7 +126,7 @@ def migrate_archived_run(repo: Path, archive_dir: Path, service: str) -> dict:
     state = {'schemaVersion': 1, 'status': 'legacy-migrated', 'targetService': service, 'runId': None,
              'inputs': {'openapi': {'path': ((load(ws.dir / 'openapi-spec.yml') or {}).get('source') or {}).get('path'), 'sha256': ((load(ws.dir / 'openapi-spec.yml') or {}).get('source') or {}).get('sha256')},
                         'sparxExport': {'path': ((load(ws.dir / 'sparx-target-authority.yml') or {}).get('target') or {}).get('sourceRoot')}},
-             'archetype': (plan.get('inputs') or {}).get('archetype') or {'path': 'archetypes/claro-spring-ms/v1.0.0'},
+             'archetype': (plan.get('inputs') or {}).get('archetype') or {'path': None, 'status': 'unknown-requires-selection'},
              'completedPhases': [], 'currentPhase': None,
              'legacyEvidence': {'note': 'Recovered from an archived run that predates the consistency gate and per-service workspaces; phases are not asserted.',
                                 'sourceArchive': archive_dir.relative_to(repo).as_posix(), 'serviceSpecPresent': bool(spec), 'implementationPlanMode': (plan.get('plan') or {}).get('mode'),

@@ -46,7 +46,7 @@ validation of this agent.
 
 You coordinate existing implementations. Do not parse OpenAPI/HTML yourself,
 invent a replacement analyzer/planner, implement business rules yourself, or
-create vendor-specific reasoning artifacts. Delegate semantic/code work and
+create vendor-specific reasoning artifacts. Delegate semantic work and
 validate the returned artifacts. Never extract/re-analyze the reference project
 in normal service generation.
 
@@ -66,18 +66,17 @@ language labels “Target service”, “OpenAPI”, and “Sparx”. On resume,
 `@service-generator` plus “Resume” may use these inputs from the checkpoint.
 Missing required initial inputs are the only normal setup questions.
 
-Default archetype: `archetypes/claro-spring-ms/v1.0.0`. Select a different version
-only if the user explicitly supplies it. Use the versioned, approved technical
+Select the archetype explicitly or reuse the target checkpoint's selection.
+There is no implicit archetype. Use the versioned, approved technical
 baseline unchanged; do not run `archetype-extractor` or `extract-archetype`.
 Default output: `output/<target_service>/`, using a safe service directory name.
 Derive package/build parameters by that archetype's approved conventions.
-The Maven POM is the mandatory reference baseline (D-012): planning and generation render
+The Maven POM is the selected archetype's mandatory reference baseline: planning and generation render
 `template/pom.xml` with the target identifiers and may only add justified target-specific
 dependencies; pruning or altering baseline properties, repositories, dependencies, plugins,
 configuration or profiles is a generation defect, and every run must produce the machine-readable
-Maven baseline comparison. Persistence technology is inherited from the archetype (D-011: Spring Data JPA,
-Hibernate, Oracle, HikariCP, reference `application.properties` baseline without
-SUBTYPES IDF). Never let planning or generation substitute plain JDBC or another
+Maven baseline comparison. Persistence technology or its absence comes from the
+selected archetype. Never let planning or generation substitute another
 technology for simplicity; only an explicit user instruction or an explicit
 target technical requirement may override it, recorded with provenance.
 Overrides and business decisions from another service are never defaults.
@@ -95,20 +94,18 @@ semantic analysis, Maven, database access, deployment, or infrastructure changes
 | `sparx-analyzer` | `interpret-sparx` | `.opencode/skills/interpret-sparx/scripts/slice_endpoint_detail.py`, `select_target_units.py`, `select_target_semantics.py`, `slice_sparx_context.py` |
 | `spec-analyzer` | `reconcile-service-spec` | `.opencode/skills/reconcile-service-spec/scripts/reconcile_specs.py`; use `consolidate_authoritative_specs.py` / `consolidate_emit.py` only when their input profile is actually compatible |
 | `implementation-planner` | `plan-service-implementation` | `.opencode/skills/plan-service-implementation/scripts/build_implementation_plan.py --mode full`; `resolve_generation_parameters.py --mode full` |
-| `general` (existing general-purpose coding agent) | existing full plan-driven materialization workflow | Materialize the approved file actions and tests, then inventory/hash, parse Java syntax and validate XML, mappings and boundaries offline |
+| deterministic materializer | `materialize-full-service` | `workspace_cli.py materialize <service>` with the selected profile |
 
 `materialize-service-scaffold` exists, with `materialize_scaffold.py`,
 `materialize_build_files.py` and `validate_offline_scaffold.py` under its
 `scripts/` directory. Reuse compatible rendering/validation capabilities; its
 CLI is **scaffold-only** and must not be presented as a full generator, passed a
 full plan blindly, or allowed to replace functional output with skeletons.
-There is currently no separately registered full-materializer repository agent;
-delegate the existing coding workflow to `general`, not to a fictional skill.
+Do not delegate Java writing; invoke the deterministic materializer.
 
 Inspect skill instructions and script argument/input contracts before dispatch.
 Do not execute target-specific `.factory/` development helpers or fixed decision
-IDs from a previous run. The current full planner backend supports one explicit
-Oracle relational table and specified select/insert/update actions. Unsupported
+IDs from a previous run. Check the selected profile's actual capabilities. Unsupported
 shapes are technical capability failures, not permission to invent mappings,
 reduce requested functionality, or ask the user to choose false business rules.
 
@@ -267,9 +264,13 @@ mode. The specialist derives a fresh target-specific planning input using the
 archetype and approved service spec, preserving only applicable approved values.
 Runtime connection/credential values can remain environment-only; never copy
 another service's database address, package override, identifier strategy or
-business policy. Safe technical choices are made and recorded by the planner, except persistence
-technology, which is fixed by the archetype (D-011) and must appear in the plan as
-`persistenceAuthority` with source `archetype` unless an explicit override exists.
+business policy. Technical conventions come from the selected archetype and its
+scoped decisions, with provenance. Unsupported profiles are technical failures.
+
+The following ActivityLogger and Checkstyle requirements apply ONLY to
+`claro-spring-ms/1.0.0`; D-011 also preserves its JPA/Hibernate/Oracle/HikariCP
+baseline. Other profiles retain their own logging and quality rules. Missing
+Checkstyle is `not-applicable`, never `passed`.
 
 Activity logging is also archetype-owned (D-013, reference `ActivityLogger` pattern). Before
 materialization verify the plan contains `activityLogging` (transaction header role, activity
@@ -280,7 +281,7 @@ their tests. A plan or output without them is a stage failure; never omit loggin
 The reference Checkstyle is a mandatory quality gate (D-014) for generated main AND test Java. Before
 materialization verify the plan contains `qualityGates.checkstyle` (mandatory, both source sets,
 no suppression/exclusion). Final validation order: expected file inventory, Java syntax, imports/structure,
-reference Checkstyle (`mvnw -o -s settings.xml validate`, or online if authorized), manifest consistency.
+reference Checkstyle (only with explicit Maven authorization), manifest consistency.
 Generation is complete only when Checkstyle is `passed` with 0 violations. If it cannot run, report
 `unverified` and do not mark generation complete or claim static validation passed; a Java parse never
 substitutes for it. If it fails, fix the generated code (never the rules) and rerun.
@@ -315,7 +316,7 @@ internally consistent plan, add behavior, or execute traceability-only pseudocod
 Generate production code and planned tests and use the existing offline validation
 workflow (source/package/route/mapping checks, XML, syntax, manifest/tree hashes).
 Record limitations explicitly: static parsing does not prove compilation or tests.
-Write style-conformant Java from the start (D-014) and run the reference Checkstyle gate
+For `claro-spring-ms/1.0.0` only, write style-conformant Java (D-014) and, when explicitly authorized, run the reference Checkstyle gate
 over `src/main/java` and `src/test/java` (narrowest run: the generated project's
 `mvnw -o -s settings.xml validate`, which executes only `maven-checkstyle-plugin:check`; no tests,
 database or deployment). Fix violations in the generated code, never in the rules. Checkpoint
@@ -327,7 +328,8 @@ a passed static/offline report AND Checkstyle `passed` with 0 violations. Checks
 
 Deliver output location, file actions, validation, manifest/tree hashes and
 remaining technical runtime/build risks. Stop after functional code, tests and
-static validation, including the Checkstyle validate gate. Do not run any other Maven goal, connect to a database, deploy or modify
+static validation. Required Checkstyle without Maven authorization stays unverified.
+Do not run Maven, connect to a database, deploy or modify
 infrastructure. Those are separate expressly authorized tasks, outside this
 orchestrator's normal run. Never mark a network-blocked build as successful.
 

@@ -17,21 +17,8 @@ from typing import Any
 SERVICE_SPEC = Path(".factory/service-spec.yml")
 PLAN = Path(".factory/implementation-plan.yml")
 PARAMETERS = Path(".factory/generation-parameters.yml")
-def _resolve_archetype_root() -> Path:
-    import os
-    chosen = os.environ.get("SERVICE_ARCHETYPE_PATH")
-    if not chosen:
-        state = Path(".factory/service-generation-state.yml")
-        if state.is_file():
-            import re
-            text = state.read_text(encoding="utf-8")
-            match = re.search(r"^archetype:\s*\n(?:[ \t]+.*\n)*?[ \t]+path:\s*['\"]?([^\s'\"]+)", text, re.M)
-            chosen = match.group(1) if match else None
-    return Path((chosen or "archetypes/claro-spring-ms/v1.0.0").rstrip("/"))
-
-
-ARCHETYPE_ROOT = _resolve_archetype_root()
-OUTPUT = Path("output/dom-document-mailing-info")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'service-workspace' / 'scripts'))
+from generation_context import resolve_archetype, resolve_context
 MANIFEST = ".generation-manifest.yml"
 PARAM_RE = re.compile(r"__[A-Z0-9_]+__")
 
@@ -230,10 +217,15 @@ def validate_settings(source: bytes, arch: dict[str, Any]) -> bytes:
 
 
 def build_payloads(root: Path, yaml: Any) -> tuple[dict[str, bytes], dict[str, Any], dict[str, str]]:
+    context = resolve_context(root)
+    ARCHETYPE_ROOT, OUTPUT = context.archetype, context.output
     spec, _ = read_yaml(root / SERVICE_SPEC, root, yaml)
     plan, _ = read_yaml(root / PLAN, root, yaml)
     params, _ = read_yaml(root / PARAMETERS, root, yaml)
     arch, _ = read_yaml(root / ARCHETYPE_ROOT / "archetype.yml", root, yaml)
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'plan-service-implementation' / 'scripts'))
+    from archetype_contract import normalize, require_backend
+    require_backend(normalize(arch), mode='scaffold')
     allowed, resolved = validate_build_plan(spec, plan, params, arch)
     pom_template = (root / ARCHETYPE_ROOT / "template/pom.xml").read_bytes()
     settings_template = (root / ARCHETYPE_ROOT / "template/settings.xml").read_bytes()
@@ -327,6 +319,7 @@ def main() -> int:
     args = parser.parse_args()
     root = Path.cwd().resolve()
     try:
+        OUTPUT = resolve_context(root).output
         yaml = yaml_module()
         output_root = root / OUTPUT
         if output_root.is_symlink() or not output_root.is_dir():

@@ -19,20 +19,7 @@ from build_implementation_plan import PlanError
 ROOT = Path.cwd().resolve()
 PLAN_PATH = Path(".factory/implementation-plan.yml")
 PARAMETERS_PATH = Path(".factory/generation-parameters.yml")
-def _resolve_archetype_root() -> Path:
-    import os
-    chosen = os.environ.get("SERVICE_ARCHETYPE_PATH")
-    if not chosen:
-        state = Path(".factory/service-generation-state.yml")
-        if state.is_file():
-            import re
-            text = state.read_text(encoding="utf-8")
-            match = re.search(r"^archetype:\s*\n(?:[ \t]+.*\n)*?[ \t]+path:\s*['\"]?([^\s'\"]+)", text, re.M)
-            chosen = match.group(1) if match else None
-    return Path((chosen or "archetypes/claro-spring-ms/v1.0.0").rstrip("/"))
-
-
-ARCHETYPE_ROOT = _resolve_archetype_root()
+from generation_context import resolve_archetype
 TOKEN_RE = re.compile(r"__[A-Z0-9_]+__")
 JAVA_SCOPES = ("src/main/java/", "src/test/java/")
 BUILD_PATHS = {"pom.xml", "settings.xml"}
@@ -299,14 +286,14 @@ def render_target_path(value: str, token_names: dict[str, str], resolved_by_name
 
 def file_parameters(entry: dict[str, Any], token_names: dict[str, str], root: Path) -> list[str]:
     source = str(entry.get("source") or "")
-    prefix = ARCHETYPE_ROOT.as_posix() + "/"
+    prefix = resolve_archetype(root).as_posix() + "/"
     dependencies = set() if source.startswith(prefix) else set(map(str, entry.get("dependencies") or []))
     for candidate in (str(entry.get("path") or ""), str(entry.get("source") or "")):
         for token in TOKEN_RE.findall(candidate):
             if token in token_names:
                 dependencies.add(token_names[token])
     if source.startswith(prefix):
-        template_path = ROOT / Path(source.replace("/", os.sep))
+        template_path = root / Path(source.replace("/", os.sep))
         if template_path.is_file() and not template_path.is_symlink():
             content = template_path.read_text(encoding="utf-8")
             for token in TOKEN_RE.findall(content):
@@ -337,9 +324,12 @@ def collect_candidates(files: dict[str, Any]) -> tuple[list[dict[str, Any]], lis
 
 
 def resolve(root: Path, yaml: Any) -> tuple[dict[str, Any], dict[str, Any]]:
+    ARCHETYPE_ROOT = resolve_archetype(root)
     plan_path = root / PLAN_PATH
     plan, _ = load_yaml(plan_path, yaml)
     archetype, _ = load_yaml(root / ARCHETYPE_ROOT / "archetype.yml", yaml)
+    from archetype_contract import normalize, require_backend
+    require_backend(normalize(archetype), mode='scaffold')
     plan.setdefault("inputs", {}).setdefault("archetype", {})["fingerprint"] = directory_fingerprint(root / ARCHETYPE_ROOT)
     prior_parameter_path = root / PARAMETERS_PATH
     prior_params = load_yaml(prior_parameter_path, yaml)[0] if prior_parameter_path.exists() else None
@@ -679,9 +669,26 @@ def main() -> int:
     args = parser.parse_args()
     try:
         yaml = yaml_module()
-        current, _ = load_yaml(ROOT / PLAN_PATH, yaml)
+        # An explicit full run needs no pre-existing plan. Use the workspace-aware
+        # loader when inferring mode (the sandbox's .factory is an approved link).
+        from build_implementation_plan import read_yaml as workspace_yaml
+        current = {}
+        if args.mode is None:
+            current, _ = workspace_yaml(ROOT / PLAN_PATH, ROOT, yaml)
         mode = args.mode or current.get("plan", {}).get("mode", "scaffold")
         if mode == "full":
+            import profiles
+            cfg = yaml.safe_load((ROOT / args.planning_input).read_bytes())
+            resolve_archetype(ROOT, workspace=(ROOT / args.planning_input).parent,
+                              explicit=cfg['target']['archetype'])
+            arch = yaml.safe_load((ROOT / cfg['target']['archetype'] / 'archetype.yml').read_bytes())
+            profile = profiles.resolve(arch)
+            if profile == profiles.BATCH_SHELL:
+                from batch_shell_plan import write_plan
+                return write_plan(ROOT, yaml, args.planning_input)
+            if profile == profiles.JDBC_WAR:
+                from jdbc_war_plan import write_plan
+                return write_plan(ROOT, yaml, args.planning_input)
             from full_implementation_plan import write_full_plan
             return write_full_plan(ROOT, yaml, args.planning_input)
         generation_parameters, plan = resolve(ROOT, yaml)

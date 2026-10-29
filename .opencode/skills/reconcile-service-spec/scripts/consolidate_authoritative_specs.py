@@ -495,8 +495,10 @@ def main() -> int:
         return _gate_exit
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--stage", choices=["reassess", "consolidate"], required=True)
-    parser.add_argument("--archetype", default=(__import__("os").environ.get("SERVICE_ARCHETYPE_PATH") or "archetypes/claro-spring-ms/v1.0.0").rstrip("/") + "/archetype.yml")
+    parser.add_argument("--archetype")
     args = parser.parse_args()
+    from generation_context import resolve_archetype
+    args.archetype = (resolve_archetype(Path.cwd(), explicit=args.archetype) / 'archetype.yml').as_posix()
     register, blockers, derived, ctx = assess()
     readiness = readiness_for(blockers, derived)
     source_hashes = {k: {"file": v, "sha256": sha256_file(v)} for k, v in PATHS.items()}

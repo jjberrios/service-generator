@@ -405,6 +405,21 @@ Existing output files modified by hand (or listed as user-owned) are preserved; 
 
 ## Service Generation Orchestrator
 
+### Non-HTTP batch backend
+
+The approved `claro-java-8-shell` profile has a bounded full planner/materializer
+(`batch_shell_plan.py`, `batch_shell_materializer.py`); its closed normalized Sparx
+IR and limits are documented in
+`.opencode/skills/materialize-full-service/docs/batch-shell-contract.md`.
+It does not impose OpenAPI, Spring Boot, JPA, ActivityLogger or Checkstyle on batch.
+`batch_gate.py` marks HTTP comparison not applicable but still requires target-local
+resolved Sparx authority, current evidence hashes, semantic review and explicit
+human resume authorization. It never manufactures a successful Swagger audit.
+Unsupported behavior stops generation. Backend implementation does not itself
+enable/freeze an archetype or authorize a real service, Maven or remote execution.
+
+### HTTP service orchestration
+
 Use `.opencode/agents/service-generator.md` to coordinate the existing specialized
 agents and skills. The orchestrator resumes from
 `.factory/service-generation-state.yml`, validates input/artifact hashes, selects

@@ -312,9 +312,34 @@ def materialize(repo: Path, service: str, supported_only: bool = False, dry_run:
     ws = wsm.Workspace(repo, service)
     # 1. The gate comes first: a blocked service gets no further than this line (GateError propagates; no file has been touched).
     gate.check_cleared(ws.dir, repo, service)
+    from generation_context import resolve_context, SelectionError
     plan_file = ws.dir / 'implementation-plan.yml'
-    profile = ((yaml.safe_load(plan_file.read_bytes()) or {}).get('plan') or {}).get('profile') if plan_file.is_file() else None
+    try:
+        plan_doc = yaml.safe_load(plan_file.read_bytes()) if plan_file.is_file() else None
+    except yaml.YAMLError:
+        plan_doc = None
+    plan_section = plan_doc.get('plan') if isinstance(plan_doc, dict) else None
+    profile = plan_section.get('profile') if isinstance(plan_section, dict) else None
+    try:
+        context = resolve_context(repo, service=service)
+    except SelectionError as error:
+        if profile is None:
+            load_plan(ws, repo)  # plan-level errors (stale/invalid) surface before the selection error
+        raise MaterializationError('invalid-selection', str(error)) from error
+    import profiles
+    selected_profile = profiles.resolve(yaml.safe_load((repo / context.archetype / 'archetype.yml').read_bytes()))
+    if profile is None and selected_profile != profiles.LEGACY_JPA:
+        raise MaterializationError('invalid-plan', 'missing profile for non-legacy archetype')
+    if profile is not None and profile != selected_profile:
+        raise MaterializationError('invalid-plan', 'plan profile disagrees with selected archetype')
+    if profile == profiles.LEGACY_JPA:
+        profile = None
     if profile:
+        import batch_shell_materializer as batch
+        if profile == batch.PROFILE:
+            if supported_only or not assemble:
+                raise MaterializationError('unsupported', 'batch requires full atomic project assembly; partial generation is not supported')
+            return batch.materialize(repo, service, dry_run)
         import jdbc_war_materializer as jdbc
         if profile != jdbc.PROFILE:
             raise MaterializationError('unsupported', f'generation profile {profile!r} has no materializer', {'unsupported': [{'path': 'implementation-plan.yml', 'componentType': 'profile', 'reason': profile}]})

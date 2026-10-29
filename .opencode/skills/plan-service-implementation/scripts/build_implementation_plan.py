@@ -15,20 +15,8 @@ from typing import Any
 
 
 SERVICE_SPEC = Path(".factory/service-spec.yml")
-def _resolve_archetype_root() -> Path:
-    import os
-    chosen = os.environ.get("SERVICE_ARCHETYPE_PATH")
-    if not chosen:
-        state = Path(".factory/service-generation-state.yml")
-        if state.is_file():
-            import re
-            text = state.read_text(encoding="utf-8")
-            match = re.search(r"^archetype:\s*\n(?:[ \t]+.*\n)*?[ \t]+path:\s*['\"]?([^\s'\"]+)", text, re.M)
-            chosen = match.group(1) if match else None
-    return Path((chosen or "archetypes/claro-spring-ms/v1.0.0").rstrip("/"))
-
-
-ARCHETYPE_ROOT = _resolve_archetype_root()
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'service-workspace' / 'scripts'))
+from generation_context import resolve_archetype
 PLAN_PATH = Path(".factory/implementation-plan.yml")
 SCAFFOLD_ARTIFACTS = {
     "template/.gitattributes", "template/.gitignore", "template/.mvn/wrapper/maven-wrapper.properties",
@@ -299,6 +287,9 @@ def parameter_value(parameter: dict[str, Any], service: dict[str, Any], archetyp
 
 
 def plan(root: Path, yaml: Any) -> dict[str, Any]:
+    ARCHETYPE_ROOT = resolve_archetype(root)
+    from archetype_contract import normalize, require_backend
+    require_backend(normalize(read_yaml(root / ARCHETYPE_ROOT / 'archetype.yml', root, yaml)[0]), mode='scaffold')
     service, service_bytes = read_yaml(root / SERVICE_SPEC, root, yaml)
     archetype_root = root / ARCHETYPE_ROOT
     archetype, _ = read_yaml(archetype_root / "archetype.yml", root, yaml)
@@ -553,8 +544,13 @@ def main() -> int:
         if args.mode == "full":
             import profiles
             cfg, _ = read_yaml(root / args.planning_input, root, yaml)
+            resolve_archetype(root, workspace=(root / args.planning_input).parent,
+                              explicit=cfg['target']['archetype'])
             arch, _ = read_yaml(root / cfg["target"]["archetype"] / "archetype.yml", root, yaml)
             profile = profiles.resolve(arch)
+            if profile == profiles.BATCH_SHELL:
+                from batch_shell_plan import write_plan
+                return write_plan(root, yaml, args.planning_input)
             if profile == profiles.JDBC_WAR:
                 from jdbc_war_plan import write_plan
                 return write_plan(root, yaml, args.planning_input)

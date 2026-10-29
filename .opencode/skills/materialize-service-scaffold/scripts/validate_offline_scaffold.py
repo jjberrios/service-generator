@@ -17,8 +17,6 @@ from typing import Any
 SERVICE_SPEC = Path(".factory/service-spec.yml")
 PLAN = Path(".factory/implementation-plan.yml")
 PARAMETERS = Path(".factory/generation-parameters.yml")
-MANIFEST_REL = Path("output/dom-document-mailing-info/.generation-manifest.yml")
-OUTPUT_REL = Path("output/dom-document-mailing-info")
 BUILD_REPORT = Path(".factory/build-report.yml")
 REPORT = Path(".factory/offline-validation-report.yml")
 JAVA_PACKAGE = "com.claro.document.mailing.info.support"
@@ -424,6 +422,11 @@ def validate_pointer_contract(spec: dict[str, Any], plan: dict[str, Any], output
 
 def validate(root: Path, yaml: Any) -> dict[str, Any]:
     try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'service-workspace' / 'scripts'))
+        from generation_context import resolve_context
+        OUTPUT_REL = resolve_context(root).output
+        MANIFEST_REL = OUTPUT_REL / '.generation-manifest.yml'
         spec, _ = read_yaml(root / SERVICE_SPEC, root, yaml)
         plan, _ = read_yaml(root / PLAN, root, yaml)
         parameters, _ = read_yaml(root / PARAMETERS, root, yaml)

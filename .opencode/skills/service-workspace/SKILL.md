@@ -19,6 +19,15 @@ Provenance paths inside artifacts keep their `.factory/...` form; `workspace_cli
 
 ## Consistency gate (mandatory, blocking)
 
+For an explicitly selected non-HTTP batch archetype, `batch_gate.py` reports
+`comparison: not-applicable-non-http-batch` (not a successful Swagger audit). It verifies
+the selected archetype, workspace identity, resolved Sparx authority, live source hashes,
+equality of the normalized Sparx batch IR with service-spec, a bound semantic review
+with no pending findings, and the existing explicit human resume authorization.
+An OpenAPI artifact in that workspace blocks; relabeling an HTTP service cannot clear
+the gate. The batch contract is documented in
+`../materialize-full-service/docs/batch-shell-contract.md`.
+
 Statuses: `NO_AUDIT`, `SEMANTIC_REVIEW_PENDING`, `BLOCKED_BY_INCONSISTENCIES`, `AWAITING_AUTHORIZATION`, `CLEARED`. Checkpoint statuses mirror them
 (`BLOCKED_BY_INCONSISTENCIES`, `CONSISTENCY_REVIEW_PENDING`, `AWAITING_RESUME_AUTHORIZATION`). Blocks: every verified contradiction, every documental
 difference, unverified `comportamiento-no-especificado`/`verificacion-pendiente`. Does not block: internal-to-one-source, non comparable sources, discarded false

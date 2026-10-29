@@ -37,6 +37,16 @@ do not generate Java.
 
 ## Full functional planning
 
+### Non-HTTP batch profile
+
+`batch-shell-jar-spring-xml-log4j-sftp-junit4` dispatches to `batch_shell_plan.py`.
+It consumes the evidence-bound `service-spec.yml#/batch` IR and the selected archetype,
+not OpenAPI or reference sources. It never upgrades readiness or enables the archetype.
+Its closed schema, explicit parameters, supported SFTP steps and non-HTTP gate are
+documented in `../materialize-full-service/docs/batch-shell-contract.md`.
+The JPA/Checkstyle/ActivityLogger requirements below apply to their own legacy profile,
+never to batch. `resolve_generation_parameters.py --mode full` uses the same dispatcher.
+
 ```text
 python .opencode/skills/plan-service-implementation/scripts/build_implementation_plan.py --mode full --planning-input .factory/full-planning-input.yml
 ```
@@ -53,6 +63,13 @@ embeds effective operation, column, mapping, outcome and test matrices. It
 distinguishes absent JSON fields from explicit null, preserves effective contract
 amendments, and records runtime database prerequisites separately from source
 generation readiness. Never infer sequence names, ID algorithms or extra layers.
+
+### Legacy adapter: claro-spring-ms/1.0.0 only
+
+The D-012/D-014/D-013/D-011 requirements below belong only to this baseline.
+Other selected archetypes retain their own POM, persistence, logging and quality
+conventions, including absence. Unsupported capabilities are technical errors,
+never a request to adopt the legacy stack. Workspace gates apply to every profile.
 
 **The reference POM is the mandatory Maven baseline (D-012).** `template/pom.xml` is the
 approved reference project's `pom.xml` with only declared substitutions

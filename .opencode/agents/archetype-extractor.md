@@ -38,13 +38,10 @@ Before doing any work:
 
 4. Resolve and verify the reference and target paths.
 
-For the current archetype:
-
-- Reference project:
-  `input/reference/ms-individual`
-
-- Target archetype:
-  `archetypes/claro-spring-ms/v1.0.0`
+Use the explicitly selected reference and target version. During revision or
+validation resolve provenance from that target's manifest and approved decisions.
+There is no implicit reference or archetype. Ask once for missing required paths;
+never use another baseline as a technical model.
 
 Treat the entire `input/reference/` tree as strictly read-only.
 

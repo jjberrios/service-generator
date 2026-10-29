@@ -297,6 +297,10 @@ def fresh_registry(ws_dir: Path, repo: Path, service: str, persist: bool = False
 
 
 def current_decision(ws_dir: Path, repo: Path, service: str, persist: bool = False) -> dict:
+    spec = load(Path(ws_dir) / 'service-spec.yml') or {}
+    if (spec.get('service') or {}).get('profile') == 'batch-shell':
+        import batch_gate
+        return batch_gate.evaluate(Path(ws_dir), Path(repo), service, sys.modules[__name__])
     p = paths(ws_dir)
     registry = fresh_registry(ws_dir, repo, service, persist)
     supplemental = load(p['supplemental'])
@@ -327,7 +331,10 @@ def check_cleared(ws_dir: Path, repo: Path, service: str | None = None) -> dict:
     result = current_decision(ws_dir, repo, service)
     result.pop('_registry', None)
     if result['status'] != CLEARED:
-        raise GateError(result['status'], f'{len(result["blocking"])} blocking item(s) pending' if result['blocking'] else 'consistency gate is not cleared', result)
+        message = f'{len(result["blocking"])} blocking item(s) pending' if result['blocking'] else 'consistency gate is not cleared'
+        if result.get('comparison') == 'not-applicable-non-http-batch' and result.get('problems'):
+            message += ': ' + '; '.join(str(p) for p in result['problems'])
+        raise GateError(result['status'], message, result)
     return result
 
 

@@ -18,21 +18,9 @@ from typing import Any
 SERVICE_SPEC_PATH = Path(".factory/service-spec.yml")
 PLAN_PATH = Path(".factory/implementation-plan.yml")
 GENERATION_PARAMETERS_PATH = Path(".factory/generation-parameters.yml")
-def _resolve_archetype_root() -> Path:
-    import os
-    chosen = os.environ.get("SERVICE_ARCHETYPE_PATH")
-    if not chosen:
-        state = Path(".factory/service-generation-state.yml")
-        if state.is_file():
-            import re
-            text = state.read_text(encoding="utf-8")
-            match = re.search(r"^archetype:\s*\n(?:[ \t]+.*\n)*?[ \t]+path:\s*['\"]?([^\s'\"]+)", text, re.M)
-            chosen = match.group(1) if match else None
-    return Path((chosen or "archetypes/claro-spring-ms/v1.0.0").rstrip("/"))
-
-
-ARCHETYPE_ROOT = _resolve_archetype_root()
-DEFAULT_OUTPUT = Path("output/dom-document-mailing-info")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'service-workspace' / 'scripts'))
+from generation_context import resolve_archetype, resolve_context
+DEFAULT_OUTPUT = None
 MANIFEST_NAME = ".generation-manifest.yml"
 TOKEN_RE = re.compile(r"__[A-Z0-9_]+__")
 JAVA_IDENTIFIER_RE = re.compile(r"^[A-Za-z_$][A-Za-z0-9_$]*$")
@@ -502,7 +490,7 @@ def materialize_bytes(root: Path, spec: dict[str, Any], plan: dict[str, Any], pa
         status = str(entry["generationStatus"])
         source = str(entry.get("source") or "")
         if status in {"archetype-copy", "archetype-parameterize"}:
-            prefix = ARCHETYPE_ROOT.as_posix() + "/"
+            prefix = resolve_archetype(root).as_posix() + "/"
             if not source.startswith(prefix):
                 raise MaterializationError(f"Archetype file has an invalid source path: {source}")
             src = root / Path(source.replace("/", os.sep))
@@ -583,6 +571,7 @@ def materialize_bytes(root: Path, spec: dict[str, Any], plan: dict[str, Any], pa
             "unresolvedBehavior": sorted(set(map(str, behavior))),
         })
 
+    ARCHETYPE_ROOT = resolve_archetype(root)
     input_fingerprints = snapshots(root, ARCHETYPE_ROOT)
     source_input_hash = input_fingerprints[SERVICE_SPEC_PATH.as_posix()]
     manifest = {
@@ -688,10 +677,14 @@ def validate_generated(spec: dict[str, Any], plan: dict[str, Any], params: dict[
 
 
 def build_from_approved_inputs(root: Path, yaml: Any) -> tuple[dict[str, bytes], dict[str, Any], dict[str, str]]:
+    ARCHETYPE_ROOT = resolve_archetype(root)
     spec, _ = read_yaml(root / SERVICE_SPEC_PATH, root, yaml)
     plan, _ = read_yaml(root / PLAN_PATH, root, yaml)
     params, _ = read_yaml(root / GENERATION_PARAMETERS_PATH, root, yaml)
     arch, _ = read_yaml(root / ARCHETYPE_ROOT / "archetype.yml", root, yaml)
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'plan-service-implementation' / 'scripts'))
+    from archetype_contract import normalize, require_backend
+    require_backend(normalize(arch), mode='scaffold')
     entries = validation_inventory(plan)
     check_ready_inputs(spec, plan, params, arch, entries)
     before = snapshots(root, ARCHETYPE_ROOT)
@@ -723,6 +716,10 @@ def main() -> int:
     args = parser.parse_args()
     root = Path.cwd().resolve()
     try:
+        expected_output = resolve_context(root).output
+        if args.output is not None and args.output != expected_output:
+            raise MaterializationError('output-selection-conflict')
+        args.output = expected_output
         yaml = yaml_module()
         files, manifest, before = build_from_approved_inputs(root, yaml)
 
@@ -773,7 +770,7 @@ def main() -> int:
             manifest_path.write_bytes(files[MANIFEST_NAME])
         else:
             write_output(output, files)
-        after = snapshots(root, ARCHETYPE_ROOT)
+        after = snapshots(root, resolve_archetype(root))
         if before != after:
             raise MaterializationError("An authoritative input changed during materialization.")
         print({"output": output.relative_to(root).as_posix(),

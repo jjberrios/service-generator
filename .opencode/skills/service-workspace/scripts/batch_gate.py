@@ -1,0 +1,69 @@
+"""Source-only batch gate. HTTP is N/A, never a fabricated successful Swagger audit.
+
+Still requires current authoritative Sparx, explicit semantic review and the existing
+human resume authorization. A profile label alone can never release a workspace.
+"""
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'plan-service-implementation' / 'scripts'))
+from batch_shell_contract import PROFILE, require, validate
+
+
+def evaluate(ws, repo, service, gate):
+    result = {'status': gate.NO_AUDIT, 'blocking': [], 'resolved': [], 'orphanedResolutions': [],
+              'coveredByDecision': [], 'coverageProblems': [], 'topics': [], 'evaluationHash': None,
+              'problems': [], 'comparison': 'not-applicable-non-http-batch', '_registry': None}
+    try:
+        spec = gate.load(ws / 'service-spec.yml')
+        state = gate.load(ws / 'service-generation-state.yml') or {}
+        require(state.get('targetService') == service, 'checkpoint service mismatch')
+        path = (state.get('archetype') or {}).get('path', '')
+        require(isinstance(path, str) and path.startswith('archetypes/') and '\\' not in path
+                and ':' not in path and not set(path.split('/')) & {'', '.', '..'}, 'invalid selected archetype')
+        root = repo / path
+        require(root.resolve().is_relative_to((repo / 'archetypes').resolve()), 'archetype escapes repository')
+        arch = gate.load(root / 'archetype.yml') or {}
+        require((arch.get('generation') or {}).get('profile') == PROFILE
+                and arch.get('generationOwnership', {}).get('apiContract') == 'not-applicable-non-http-batch',
+                'selected archetype is not a non-HTTP batch')
+        require(spec.get('service') == {'name': service, 'profile': 'batch-shell'}, 'batch service identity required')
+        require(not (ws / 'openapi-spec.yml').exists(), 'batch workspace must not silently ignore an OpenAPI contract')
+        batch = validate(spec.get('batch'))
+        sparx = gate.load(ws / 'sparx-spec.yml') or {}
+        require(sparx.get('service') == spec['service'] and sparx.get('batch') == batch,
+                'batch IR must equal the authoritative normalized Sparx behavior')
+        require(not any((spec.get('unresolved') or {}).values()) and not any((sparx.get('unresolved') or {}).values()),
+                'unresolved Sparx behavior/conflicts')
+        require(not spec.get('operations') and not spec.get('inactive'), 'HTTP or inactive operations are not valid batch IR')
+        require(not spec.get('validation', {}).get('errors'), 'invalid consolidated spec')
+        authority = gate.load(ws / 'sparx-target-authority.yml') or {}
+        selection = authority.get('selection') or {}
+        require(authority.get('target', {}).get('name') == service and selection.get('status') == 'resolved'
+                and selection.get('authoritativeBranchRootId') is not None, 'resolved target-local Sparx authority required')
+        for binding in batch['sourceBindings']:
+            source = repo / binding['path']
+            require(source.resolve().is_relative_to((repo / 'input/sparx').resolve()), 'source escapes Sparx root')
+            require(source.is_file() and gate.sha_bytes(source.read_bytes()) == binding['sha256'], 'Sparx source missing or changed')
+        hashes = {name: gate.sha_bytes((ws / filename).read_bytes()) for name, filename in
+                  (('serviceSpecSha256', 'service-spec.yml'), ('sparxSpecSha256', 'sparx-spec.yml'),
+                   ('authoritySha256', 'sparx-target-authority.yml'))}
+        hashes['archetypeSha256'] = gate.sha_bytes((root / 'archetype.yml').read_bytes())
+        review = gate.load(ws / 'consistency/batch-review.yml') or {}
+        result['evaluationHash'] = gate.digest({'service': service, 'hashes': hashes, 'review': review, 'sources': batch['sourceBindings']})
+        if review.get('reviewed') is not True or not str(review.get('reviewedBy', '')).strip() or review.get('reviewedAgainst') != hashes:
+            result['status'] = gate.SEMANTIC_REVIEW_PENDING
+            result['problems'] = ['batch semantic review absent or stale (including selected archetype)']
+        elif review.get('findings') != []:
+            result['status'] = gate.BLOCKED
+            result['problems'] = ['batch review has unresolved findings or lacks explicit findings: []']
+        else:
+            auth = gate.load(ws / 'consistency/authorization.yml') or {}
+            by = str(auth.get('authorizedBy', '')).strip()
+            result['status'] = gate.CLEARED if (auth.get('evaluationHash') == result['evaluationHash']
+                and auth.get('service') == service and by and by.lower() not in gate.FORBIDDEN_APPROVERS
+                and str(auth.get('statement', '')).strip()) else gate.AWAITING_AUTHORIZATION
+    except (ValueError, TypeError, KeyError, OSError) as error:
+        result['status'] = gate.BLOCKED
+        result['problems'] = [str(error)]
+    return result

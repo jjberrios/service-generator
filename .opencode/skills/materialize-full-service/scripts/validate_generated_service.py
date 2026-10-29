@@ -76,6 +76,16 @@ def validate(repo: Path, service: str) -> dict:
     check('planPresent', plan is not None, 'implementation-plan.yml missing')
     if plan is None:
         return {'status': 'failed', 'checks': checks, 'violations': violations, 'checkstyleOfficial': 'unverified'}
+    batch_profile = (plan.get('plan') or {}).get('profile') == 'batch-shell-jar-spring-xml-log4j-sftp-junit4'
+    from generation_context import resolve_context
+    from archetype_contract import normalize
+    try:
+        context = resolve_context(repo, service=service)
+        contract = normalize(yaml.safe_load((repo / context.archetype / 'archetype.yml').read_bytes()))
+        checkstyle_applicability = contract['quality']['checkstyle']['applicability']
+    except (ValueError, OSError) as error:
+        check('archetypeContract', False, str(error))
+        checkstyle_applicability = 'unknown'
     out = repo / plan['service']['outputDirectory']
     check('outputDirectoryBelongsToService', plan['service']['outputDirectory'] == f'output/{service}' and out.is_dir(), plan['service']['outputDirectory'])
     planned = {f['path']: f for f in plan['files']['generate']}
@@ -179,11 +189,20 @@ def validate(repo: Path, service: str) -> dict:
     except gate.GateError as error:
         gate_state = error.status
     check('javaOnlyWhileGateCleared', gate_state == gate.CLEARED or not java_on_disk, f'{len(java_on_disk)} Java file(s) present while the gate is {gate_state}')
-    lint = style_lint.lint_project(out) if out.is_dir() else None
+    if batch_profile:
+        import full_materializer as fm
+        try:
+            preview = fm.materialize(repo, service, dry_run=True)
+            check('batchPlanAndPayloadCurrent', not preview['written'], preview['written'])
+        except (fm.MaterializationError, gate.GateError, ValueError, OSError) as error:
+            check('batchPlanAndPayloadCurrent', False, str(error))
+        validation_scope = {'maven': 'not-executed', 'compilation': 'not-verified', 'tests': 'not-executed', 'jacoco': 'not-verified'}
+    lint = style_lint.lint_project(out) if out.is_dir() and checkstyle_applicability in ('required', 'present') else None
     status = 'passed' if not violations else 'failed'
     return {'status': status, 'service': service, 'complete': not partial, 'gate': gate_state, 'checks': checks, 'violations': violations,
             'preventiveStyleLint': {k: lint[k] for k in ('preventiveResult', 'byRule', 'filesChecked')} if lint else None,
-            'checkstyleOfficial': 'unverified', 'checkstyleNote': 'Run maven-checkstyle-plugin (offline validate); the validator never marks the official gate as passed.',
+            'checkstyleOfficial': 'not-applicable' if checkstyle_applicability == 'not-applicable' else 'unverified',
+            'checkstyleNote': 'not-present-in-reference' if checkstyle_applicability == 'not-applicable' else 'Selected baseline quality tool unverified; execution requires explicit authorization.',
             'validationScope': validation_scope or None, 'applicationPropertiesRead': False}
 
 

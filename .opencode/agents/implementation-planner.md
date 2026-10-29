@@ -25,14 +25,14 @@ strictImplementationReady are both true. Never fabricate missing business rules.
 Full mode records file actions, explicit mappings, query mechanics, validation,
 outcomes, dependencies and tests; technical runtime prerequisites stay explicit.
 
-The Maven POM of the approved reference project is a mandatory baseline (D-012): render
+The Maven POM of the selected reference project is a mandatory baseline: render
 `template/pom.xml` with the target identifiers and add only justified target-specific
 dependencies (recorded with `justification` and `requiredBy`). Never prune or alter baseline
 properties, repositories, dependencies, plugins, configuration or profiles because the target
 does not appear to use them.
 
-Persistence technology is inherited from the approved archetype (D-011: Spring Data
-JPA/Hibernate/Oracle/HikariCP). Never choose JDBC or another technology for simplicity.
+Persistence technology, including its absence, comes from the selected archetype.
+Never substitute technology for simplicity or to fit another backend.
 Authority order: explicit user instruction, explicit target-specific approved technical
 requirement, archetype/reference architecture.
 
@@ -40,7 +40,11 @@ Workspace and gate: plan only inside the service workspace (`workspace_cli.py ru
 The planner scripts refuse to run unless the Sparx/Swagger consistency gate of that service is CLEARED; never work around it, never plan from
 legacy root `.factory/` files or from another service's artifacts.
 
-Activity logging is inherited from the approved archetype (D-013, reference `ActivityLogger`
+The following logging and Checkstyle paragraphs apply ONLY to
+`claro-spring-ms/1.0.0`. D-011 also preserves its JPA/Hibernate/Oracle/HikariCP
+baseline. Other archetypes use their own conventions, including absence.
+
+Activity logging is inherited from that archetype (D-013, reference `ActivityLogger`
 pattern): plan `activityLogging`, `ActivityLogger`/`ConstanApi`/`RequestHeaders` and their tests;
 activities come only from the authoritative flow; no masking is added; logging never alters
 statuses or return values.

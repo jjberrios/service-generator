@@ -129,9 +129,10 @@ models, repository queries, business mappings, business services, business
 rules, domain test fixtures, sample business payloads, local development state,
 runtime data, credentials, and generated build output.
 
-Dependencies used only by excluded domain functionality should also be
-excluded unless an approved decision or independent evidence establishes them
-as part of the baseline.
+Preserve the selected reference's complete POM dependency baseline, including
+dependencies whose observed callers are excluded. Inventory declared dependencies
+and observed use separately. Removing or changing a dependency requires an explicit
+approved deviation for the target version; domain-code exclusion alone is insufficient.
 
 ## Ambiguity And Approved Decisions
 
@@ -385,6 +386,26 @@ properly parameterized infrastructure/configuration.
 No reference business behavior may leak into the template.
 
 ## Validation
+
+Run the shared read-only relational validator before the profile-specific validator:
+
+```text
+python .opencode/skills/extract-archetype/scripts/validate_inventory.py archetypes/<name>/<version>
+python archetypes/<name>/<version>/validate-extraction.py
+```
+
+The shared validator checks inventory equality, duplicate YAML keys, exact parameter
+locations, decision/evidence references, declared utility/configuration files and
+POM dependency/plugin inventory fields. It supports `templateInventory`/`@@TOKEN@@`
+and the existing claro-spring-ms manifest through a read-only legacy adapter.
+An unknown schema is an explicit unsupported-schema result, never a pass.
+It never reads protected application properties or requires a generation backend.
+The profile validator retains full POM fidelity and reference-specific checks;
+the common checks do not replace those checks or prove compilation/runtime.
+Historical reference hashes covering other projects or filesystem modification
+times cannot establish target-local provenance. Retain them, report unverified,
+and never replace them with the current hash merely to make validation pass.
+See `validation-contract.md` for scope and known legacy metadata findings.
 
 Before completion:
 

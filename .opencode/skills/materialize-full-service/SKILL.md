@@ -5,6 +5,16 @@ description: Deterministically materializes the supported Java components of a F
 
 # Materialize FULL service (v5)
 
+## Scope of baseline-specific rules
+
+Select the backend from the selected archetype's supported profile. The JPA,
+ActivityLogger, D-011 through D-014, Checkstyle and legacy Maven assembly sections
+below describe `claro-spring-ms/1.0.0` only. JDBC/WAR and batch use their own
+documented adapters and conventions. Shared gates, file protection, provenance
+and honest validation reporting apply to every profile. No Maven goal is implicitly
+authorized by this skill. A quality tool absent from the selected baseline is
+`not-applicable`, never `passed`; a required unexecuted tool stays `unverified`.
+
 Scripts (`.opencode/skills/materialize-full-service/scripts/`): `full_materializer.py`, `renderers.py`, `validate_generated_service.py`, `style_lint.py`.
 Run through `python .opencode/skills/service-workspace/scripts/workspace_cli.py materialize <service> [--supported-only] [--dry-run]`.
 
@@ -94,6 +104,15 @@ Evidence is bound to the SHA-256 of the exact project; a different tree makes ev
   Not supported (stops with a reason, never guessed): constraints on non-text headers, `@Min/@Max` on a header, patterns with no derivable sample.
 
 ## Profile dispatch (per archetype)
+
+Profile `batch-shell-jar-spring-xml-log4j-sftp-junit4` dispatches to
+`batch_shell_materializer.py` + `batch_shell_plan.py`. It preserves Spring XML, Java 8,
+log4j, the reference utilities, external properties, JUnit4/Mockito and the shaded JAR POM.
+No HTTP, JPA, Boot, ActivityLogger, scheduler or Checkstyle is introduced. Full assembly
+only: `--supported-only` and `--no-assemble` are rejected for batch. All unsupported
+behavior fails before writes. See `docs/batch-shell-contract.md` for the bounded SFTP IR,
+semantic review, authorization, input hashes and tests. `validate_generated_service.py`
+also validates batch via a side-effect-free materialization preview; Checkstyle is N/A.
 
 The backend is selected by the archetype's `generation.profile` (`profiles.py`), never fixed. Profile `war-jdbc-callablestatement-junit4` (claro-spring-java-8) is implemented by `jdbc_war_plan.py` + `jdbc_war_materializer.py` (`jdbc-war-materializer-2`): JDBC CallableStatement over JNDI, Java 8, JUnit4/Mockito, no JPA/ActivityLogger/Checkstyle.
 - The profile must declare `generation.style` (constants class, external-properties class, JNDI key, `hardcodedLiterals: forbidden`); the planner stops without it.

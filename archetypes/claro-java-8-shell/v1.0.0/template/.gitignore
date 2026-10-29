@@ -1,0 +1,12 @@
+#gitignore para proyectos maven
+
+# Eclipse
+.classpath
+.project
+.settings/
+*.diff
+
+# Maven
+log/
+#Comentado para poder pasar sonar
+target/

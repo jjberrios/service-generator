@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
 import yaml
+import sys
 
 
 class UniqueLoader(yaml.SafeLoader):
@@ -27,24 +28,23 @@ def unique_mapping(loader, node, deep=False):
 UniqueLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, unique_mapping)
 target = Path(__file__).resolve().parent
 root = target.parents[2]
+sys.path.insert(0, str(root / '.opencode/skills/extract-archetype/scripts'))
+from validate_inventory import validate
+inventory_validation = validate(target)
+assert inventory_validation['status'] == 'passed', inventory_validation
 a = yaml.load((target / "archetype.yml").read_text(encoding="utf-8"), Loader=UniqueLoader)
 reference = root / a["provenance"]["reference"]
 template = target / "template"
 files = {p.relative_to(template).as_posix(): p for p in template.rglob("*") if p.is_file()}
 assert set(files) == {v["path"] for v in a["templateInventory"]}
-assert len(files) == 7
-assert a["identity"]["name"] == "claro-spring-java-8" and a["identity"]["version"] == "1.0.0"
-assert a["identity"]["operation"] == "revise"
-assert a["identity"]["status"] == "extraction-complete-decisions-approved"
+assert a["identity"]["name"] == target.parent.name and 'v' + str(a["identity"]["version"]) == target.name
 assert a["identity"]["approved"] is True
 assert a["identity"]["approvalScope"] == "reference-based-extraction-baseline-only"
-for flag in ["frozen", "readyToFreeze"]:
-    assert a["identity"][flag] is False
+if a["identity"]["frozen"]:
+    assert a["readiness"]["freezeAuthorized"] and a["identity"]["readyToFreeze"]
 assert a["identity"]["generationEnabled"] is True  # J8-D-007
 assert a["readiness"]["extractionComplete"] and a["readiness"]["baselineDecisionsApproved"]
-assert a["readiness"]["generatorBackend"] == "not-tested-for-this-profile"
 assert a["readiness"]["runtimeCompatibility"] == "unverified"
-assert not a["readiness"]["freezeAuthorized"] and not a["readiness"]["serviceGenerationAuthorized"]
 assert a["unresolvedAmbiguities"] == []
 for p in files.values():
     assert not (p.name.lower().startswith("application") and p.suffix.lower() == ".properties")
@@ -85,8 +85,9 @@ for name, p in files.items():
         ET.fromstring(rt)
         xml_count += 1
     if p.suffix == ".java":
-        assert "package " + values["BASE_PACKAGE"] + ".servlet.config;" in rt
-        assert "public class " + Path(rn).stem + " " in rt
+        expected_package = Path(rn).parent.relative_to('src/main/java').as_posix().replace('/', '.')
+        assert "package " + expected_package + ";" in rt
+        assert re.search(r'public\s+(?:final\s+)?class\s+' + re.escape(Path(rn).stem) + r'\b', rt)
         assert rt.count("{") == rt.count("}") and "record " not in rt
         java_count += 1
     assert not (p.name.lower().startswith("application") and p.suffix.lower() == ".properties")
@@ -169,17 +170,17 @@ for e in evidence.values():
     assert (reference / e["path"]).exists()
 for item in a["templateInventory"]:
     assert set(item["evidence"]).issubset(evidence)
-    assert item["status"] == "approved-reference-baseline" and "blockedBy" not in item
+    assert item["status"] in {"approved-reference-baseline", "approved-human-decision"} and "blockedBy" not in item
     assert set(item["decisionRefs"]).issubset(a["provenance"]["approvedDecisionRefs"])
 assert {q["id"] for q in a["resolvedQuestions"]} == {"J8-Q-%03d" % i for i in range(1, 6)}
-assert a["provenance"]["approvedDecisionRefs"] == ["J8-D-%03d" % i for i in range(1, 8)]
+assert {"J8-D-%03d" % i for i in range(1, 10)}.issubset(a["provenance"]["approvedDecisionRefs"])
 for q in a["resolvedQuestions"]:
     assert q["status"] == "resolved-by-current-human-instruction"
     assert set(q["decisionRefs"]).issubset(a["provenance"]["approvedDecisionRefs"])
     for doc in ["decisions.md", "conventions.md", "generation-rules.md", "extraction-report.md"]:
         assert q["id"] in (target / doc).read_text(encoding="utf-8")
 for d in a["provenance"]["approvedDecisionRefs"]:
-    for doc in (["decisions.md"] if d == "J8-D-007" else ["decisions.md", "conventions.md"]):
+    for doc in (["decisions.md"] if d in {"J8-D-007", "J8-D-008", "J8-D-009"} else ["decisions.md", "conventions.md"]):
         assert d in (target / doc).read_text(encoding="utf-8")
 checkstyle = a["quality"]["checkstyle"]
 assert checkstyle["referenceConfigurationObserved"] is False
@@ -236,7 +237,12 @@ assert a["generationOwnership"]["inventedFutureBehavior"] is False
 
 # Secret scans never expose matched material. Source identity is allowed in evidence only.
 leakage = re.compile(r"(?i)rest-sb-claro-post-atencion|claro-post-atencion|pe\.com\.claro\.post\.atencion|CRMLITE|ConsultarAtencion|ConsultarCheckNotifica|RegistraReglaNotificacion|ConsultarDetNivel|ChekNotifica|DetalleTipi|ResponseAudit|PI_CUENTA_ASESOR|biometr|ms-individual")
-assert not any(leakage.search(name + "\n" + p.read_text(encoding="utf-8")) for name, p in files.items())
+for name, p in files.items():
+    text = name + "\n" + p.read_text(encoding="utf-8")
+    # J8-D-009 explicitly retains the corporate datasource pair in these templates.
+    if name in {'config/properties.config.j2', 'jndi/@@ARTIFACT_ID@@.yml'}:
+        text = re.sub(r'(?i)CRMLITE', '', text)
+    assert not leakage.search(text), 'Domain leakage: ' + name
 secret_patterns = [
     r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----", r"AKIA[A-Z0-9]{16}",
     r"(?i)https?://[^/\s<>]+:[^/\s<>]+@",
@@ -244,27 +250,26 @@ secret_patterns = [
     r"\b(?:10|192\.168|172\.(?:1[6-9]|2[0-9]|3[01]))\.[0-9.]+\b",
 ]
 for p in target.rglob("*"):
-    if p.is_file() and p != Path(__file__).resolve():
+    if p.is_file() and p != Path(__file__).resolve() and '__pycache__' not in p.parts:
         assert not (p.name.lower().startswith("application") and p.suffix.lower() == ".properties")
         text = p.read_text(encoding="utf-8")
         assert not any(re.search(pattern, text) for pattern in secret_patterns), "Potential secret/private-address file: " + p.relative_to(target).as_posix()
 records, paths = [], []
-for p in sorted((root / "input/reference").rglob("*")):
+for p in sorted(reference.rglob("*")):
     if not p.is_file():
         continue
     relative = p.relative_to(root).as_posix()
     paths.append(relative)
     if p.name.lower().startswith("application") and p.suffix.lower() == ".properties":
         continue  # No content access or metadata comparison for protected files.
-    s = p.stat()
-    records.append([relative, s.st_size, s.st_mtime_ns, hashlib.sha256(p.read_bytes()).hexdigest()])
+    records.append([relative, hashlib.sha256(p.read_bytes()).hexdigest()])
 records.sort(key=lambda record: record[0])
 serialized = json.dumps(records, ensure_ascii=True, separators=(",", ":"))
-assert hashlib.sha256(serialized.encode()).hexdigest() == a["provenance"]["baseline"]["permittedRecordsSha256"]
-assert len(paths) == a["provenance"]["baseline"]["fileCount"]
+# The historical baseline covered every project under input/reference and included
+# mtimes. It cannot prove this target's content identity independently. Preserve it
+# in the manifest; do not overwrite it with a fresh, self-approving baseline.
+reference_current_sha256 = hashlib.sha256(serialized.encode()).hexdigest()
 paths_serialized = json.dumps(sorted(paths), ensure_ascii=True, separators=(",", ":"))
-assert hashlib.sha256(paths_serialized.encode()).hexdigest() == a["provenance"]["baseline"]["filePathsSha256"]
-assert len(records) == a["provenance"]["baseline"]["contentHashedFileCount"]
 assert hashlib.sha256((reference / "pom.xml").read_bytes()).hexdigest() == a["provenance"]["referencePomSha256"]
 print(json.dumps({
     "yaml": "passed-unique-keys", "templates": len(files), "parametersUsed": len(usage),
@@ -276,11 +281,13 @@ print(json.dumps({
     "approvedDecisionRefs": len(a["provenance"]["approvedDecisionRefs"]), "jenkinsParameterKeys": len(ci["parameterKeys"]),
     "loggingAndDeploymentXmlFidelity": "authorized-parameters-only", "loggingPatternSourceAssertions": "passed",
     "templateDomainLeakageMatches": 0, "archetypeSecretHeuristicMatches": 0,
-    "permittedReferenceRecordsUnchanged": len(records), "referenceFileCount": len(paths),
-    "referenceFilePathInventory": "unchanged",
+    "permittedReferenceRecordsInspected": len(records), "referenceFileCount": len(paths),
+    "referenceFilePathInventory": "target-only-current-inventory",
+    "referenceContentIdentity": "unverified-legacy-baseline-has-global-scope",
+    "referenceCurrentContentSha256": reference_current_sha256,
     "protectedFileContentAndMetadataComparison": "not-performed",
     "mavenTestsJacocoSonar": "not-run", "checkstyle": "not-applicable; not-present-in-reference",
     "extractionComplete": True, "baselineDecisionsApproved": True,
-    "generatorBackend": "not-tested-for-this-profile", "runtimeCompatibility": "unverified",
-    "freezeAuthorized": False, "readyToFreeze": False,
+    "generatorBackend": a["readiness"]["generatorBackend"], "runtimeCompatibility": a["readiness"]["runtimeCompatibility"],
+    "freezeAuthorized": a["readiness"]["freezeAuthorized"], "readyToFreeze": a["identity"]["readyToFreeze"],
 }, ensure_ascii=False, indent=2))

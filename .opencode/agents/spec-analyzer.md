@@ -34,14 +34,14 @@ Names or summaries alone are not a match. `matched`, `partially-matched`,
 Only contradictory active authoritative claims may become conflicts. Inactive
 or `ELIMINADO` Sparx operations remain under inactive/historical traceability;
 their omission from OpenAPI is not a conflict and must never create an active
-API endpoint. Preserve the human-reviewed mailing GET decision from the Sparx
-spec and its exact decision evidence; do not hardcode the route in generic logic.
+API endpoint. Preserve only applicable target-local human-reviewed decisions
+and their exact evidence; do not hardcode routes or another target's decisions.
 
 Deduplicate only when evidence-backed operation/integration identity is exact.
 When combining items, union citations and source references without raising
 confidence. Otherwise keep items separate. Preserve all unresolved ambiguities,
-missing evidence and relevant warnings. In particular, do not infer persistence
-for GEDODBDD without explicit query/table/entity/schema/mapping evidence.
+missing evidence and relevant warnings. Do not infer persistence for any integration
+without explicit query/table/entity/schema/mapping evidence.
 
 Read only target-specific evidence directly referenced by `.factory/sparx-spec.yml`
 when validating citations. Do not read global semantic results, index/context,

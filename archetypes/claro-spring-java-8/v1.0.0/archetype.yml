@@ -17,7 +17,7 @@ provenance:
   methodology: extract-archetype
   decisionFile: decisions.md
   revisedOn: '2026-10-20'
-  approvedDecisionRefs: [J8-D-001, J8-D-002, J8-D-003, J8-D-004, J8-D-005, J8-D-006, J8-D-007]
+  approvedDecisionRefs: [J8-D-001, J8-D-002, J8-D-003, J8-D-004, J8-D-005, J8-D-006, J8-D-007, J8-D-008, J8-D-009]
   inheritedDecisions: []
   entireReferenceTreeReadOnly: true
   initialTargetAbsent: true
@@ -267,7 +267,7 @@ parameters:
     required: true
     pattern: '^[a-z][a-z0-9-]*$'
     replacementScope: xml-text-and-log-basename
-    affectedFiles: [pom.xml, config/logback.xml]
+    affectedFiles: [pom.xml, config/logback.xml, 'jndi/@@ARTIFACT_ID@@.yml']
   PROJECT_VERSION:
     source: target-technical-version
     required: true
@@ -280,6 +280,7 @@ parameters:
     pattern: '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$'
     replacementScope: java-package-and-scan-string
     affectedFiles:
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/common/util/ClaroUtil.java'
       - 'src/main/java/@@BASE_PACKAGE_PATH@@/servlet/config/@@APPLICATION_CLASS@@.java'
       - 'src/main/java/@@BASE_PACKAGE_PATH@@/servlet/config/ServletInitializer.java'
   BASE_PACKAGE_PATH:
@@ -290,6 +291,7 @@ parameters:
     pattern: '^[a-z][a-z0-9_]*(/[a-z][a-z0-9_]*)+$'
     replacementScope: template-relative-path-only
     affectedFiles:
+      - 'src/main/java/@@BASE_PACKAGE_PATH@@/common/util/ClaroUtil.java'
       - 'src/main/java/@@BASE_PACKAGE_PATH@@/servlet/config/@@APPLICATION_CLASS@@.java'
       - 'src/main/java/@@BASE_PACKAGE_PATH@@/servlet/config/ServletInitializer.java'
   APPLICATION_CLASS:
@@ -311,7 +313,7 @@ parameters:
     required: true
     pattern: '^[a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*$'
     replacementScope: java-string-relative-path
-    affectedFiles: ['src/main/java/@@BASE_PACKAGE_PATH@@/servlet/config/ServletInitializer.java']
+    affectedFiles: ['src/main/java/@@BASE_PACKAGE_PATH@@/servlet/config/ServletInitializer.java', config/properties.config.j2]
   LOG_DIRECTORY:
     source: target-environment-log-directory
     required: true
