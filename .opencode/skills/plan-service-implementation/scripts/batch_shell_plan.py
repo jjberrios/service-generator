@@ -3,7 +3,7 @@ from pathlib import Path
 import re
 
 import build_implementation_plan as base
-from batch_shell_contract import PROFILE, identifier, require, validate
+from batch_shell_contract import PROFILE, identifier, require, validate, features_of
 
 TOKEN = re.compile(r'@@([A-Z][A-Z0-9_]*)@@')
 
@@ -39,7 +39,6 @@ def build(repo, spec, cfg):
     ready = spec.get('readiness') or {}
     require(ready.get('functionalCodeGenerationReady') is True and ready.get('strictImplementationReady') is True
             and not ready.get('blockers') and not ready.get('incompleteOperations'), 'full batch readiness is required')
-    batch = validate(spec.get('batch'))
     arch_path = safe_path(target['archetype'])
     require(arch_path.startswith('archetypes/'), 'archetype must be versioned under archetypes/')
     arch_root = repo / arch_path
@@ -47,6 +46,11 @@ def build(repo, spec, cfg):
     yaml = base.yaml_module()
     arch, _ = base.read_yaml(arch_root / 'archetype.yml', repo, yaml)
     generation, identity = arch.get('generation', {}), arch.get('identity', {})
+    features = features_of(generation)
+    unsupported = [m['id'] for m in generation.get('featureModules', ()) if isinstance(m, dict)
+                   and m.get('defaultEnabled') is True and m['id'] not in features]
+    require(not unsupported, f'archetype feature modules not implemented by this backend: {unsupported}')
+    batch = validate(spec.get('batch'), features)
     require(generation.get('profile') == PROFILE and identity.get('profile') == 'batch-shell', 'archetype profile mismatch')
     require(identity.get('approved') is True and identity.get('generationEnabled') is True, 'archetype not approved/enabled for generation')
     platform = arch.get('platform') or {}
@@ -105,7 +109,7 @@ def build(repo, spec, cfg):
             'templateParameters': values, 'batch': batch, 'technicalProfile': generation,
             'readiness': ready, 'qualityGates': {'checkstyle': {'status': 'not-applicable', 'reason': 'not-present-in-reference'}},
             'files': {'generate': entries}, 'generation': {'functionalGenerationReady': True},
-            'limitations': ['SOAP/decryption, database persistence, nested loops and unrecognized steps are unsupported.',
+            'limitations': ['Database persistence, mail notification, nested loops and unrecognized steps are unsupported; SOAP credential decryption only when the archetype feature credential-decrypt-soap is implemented.',
                             'External properties/log4j and Lib/ artifacts must be supplied by the operator.',
                             'Maven, runtime, remote connections and coverage are not verified by materialization.']}
 
@@ -132,13 +136,12 @@ def write_plan(repo, yaml, planning_input):
                           'planningInput': {'path': '.factory/full-planning-input.yml', 'sha256': base.sha256(raw_cfg)}})
     raw_plan = base.dump_yaml(plan, yaml)
     # All checks precede writes; reproducible bytes, no timestamps.
-    import os
+    from artifact_integrity import write_atomic, safe_path
+    for name in ('generation-parameters.yml', 'implementation-plan.yml'):
+        safe_path(ws, name)
     for name, payload in (('generation-parameters.yml', params_raw), ('implementation-plan.yml', raw_plan)):
         dst = ws / name
         require(not dst.is_symlink(), 'artifact symlink is forbidden')
-        tmp = ws / ('.' + name + '.tmp')
-        require(not tmp.is_symlink(), 'temporary artifact symlink is forbidden')
-        tmp.write_bytes(payload)
-        os.replace(tmp, dst)
+        write_atomic(dst, payload)
     print({'profile': PROFILE, 'files': len(plan['files']['generate']), 'sha256': base.sha256(raw_plan)})
     return 0

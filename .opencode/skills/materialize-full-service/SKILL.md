@@ -5,6 +5,12 @@ description: Deterministically materializes the supported Java components of a F
 
 # Materialize FULL service (v5)
 
+Shared integrity controls for all FULL profiles are documented in
+`docs/artifact-integrity-v1.md`: declared-inventory fingerprints, whole-payload
+file protection (including identical user-owned content), service-scoped writer
+locks, unique atomic replacements and guarded manifest-last publication.
+Old all-tree fingerprints require replanning, never silent hash refresh.
+
 ## Scope of baseline-specific rules
 
 Select the backend from the selected archetype's supported profile. The JPA,
@@ -25,7 +31,9 @@ Run through `python .opencode/skills/service-workspace/scripts/workspace_cli.py 
 4. Every file goes through `file_protection`: manual, untracked or user-owned content is preserved (exit 3, nothing written) unless an authorization bound to its exact content exists; `application*.properties` is never read, listed, written or blocking.
 5. `guard_write` is re-checked immediately before each write; writes are atomic and recorded with hashes in `.generation-manifest.yml`. The orchestrator has no edit permission on `output/**`.
 
-Same plan + archetype + workspace spec => identical bytes, manifest and report (UTF-8, LF, no timestamps).
+Same plan + archetype + workspace spec (and retained inputs) => identical generated
+payload and manifest bytes (UTF-8, LF, no timestamps). Operational reports honestly
+distinguish `written` from `unchanged`; their bytes may change on a repeat run.
 
 ## Supported in v2 (`full-materializer-2`)
 Foundation (v1): `archetype-activity-logger`, `archetype-activity-logger-test`, `activity-constants`, `request-headers-model`, `internal-typed-exception`, `jpa-entity`, `spring-data-jpa-repository`.
@@ -56,6 +64,10 @@ the D-014 Maven Checkstyle gate (`checkstyleOfficial: not-verified`).
 
 ## Tests
 `python -m unittest discover -s .opencode/skills/materialize-full-service/tests` (synthetic services in temporary directories only).
+
+Official offline Maven test groups are opt-in: they are skipped unless a human
+explicitly authorizes Maven and sets `SERVICE_GENERATOR_AUTHORIZED_MAVEN_TESTS=1`.
+Having Maven installed is not authorization. Never set that flag automatically.
 
 Optional compile evidence: `test_generated_java_compiles_with_javac_against_local_jars_without_running_maven` compiles synthetic output with `javac` and the jars of the local Maven cache (Lombok as processor). It is NOT Maven, Checkstyle or JaCoCo.
 
@@ -104,6 +116,14 @@ Evidence is bound to the SHA-256 of the exact project; a different tree makes ev
   Not supported (stops with a reason, never guessed): constraints on non-text headers, `@Min/@Max` on a header, patterns with no derivable sample.
 
 ## Profile dispatch (per archetype)
+
+JDBC/WAR now uses `jdbc-war-materializer-3-explicit-bindings` and
+`docs/jdbc-binding-v1.md`. Legacy inferred JDBC plans stop before writes; target
+class names, procedure mappings/order and outcomes must be explicit. No
+claro-post-atencion decisions or pending-operation exception are defaults for
+other targets. Existing target outputs/decisions remain unchanged. The profile's
+older v2 description below is historical externalization/style context, not
+permission to consume an inferred plan.
 
 Profile `batch-shell-jar-spring-xml-log4j-sftp-junit4` dispatches to
 `batch_shell_materializer.py` + `batch_shell_plan.py`. It preserves Spring XML, Java 8,

@@ -15,10 +15,9 @@ from pathlib import Path
 import yaml
 
 PROFILE = 'war-jdbc-callablestatement-junit4'
-VERSION = 'jdbc-war-materializer-2'
+VERSION = 'jdbc-war-materializer-3-explicit-bindings'
 TOKEN = re.compile(r'@@([A-Z0-9_]+)@@')
 OBFUSC = '%%'
-DEFAULT_INVALID = 'Parametros incorrectos: [PARAMETROS]'
 WORDS = ['CERO', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE', 'DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISEIS',
          'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE', 'VEINTE', 'VEINTIUNO', 'VEINTIDOS', 'VEINTITRES', 'VEINTICUATRO']
 
@@ -71,6 +70,8 @@ class Ctx:
         self.consts = {}
         self.by_value = {}
         for name, value in self.FIXED:
+            if name == 'DATASOURCE_CRMLITE':
+                value = self.style['dataSourceBean']
             self.consts[name] = ('String', value)
             self.by_value[value] = name
         for name, value in (plan['technicalProfile'].get('utilityConstants') or {}).items():
@@ -86,12 +87,15 @@ class Ctx:
             self._apply_template_config(repo)
 
     def _config_template_text(self, repo: Path):
+        from artifact_integrity import template_paths, safe_path
         root = repo / self.plan['inputs']['archetype']['path'] / 'template'
-        for entry in self.plan['files']['generate']:
-            if entry['componentType'] == 'archetype-configuration' and entry['path'].endswith('.j2'):
-                src = next((p for p in root.rglob('*.j2')), None)
-                return src.read_text(encoding='utf-8') if src else None
-        return None
+        targets = {entry['path'] for entry in self.plan['files']['generate']
+                   if entry['componentType'] == 'archetype-configuration' and entry['path'].endswith('.j2')}
+        candidates = [rel for rel in template_paths(root.parent)
+                      if TOKEN.sub(lambda m: str(self.plan['templateParameters'][m.group(1)]), rel) in targets]
+        if len(candidates) > 1:
+            raise ValueError('unsupported JDBC multiple property configuration templates; explicit adapter required')
+        return safe_path(root, candidates[0]).read_text(encoding='utf-8') if candidates else None
 
     def _apply_template_config(self, repo: Path):
         text = self._config_template_text(repo)
@@ -156,47 +160,41 @@ class Ctx:
         return self._add_prop(f'ws.{oid}.{suffix}', oid + cap(suffix), value, source)
 
     def _build_props(self):
-        owner = None
         for op in self.ops:
             oid = op['operationId']
             out = op.get('outcomes') or {}
             p = {}
-            inv = out.get('invalidParameters') or {'code': '1', 'message': op['errors'].get('IDF1')}
-            msg = inv.get('message')
-            if not msg or 'sin texto literal' in msg:
-                msg = DEFAULT_INVALID
-            p['inv_code'] = self._resp(oid, 'codigoIdf1', inv['code'], 'OpenAPI codigoRespuesta enum (D-G)')
-            p['inv_msg'] = self._resp(oid, 'mensajeIdf1', msg, 'Sparx IDF1 literal (D-G)')
+            inv = out['invalidParameters']
+            msg = inv['message']
+            p['inv_code'] = self._resp(oid, 'codigoIdf1', inv['code'], 'service-spec jdbcBinding.outcomes', per_op=True)
+            p['inv_msg'] = self._resp(oid, 'mensajeIdf1', msg, 'service-spec jdbcBinding.outcomes', per_op=True)
             if op.get('implemented'):
                 proc = op['procedure']
-                p['ok'] = self._resp(oid, 'codigoIdf0', out['success'], 'OpenAPI codigoRespuesta enum (D-G)')
+                p['ok'] = self._resp(oid, 'codigoIdf0', out['success'], 'service-spec jdbcBinding.outcomes', per_op=True)
                 fail = out['procedureFailure']
-                p['fail_code'] = self._resp(oid, 'codigoIdf2', fail['code'], 'OpenAPI codigoRespuesta enum (D-G)', per_op=True)
+                p['fail_code'] = self._resp(oid, 'codigoIdf2', fail['code'], 'service-spec jdbcBinding.outcomes', per_op=True)
                 text = fail.get('message')
-                p['fail_msg'] = None if (not text or 'sin texto literal' in text) else self._resp(oid, 'mensajeIdf2', text, 'Sparx IDF2 literal (D-G)', per_op=True)
-                p['to_code'] = self._add_prop('ws.codigoIdt1', 'codigoIdt1', out['timeout']['code'], 'OpenAPI codigoRespuesta enum (D-G)')
-                p['to_msg'] = self._add_prop('ws.mensajeIdt1', 'mensajeIdt1', None, 'definir por el operador (el texto IDT de Sparx es una descripcion, no un literal)')
-                p['un_code'] = self._add_prop('ws.codigoIdt2', 'codigoIdt2', out['unavailable']['code'], 'OpenAPI codigoRespuesta enum (D-G)')
-                p['un_msg'] = self._add_prop('ws.mensajeIdt2', 'mensajeIdt2', None, 'definir por el operador (el texto IDT de Sparx es una descripcion, no un literal)')
+                p['fail_msg'] = self._resp(oid, 'mensajeIdf2', text, 'service-spec jdbcBinding.outcomes', per_op=True)
+                p['to_code'] = self._resp(oid, 'codigoIdt1', out['timeout']['code'], 'service-spec jdbcBinding.outcomes', per_op=True)
+                p['to_msg'] = self._resp(oid, 'mensajeIdt1', out['timeout']['message'], 'service-spec jdbcBinding.outcomes', per_op=True)
+                p['un_code'] = self._resp(oid, 'codigoIdt2', out['unavailable']['code'], 'service-spec jdbcBinding.outcomes', per_op=True)
+                p['un_msg'] = self._resp(oid, 'mensajeIdt2', out['unavailable']['message'], 'service-spec jdbcBinding.outcomes', per_op=True)
                 parts = proc['name'].split('.')
                 sp = parts[-1]
                 pkg = parts[-2] if len(parts) > 1 else None
-                if len(parts) > 2:
-                    owner = parts[-3]
+                p['owner'] = self._add_prop(f'bd.jdbc.{oid}.owner', oid + 'Owner', parts[-3], 'service-spec jdbcBinding.procedure.name') if len(parts) > 2 else None
                 prefix, rest = sp.lower().split('_', 1) if '_' in sp else ('sp', sp.lower())
                 rest = rest.replace('_', '')
-                p['sp'] = self._add_prop(f'bd.crmlite.sp.{prefix}.{rest}', 'sp' + cap(prefix) + cap(rest), sp, 'Sparx persistence.operation')
-                p['timeout'] = self._add_prop(f'bd.crmlite.timeout.ejecucion.{prefix}.{rest}', 'timeoutEjecucion' + cap(prefix) + cap(rest), None,
+                p['sp'] = self._add_prop(f'bd.jdbc.{oid}.procedure', oid + 'Procedure', sp, 'service-spec jdbcBinding.procedure.name')
+                p['timeout'] = self._add_prop(f'bd.jdbc.{oid}.timeout', oid + 'Timeout', None,
                                               'sin dato en las fuentes: definir por el operador (segundos)')
                 if pkg:
                     pk = pkg.lower()
                     pk = pk[4:] if pk.startswith('pkg_') else pk
-                    p['pkg'] = self._add_prop('bd.crmlite.package.' + pk.replace('_', '.'), 'paquete' + ''.join(cap(x) for x in pk.split('_')), pkg, 'Sparx persistence.operation')
+                    p['pkg'] = self._add_prop(f'bd.jdbc.{oid}.package', oid + 'Package', pkg, 'service-spec jdbcBinding.procedure.name')
                 else:
                     p['pkg'] = None
             self.P[oid] = p
-        self.props.setdefault('bd.crmlite.owner', {'key': 'bd.crmlite.owner', 'field': 'owner', 'suggestedValue': owner,
-                                                   'source': 'Sparx persistence.operation (si incluye owner); si no, definir por el operador'})
         self.props.setdefault(self.jndi_key, {'key': self.jndi_key, 'field': None, 'suggestedValue': None,
                                               'source': 'entorno: nombre JNDI del DataSource (definir por el operador); leido en JdbcConfig'})
 
@@ -373,9 +371,9 @@ def dao_class(ctx: Ctx) -> str:
                                 '    private static final Logger logger = LoggerFactory.getLogger(CRMLITERepository.class);', '',
                                 '    @Autowired', '    private PropertiesExternos prop;', '',
                                 '    @Autowired', '    @Qualifier(Constantes.DATASOURCE_CRMLITE)', '    private DataSource dataSource;', '',
-                                '    private String nombreProcedimiento(String paquete, String procedimiento) {',
-                                '        StringBuilder nombre = new StringBuilder();', '        if (StringUtils.isNotBlank(prop.owner)) {',
-                                '            nombre.append(prop.owner).append(Constantes.PUNTO);', '        }', '        if (StringUtils.isNotBlank(paquete)) {',
+                                 '    private String nombreProcedimiento(String owner, String paquete, String procedimiento) {',
+                                 '        StringBuilder nombre = new StringBuilder();', '        if (StringUtils.isNotBlank(owner)) {',
+                                 '            nombre.append(owner).append(Constantes.PUNTO);', '        }', '        if (StringUtils.isNotBlank(paquete)) {',
                                 '            nombre.append(paquete).append(Constantes.PUNTO);', '        }', '        return nombre.append(procedimiento).toString();', '    }', '']
     for op in proc_ops(ctx):
         proc = op['procedure']
@@ -386,11 +384,12 @@ def dao_class(ctx: Ctx) -> str:
         i_code, i_msg, i_cur = n_in + 1, n_in + 2, n_in + 3
         oid = op['operationId']
         pkg_ref = f'prop.{pp["pkg"]}' if pp.get('pkg') else 'null'
+        owner_ref = f'prop.{pp["owner"]}' if pp.get('owner') else 'null'
         body = ['    @Override', f'    public {dao_signature(op)}',
                 '            throws DBTimeoutException, DBDisponibilidadException {',
                 f'        String menTran = {k("[" + oid + " ", name="TX_" + slug(oid))} + idTransaccion + Constantes.TX_CIERRE;',
                 '        long inicio = System.currentTimeMillis();',
-                f'        String sql = Constantes.CALL + nombreProcedimiento({pkg_ref}, prop.{pp["sp"]}) + {k("(" + marks + ")}", name="MARCAS_" + slug(oid))};',
+                 f'        String sql = Constantes.CALL + nombreProcedimiento({owner_ref}, {pkg_ref}, prop.{pp["sp"]}) + {k("(" + marks + ")}", name="MARCAS_" + slug(oid))};',
                 f'        logger.info(menTran + {k("Invocando procedimiento: ", "LOG_")} + sql);']
         for n, _, inp in params:
             body.append(f'        logger.info(menTran + {k("Parametro input: ", "LOG_")} + {k(inp["parameter"], "PI_")} + Constantes.SEPARADOR_VALOR + {n});')
@@ -509,9 +508,9 @@ def service_class(ctx: Ctx) -> str:
             out += body
             continue
         proc = op['procedure']
-        args = ', '.join(('cabecera.getUserId()' if i['origin'] == 'header' else f'request.get{cap(i["source"])}()') for i in proc['inputs'])
+        args = ', '.join((f'cabecera.get{cap(i["source"])}()' if i['origin'] == 'header' else f'request.get{cap(i["source"])}()') for i in proc['inputs'])
         body += ['        try {', f'            ResultadoProcedimiento resultado = crmlitedao.{oid}(cabecera.getIdTransaccion(){", " if args else ""}{args});']
-        cond = 'Constantes.CADENA_CERO.equals(resultado.getCodigo())' + (' && !resultado.getFilas().isEmpty()' if proc.get('cursor') else '')
+        cond = k(proc['successCode'], name='SP_SUCCESS_' + slug(oid)) + '.equals(resultado.getCodigo())' + (' && !resultado.getFilas().isEmpty()' if proc['requireRows'] else '')
         rt = proc.get('rowTarget')
         body += [f'            if ({cond}) {{', f'                audit.setCodigoRespuesta(prop.{pp["ok"]});', '                audit.setMensajeRespuesta(resultado.getMensaje());']
         if rt:
@@ -619,7 +618,9 @@ def service_test(ctx: Ctx) -> str:
         first = op['requiredQueryParams'][0]
         out += ['    @Test', f'    public void {oid}ParametrosFaltantes() {{', f'        {resp} r = atencionService.{oid}(new {req}(), cabecera({jstr(first)}));',
                 f'        Assert.assertEquals(prop.{pp["inv_code"]}, r.getResponseAudit().getCodigoRespuesta());',
-                f'        Assert.assertTrue(r.getResponseAudit().getMensajeRespuesta().contains({jstr(first)}));',
+                (f'        Assert.assertTrue(r.getResponseAudit().getMensajeRespuesta().contains({jstr(first)}));'
+                 if '[PARAMETROS]' in op['outcomes']['invalidParameters']['message'] else
+                 f'        Assert.assertEquals(prop.{pp["inv_msg"]}, r.getResponseAudit().getMensajeRespuesta());'),
                 '    }', '']
         if not op.get('implemented'):
             out += ['    @Test(expected = OperacionNoImplementadaException.class)', f'    public void {oid}OperacionPendiente() {{', f'        atencionService.{oid}(new {req}(), cabecera());', '    }', '']
@@ -630,7 +631,7 @@ def service_test(ctx: Ctx) -> str:
         call = f'crmlitedao.{oid}({anys})'
         rt = proc.get('rowTarget')
         out += ['    @Test', f'    public void {oid}Exito() throws Exception {{', '        ResultadoProcedimiento rp = new ResultadoProcedimiento();',
-                '        rp.setCodigo("0");', '        rp.setMensaje("OK");', '        List<Map<String, Object>> filas = new ArrayList<Map<String, Object>>();']
+                f'        rp.setCodigo({jstr(proc["successCode"])});', '        rp.setMensaje("OK");', '        List<Map<String, Object>> filas = new ArrayList<Map<String, Object>>();']
         if proc.get('cursor'):
             out.append('        Map<String, Object> fila = new LinkedHashMap<String, Object>();')
             for m in proc['columnMapping']:
@@ -644,7 +645,7 @@ def service_test(ctx: Ctx) -> str:
             for m in proc['columnMapping']:
                 out.append(f'        Assert.assertEquals({sample(m["javaType"])[1]}, {access}.get{cap(m["field"])}());')
         out += ['    }', '', '    @Test', f'    public void {oid}ErrorDelProcedimiento() throws Exception {{', '        ResultadoProcedimiento rp = new ResultadoProcedimiento();',
-                '        rp.setCodigo("99");', '        rp.setMensaje("fallo");', '        rp.setFilas(new ArrayList<Map<String, Object>>());', f'        Mockito.when({call}).thenReturn(rp);',
+                f'        rp.setCodigo({jstr("!" + proc["successCode"])});', '        rp.setMensaje("fallo");', '        rp.setFilas(new ArrayList<Map<String, Object>>());', f'        Mockito.when({call}).thenReturn(rp);',
                 f'        {resp} r = atencionService.{oid}(new {req}(), cabecera());', f'        Assert.assertEquals(prop.{pp["fail_code"]}, r.getResponseAudit().getCodigoRespuesta());', '    }', '',
                 '    @Test', f'    public void {oid}Timeout() throws Exception {{',
                 f'        Mockito.when({call}).thenThrow(new DBTimeoutException("t", new SQLTimeoutException()));',
@@ -720,10 +721,9 @@ def render_template(repo: Path, plan: dict) -> dict:
     root = repo / plan['inputs']['archetype']['path'] / 'template'
     values = plan['templateParameters']
     files = {}
-    for path in sorted(p for p in root.rglob('*') if p.is_file()):
-        rel = path.relative_to(root).as_posix()
-        if re.fullmatch(r'src/main/resources/application.*\.properties', rel):
-            continue
+    from artifact_integrity import template_paths, safe_path
+    for rel in template_paths(root.parent):
+        path = safe_path(root, rel)
         text = path.read_text(encoding='utf-8')
         for source in (rel, text):
             missing = {t for t in TOKEN.findall(source) if t not in values}
@@ -753,6 +753,17 @@ def style_violations(java: dict) -> list:
 
 def render_project(plan: dict, repo: Path) -> dict:
     """Returns {path: (componentType, text)} for the whole project (template + Java)."""
+    import jdbc_contract
+    if plan.get('plan', {}).get('jdbcBindingVersion') != 1:
+        raise ValueError('unsupported-jdbc-binding: replan from explicit v1 bindings; legacy inferred plans cannot be materialized')
+    names = jdbc_contract.naming({'technical': {'jdbcNames': plan['technicalProfile'].get('jdbcNames')}})
+    model_index = {m['name']: m for m in plan['models']}
+    for op in plan['operations']:
+        jdbc_contract.validate({'version': 1, 'evidence': op.get('bindingEvidence'),
+            'envelope': {'audit': 'responseAudit', 'data': 'responseData', 'code': 'codigoRespuesta', 'message': 'mensajeRespuesta', 'transaction': 'idTransaccion'},
+            'policies': op['policies'], 'activities': op['activities'], 'outcomes': op['outcomes'], 'procedure': op['procedure']},
+            {f['name']: f['javaType'] for f in model_index[op['requestClass']]['fields']},
+            {f['name']: f['javaType'] for f in model_index[op['dataClass']]['fields']}, model_index)
     ctx = Ctx(plan, repo)
     out = dict(render_template(repo, plan))
     for path, (ctype, text) in list(out.items()):
@@ -780,6 +791,25 @@ def render_project(plan: dict, repo: Path) -> dict:
     java[f'src/test/java/{b}/repository/CRMLITERepositoryTest.java'] = repository_test(ctx)
     java[f'src/main/java/{b}/common/property/Constantes.java'] = ctx.constantes_class()
     java[f'src/main/java/{b}/common/property/PropertiesExternos.java'] = ctx.properties_class()
+    # These are renderer-local role symbols, never defaults for a target service.
+    # Only generated layer text is rewritten; contract DTO names remain source-owned.
+    aliases = {'CRMLITEDAO': names['dao'], 'CRMLITERepository': names['repository'],
+               'AtencionService': names['service'], 'AtencionController': names['controller']}
+    substitutions = dict(aliases)
+    substitutions.update({key + 'Test': value + 'Test' for key, value in aliases.items()})
+    substitutions.update({'crmlitedao': names['dao'][0].lower() + names['dao'][1:],
+                          'atencionService': names['service'][0].lower() + names['service'][1:],
+                          'atencionController': names['controller'][0].lower() + names['controller'][1:]})
+    pattern = re.compile(r'\b(' + '|'.join(map(re.escape, substitutions)) + r')\b')
+    renamed = {}
+    for path, text in java.items():
+        if planned.get(path, {}).get('componentType') == 'canonical-dto':
+            renamed[path] = text
+            continue
+        stem = Path(path).stem
+        new_path = str(Path(path).with_name(substitutions.get(stem, stem) + '.java')).replace('\\', '/')
+        renamed[new_path] = pattern.sub(lambda m: substitutions[m[0]], text)
+    java = renamed
     violations = style_violations(java)
     if violations:
         raise ValueError('hard-coded literals outside Constantes/PropertiesExternos (archetype style J8-D-008): ' + '; '.join(violations[:10]))
@@ -790,6 +820,10 @@ def render_project(plan: dict, repo: Path) -> dict:
     missing = sorted(p for p in planned if p not in out and planned[p]['action'] != 'retain')
     if missing:
         raise ValueError(f'planned files without generator: {missing}')
+    if set(out) != set(planned) or len(planned) != len(plan['files']['generate']):
+        raise ValueError('rendered inventory differs from plan (including technical/configuration files)')
+    if any(entry['action'] not in ('create', 'update') for entry in planned.values()):
+        raise ValueError('unsupported JDBC file action')
     return out
 
 
@@ -806,6 +840,8 @@ def _load_plan(ws, repo, fm):
         raise fm.MaterializationError('invalid-plan', 'the plan is not a ready full plan')
     if svc.get('name') != ws.service or svc.get('outputDirectory') != f'output/{ws.service}':
         raise fm.MaterializationError('invalid-plan', 'the plan belongs to another service or output directory')
+    if plan.get('plan', {}).get('jdbcBindingVersion') != 1:
+        raise fm.MaterializationError('unsupported', 'JDBC inferred legacy plan: explicit service-spec jdbcBinding v1 and replanning required; no files were changed')
     spec = ws.dir / 'service-spec.yml'
     inputs = plan.get('inputs') or {}
     if not spec.is_file() or (inputs.get('serviceSpec') or {}).get('artifactSha256') != sha(spec.read_bytes()):
@@ -821,6 +857,14 @@ def _load_plan(ws, repo, fm):
             raise fm.MaterializationError('stale-plan', f'{filename} is missing or changed since planning')
     for entry in plan['files']['generate']:
         fm.safe_relative(entry['path'])
+    from generation_context import load_mapping
+    import jdbc_war_plan
+    try:
+        expected, parameters = jdbc_war_plan.artifacts(repo, yaml, ws.dir / 'full-planning-input.yml')
+        if plan != expected or parameters != load_mapping(ws.dir / 'generation-parameters.yml'):
+            raise ValueError('JDBC plan/parameters differ from current authorized inputs; replan required')
+    except (ValueError, KeyError, TypeError) as error:
+        raise fm.MaterializationError('invalid-plan', str(error)) from error
     return plan, raw
 
 
@@ -837,6 +881,9 @@ def _register(plan, ws, fm):
             raise fm.MaterializationError('invalid-plan', f'assumption {item.get("id")} cites decision {decision!r} that is not human-approved in sparx-reviewed-decisions.yml')
         rows.append({'id': item['id'], 'decision': decision, 'statement': item['statement']})
     return {'schemaVersion': 1, 'service': ws.service, 'materializer': VERSION, 'assumptions': rows,
+            'implementedBindings': [{'operationId': op['operationId'], 'evidence': op['bindingEvidence'],
+                                     'procedure': op['procedure'], 'policies': op['policies'], 'outcomes': op['outcomes']}
+                                    for op in plan['operations']],
             'incompleteOperations': plan.get('incompleteOperations', [])}
 
 
@@ -854,20 +901,15 @@ def materialize(repo: Path, service: str, dry_run: bool = False) -> dict:
         raise fm.MaterializationError('invalid-plan', f'cannot render the plan ({type(error).__name__}: {error})') from error
     rendered = {p: v for p, v in rendered.items() if not fp.is_excluded(p)}
     register = _register(plan, ws, fm)
-    planned = [{'path': p, 'action': 'update' if (out_dir / p).exists() else 'create'} for p in rendered]
-    decisions = {d['path']: d for d in fp.evaluate(out_dir, planned, ws.dir)}
-    to_write, unchanged = {}, []
-    for path, (_, text) in rendered.items():
-        data = text.encode('utf-8')
-        if (out_dir / path).is_file() and (out_dir / path).read_bytes() == data:
-            unchanged.append(path)
-        else:
-            to_write[path] = data
-    blocked = [decisions[p] for p in to_write if decisions[p]['decision'] == 'blocked-needs-authorization']
-    if blocked:
-        raise fm.MaterializationError('protected-files', 'manual or untracked content would be overwritten; nothing was written',
-                                      {'blocked': [{'path': b['path'], 'state': b['state']} for b in blocked]})
-    rows = {p: {'sha256': fm.sha(text.encode('utf-8')), 'action': 'update' if (out_dir / p).exists() else 'create', 'componentType': ct}
+    from artifact_integrity import prepare, publish, IntegrityError
+    payload = {p: text.encode('utf-8') for p, (_, text) in rendered.items()}
+    try:
+        to_write, unchanged = prepare(out_dir, ws.dir, payload, reject_obsolete=True)
+    except fp.ProtectedFileError as error:
+        raise fm.MaterializationError('protected-files', str(error), getattr(error, 'details', {})) from error
+    except IntegrityError as error:
+        raise fm.MaterializationError('invalid-plan', str(error)) from error
+    rows = {p: {'sha256': fm.sha(text.encode('utf-8')), 'action': 'generated', 'componentType': ct}
             for p, (ct, text) in rendered.items()}
     incomplete = list(plan.get('incompleteOperations', []))
     manifest = {'schemaVersion': 1, 'materializer': VERSION, 'complete': True, 'service': service,
@@ -886,10 +928,7 @@ def materialize(repo: Path, service: str, dry_run: bool = False) -> dict:
               'validation': {'maven': 'not-run', 'compilation': 'not-verified', 'checkstyle': 'not-applicable'}}
     if dry_run:
         return report
-    for path, data in sorted(to_write.items()):
-        if fp.guard_write(out_dir, path, ws.dir):
-            fm.write_atomic(out_dir / path, data)
-    fm.write_atomic(out_dir / fm.MANIFEST, manifest_bytes)
+    publish(out_dir, ws.dir, payload, manifest_bytes)
     fm.write_atomic(ws.dir / 'assumptions-register.yml', dump(register))
     fm.write_atomic(ws.dir / 'required-properties.yml', dump(required_properties(plan, repo)))
     fm.write_atomic(ws.dir / fm.REPORT, dump(report))

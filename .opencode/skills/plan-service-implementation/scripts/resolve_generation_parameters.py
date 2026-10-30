@@ -104,15 +104,8 @@ def classify(name: str) -> str:
 def put_atomic(path: Path, data: bytes) -> None:
     if path.is_symlink() or path.parent.resolve() != (ROOT / ".factory").resolve():
         raise ResolutionError(f"Output must be a regular file directly under .factory/: {path}")
-    temp = None
-    try:
-        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=f".{path.stem}-", delete=False) as stream:
-            temp = Path(stream.name)
-            stream.write(data)
-        os.replace(temp, path)
-    finally:
-        if temp is not None:
-            temp.unlink(missing_ok=True)
+    from artifact_integrity import write_atomic
+    write_atomic(path, data)
 
 
 def parameter_sources(archetype: dict[str, Any]) -> tuple[dict[str, dict[str, Any]], dict[str, str]]:

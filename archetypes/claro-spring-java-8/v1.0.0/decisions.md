@@ -1,5 +1,14 @@
 # Decisiones — claro-spring-java-8 / 1.0.0
 
+## Mantenimiento de trazabilidad — paquete 4 (2026-10-30)
+
+Por instrucción explícita «Continua con el punto 4 tambien, lo que quedo pendiente»,
+se incorpora `reference-content-baseline.yml`: observación actual del contenido
+permitido de esta referencia, sin fechas ni archivos de otros proyectos y sin
+leer configuración protegida. Sirve para detectar cambios posteriores; no aprueba
+retroactivamente la identidad histórica. El hash global anterior permanece intacto.
+No se alteran decisiones J8-D-001–009, templates, estado de aprobación o permisos.
+
 Estado: **extracción completa; baseline basado en referencia aprobado por las
 decisiones actuales, no congelado**. No implica compilación, compatibilidad runtime,
 soporte del backend generador ni autorización de generar un servicio.

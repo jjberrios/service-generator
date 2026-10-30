@@ -430,8 +430,13 @@ class SecurityAndDeterminismTests(Base):
         self.assertEqual(agent['permission']['edit'].get('*'), 'deny')
         source = (SCRIPTS / 'full_materializer.py').read_text(encoding='utf-8')
         self.assertLess(source.index('gate.check_cleared'), source.index('assumption_register(plan, ws)'))
-        self.assertLess(source.index('assumption_register(plan, ws)'), source.index('write_atomic(out_dir / path'))
-        self.assertIn('fp.guard_write(out_dir, path, ws.dir)', source)
+        self.assertLess(source.index('assumption_register(plan, ws)'), source.index('publish(out_dir, ws.dir, payload, manifest_bytes)'))
+        import artifact_integrity
+        import inspect
+        publisher = inspect.getsource(artifact_integrity.publish)
+        self.assertLess(publisher.index('prepare(output, workspace, payload)'), publisher.index('write_atomic('))
+        self.assertLess(publisher.index('fp.guard_write(output, rel, workspace)'), publisher.index('write_atomic(safe_path(output, rel), data)'))
+        self.assertLess(publisher.index('write_atomic(safe_path(output, rel), data)'), publisher.index('write_atomic(safe_path(output, fp.MANIFEST), manifest)'))
         for module in ('java_components.py', 'java_components2.py', 'service_model.py'):
             code = (SCRIPTS / module).read_text(encoding='utf-8')
             self.assertNotRegex(code, r'write_text|write_bytes|open\(|os\.replace')            # renderers are pure: they cannot write files

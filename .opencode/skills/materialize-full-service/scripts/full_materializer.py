@@ -1,4 +1,4 @@
-"""Deterministic FULL materializer, first version.
+﻿"""Deterministic FULL materializer, first version.
 
 Reads ONLY the service workspace plan (`.factory/services/<service>/implementation-plan.yml`, bound to the workspace service-spec hash and the
 archetype fingerprint) and the archetype templates, and writes Java under `output/<service>/`. Order of the controls (nothing is written before all pass):
@@ -308,6 +308,17 @@ def classify(plan: dict, repo: Path) -> dict:
 
 
 def materialize(repo: Path, service: str, supported_only: bool = False, dry_run: bool = False, assemble: bool = True) -> dict:
+    from artifact_integrity import service_lock, IntegrityError
+    repo = Path(repo).resolve()
+    gate.check_cleared(wsm.Workspace(repo, service).dir, repo, service)
+    try:
+        with service_lock(repo, service):
+            return _materialize_unlocked(repo, service, supported_only, dry_run, assemble)
+    except IntegrityError as error:
+        raise MaterializationError('integrity', str(error)) from error
+
+
+def _materialize_unlocked(repo: Path, service: str, supported_only: bool = False, dry_run: bool = False, assemble: bool = True) -> dict:
     repo = Path(repo).resolve()
     ws = wsm.Workspace(repo, service)
     # 1. The gate comes first: a blocked service gets no further than this line (GateError propagates; no file has been touched).
@@ -393,23 +404,17 @@ def materialize(repo: Path, service: str, supported_only: bool = False, dry_run:
         for entry in work['baselines']:
             if entry['action'] in ('create', 'update') and entry['path'] not in assembly['files']:
                 raise MaterializationError('invalid-plan', f'{entry["path"]}: planned baseline was not assembled')
-    planned = [{'path': p, 'action': 'update' if (out_dir / p).exists() else 'create'} for p in work['rendered']]
-    decisions = {d['path']: d for d in fp.evaluate(out_dir, planned, ws.dir)}
-    to_write, unchanged = {}, []
-    for path, item in work['rendered'].items():
-        data = item['text'].encode('utf-8')
-        target = out_dir / path
-        if target.is_file() and target.read_bytes() == data:
-            unchanged.append(path)
-            continue
-        to_write[path] = data
-    blocked = [decisions[p] for p in to_write if decisions[p]['decision'] == 'blocked-needs-authorization']
-    if blocked:
-        raise MaterializationError('protected-files', 'manual or untracked content would be overwritten; nothing was written',
-                                   {'blocked': [{'path': b['path'], 'state': b['state']} for b in blocked]})
+    from artifact_integrity import prepare, publish, protected, IntegrityError
+    payload = {p: item['text'].encode('utf-8') for p, item in work['rendered'].items()}
+    try:
+        to_write, unchanged = prepare(out_dir, ws.dir, payload)
+    except fp.ProtectedFileError as error:
+        raise MaterializationError('protected-files', str(error), getattr(error, 'details', {})) from error
+    except IntegrityError as error:
+        raise MaterializationError('invalid-plan', str(error)) from error
     previous_manifest = yaml.safe_load((out_dir / MANIFEST).read_bytes()) if (out_dir / MANIFEST).is_file() else {}
     rows = {r['path']: {k: v for k, v in r.items() if k != 'path'} for r in (previous_manifest or {}).get('fileInventory', [])
-            if not fp.is_excluded(r['path']) and (out_dir / r['path']).is_file()}
+            if not protected(r['path']) and (out_dir / r['path']).is_file()}
     for path, item in work['rendered'].items():
         rows[path] = {'sha256': sha(item['text'].encode('utf-8')), 'action': item['action'], 'componentType': item['componentType']}
     manifest = {'schemaVersion': 1, 'materializer': VERSION, 'complete': not work['unsupported'], 'service': service,
@@ -425,11 +430,7 @@ def materialize(repo: Path, service: str, supported_only: bool = False, dry_run:
                               'headerRolesSource': 'roles' if 'roles' in plan['activityLogging']['requestHeaders'] else 'legacy-roleMapping'}
     if dry_run:
         return report
-    for path, data in sorted(to_write.items()):
-        if not fp.guard_write(out_dir, path, ws.dir):       # re-checked immediately before every write
-            continue
-        write_atomic(out_dir / path, data)
-    write_atomic(out_dir / MANIFEST, manifest_bytes)
+    publish(out_dir, ws.dir, payload, manifest_bytes)
     write_atomic(ws.dir / 'assumptions-register.yml', yaml.safe_dump(register, sort_keys=False, allow_unicode=True, width=200).encode('utf-8'))
     if work['cov'] or any(v['componentType'] in ts.TEST_TYPES for v in work['rendered'].values()):
         model = plan.get('_serviceModel') or sm.build(plan)
@@ -449,10 +450,8 @@ def materialize(repo: Path, service: str, supported_only: bool = False, dry_run:
 
 
 def write_atomic(target: Path, data: bytes):
-    target.parent.mkdir(parents=True, exist_ok=True)
-    temp = target.with_name(target.name + '.tmp')
-    temp.write_bytes(data)
-    os.replace(temp, target)
+    from artifact_integrity import write_atomic as atomic
+    atomic(target, data)
 
 
 def main(argv=None) -> int:
@@ -464,7 +463,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     try:
         report = materialize(Path.cwd(), args.service, args.supported_only, args.dry_run, not args.no_assemble)
-        print(yaml.safe_dump({k: report[k] for k in ('status', 'written', 'unchanged', 'excludedUntouched', 'unsupported', 'payloadTreeSha256')}, allow_unicode=True, sort_keys=False))
+        print(yaml.safe_dump({k: report.get(k) for k in ('status', 'written', 'unchanged', 'excludedUntouched', 'unsupported', 'payloadTreeSha256')}, allow_unicode=True, sort_keys=False))
         return 0
     except (gate.GateError, fp.ProtectedFileError, wsm.WorkspaceError) as error:
         print(f'full_materializer: BLOCKED {error}', file=sys.stderr)

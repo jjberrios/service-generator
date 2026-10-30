@@ -151,7 +151,10 @@ def main() -> int:
     parser.add_argument("source_root", type=Path, help="Sparx export root containing js/data (e.g. input/sparx/PROYECT)")
     parser.add_argument("output", type=Path)
     parser.add_argument("--target", required=True, help="Exact element name of the target service")
-    parser.add_argument("--openapi", type=Path, required=True, help=".factory/openapi-spec.yml (operations list)")
+    parser.add_argument("--openapi", type=Path, help=".factory/openapi-spec.yml (operations list); required unless --non-http")
+    parser.add_argument("--non-http", action="store_true",
+                        help="target has no HTTP contract (batch/shell): no OpenAPI is read, no operation matching is done; "
+                             "only the branch of the exactly named service element is resolved")
     parser.add_argument("--reviewed-decisions", type=Path)
     parser.add_argument("--source-authority-decision", type=Path,
                         help="Approved human decision (YAML: decisionId, primaryBranchRootId, complementBranchRootIds[], operationMatch) "
@@ -163,8 +166,13 @@ def main() -> int:
     root = (repo / args.source_root).resolve()
     packages, elements, toc_hashes = load_toc(root / "js" / "data")
     pkg_by_id = {p["id"]: p for p in packages}
-    openapi = yaml.safe_load(args.openapi.read_bytes())
-    operations = [{"method": o["method"], "path": o["path"], "operationId": o.get("operationId")} for o in openapi["operations"]]
+    if args.non_http == (args.openapi is not None):
+        raise SystemExit("exactly one of --openapi (HTTP target) or --non-http (batch/shell target) is required")
+    if args.non_http:
+        operations = []
+    else:
+        openapi = yaml.safe_load(args.openapi.read_bytes())
+        operations = [{"method": o["method"], "path": o["path"], "operationId": o.get("operationId")} for o in openapi["operations"]]
 
     matches = [e for e in elements if e["name"] == args.target]
     paths = sorted({m["package"] for m in matches})
@@ -371,7 +379,7 @@ def main() -> int:
     document = {
         "version": 1, "kind": "sparx-target-authority",
         "target": {"name": args.target, "sourceRoot": args.source_root.as_posix(), "matchedElements": len(matches)},
-        "hierarchySources": {"tocFiles": toc_hashes, "openapi": {"file": args.openapi.as_posix(), "sha256": sha256(args.openapi)},
+        "hierarchySources": {"tocFiles": toc_hashes, "openapi": ({"file": args.openapi.as_posix(), "sha256": sha256(args.openapi)} if args.openapi else None),
                              "reviewedDecisions": ({"file": args.reviewed_decisions.as_posix(), "sha256": sha256(args.reviewed_decisions)}
                                                    if args.reviewed_decisions else None)},
         "lowestCommonAncestor": lca,

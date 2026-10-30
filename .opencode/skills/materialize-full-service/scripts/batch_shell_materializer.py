@@ -3,7 +3,7 @@ from pathlib import Path
 import json
 import yaml
 
-from batch_shell_contract import PROFILE, GENERIC_KEYS, require, validate
+from batch_shell_contract import PROFILE, GENERIC_KEYS, features_of, require, validate
 import batch_shell_plan as planner
 
 VERSION = 'batch-shell-materializer-1'
@@ -14,7 +14,7 @@ def literal(value):
 
 
 def service_source(plan):
-    values, batch = plan['templateParameters'], validate(plan['batch'])
+    values, batch = plan['templateParameters'], validate(plan['batch'], features_of(plan['technicalProfile']))
     package, interface = values['BASE_PACKAGE'], values['SERVICE_INTERFACE']
     impl = interface + 'Impl'
     props = {p['key']: 'externalProperties.' + p['field'] for p in batch['properties']}
@@ -88,11 +88,45 @@ def service_source(plan):
         lines += [f'      if ({conn(c["id"])} != null) {{', f'        {conn(c["id"])}.disconnect();', '      }']
     lines += ['      logger.info(MessageFormat.format(Constantes.TIPO_TOTAL_PROCESO, msjTrx, System.currentTimeMillis() - tiempoInicio));',
               '      logger.info(MessageFormat.format(Constantes.FIN_METODO, msjTrx, nomMetodoActual));', '    }', '  }', '']
+    decrypting = False
     for c in batch['connections']:
-        args = ', '.join((props[c['username']], props[c['host']], 'Integer.parseInt(' + props[c['port']] + ')', props[c['password']]))
-        lines += [f'  protected SFTPConnectionManager crearConexion{c["id"]}(String msjTrx) throws SFTPException {{',
-                  '    try {', f'      return new SFTPConnectionManager(msjTrx, {args});', '    } catch (Exception e) {',
-                  '      ' + fail(), '    }', '  }', '']
+        port = 'Integer.parseInt(' + props[c['port']] + ')'
+        if c['credentialMode'] == 'decrypted-soap':
+            decrypting = True
+            lines += [f'  protected SFTPConnectionManager crearConexion{c["id"]}(String msjTrx) throws SFTPException, WSException {{',
+                      f'    DesencriptarResponse credenciales = desencriptarCredenciales(msjTrx, {props[c["username"]]}, {props[c["password"]]});',
+                      '    try {',
+                      f'      return new SFTPConnectionManager(msjTrx, credenciales.getUsuarioAplicacion(), {props[c["host"]]}, {port}, credenciales.getClave());',
+                      '    } catch (Exception e) {', '      ' + fail(), '    }', '  }', '']
+        else:
+            args = ', '.join((props[c['username']], props[c['host']], port, props[c['password']]))
+            lines += [f'  protected SFTPConnectionManager crearConexion{c["id"]}(String msjTrx) throws SFTPException {{',
+                      '    try {', f'      return new SFTPConnectionManager(msjTrx, {args});', '    } catch (Exception e) {',
+                      '      ' + fail(), '    }', '  }', '']
+    if decrypting:
+        lines += ['  protected DesencriptarResponse desencriptarCredenciales(String msjTrx, String usuarioCifrado, String claveCifrada) throws WSException {',
+                  '    DesencriptarRequest request = new DesencriptarRequest();',
+                  '    request.setIdTransaccion(msjTrx);',
+                  '    request.setCodigoAplicacion(externalProperties.wsEbsConsultaClavesWSCodigoAplicacion);',
+                  '    request.setUsuarioAplicacionEncriptado(usuarioCifrado);',
+                  '    request.setClaveEncriptado(claveCifrada);',
+                  '    DesencriptarResponse response = ebsConsultaClavesWSService.desencriptar(msjTrx, request);',
+                  '    if (response == null || !Constantes.WS_EXITO.equals(response.getCodigoResultado())) {',
+                  '      throw new WSException(response == null ? null : response.getCodigoResultado(), response == null ? null : response.getMensajeResultado());',
+                  '    }',
+                  '    return response;', '  }', '']
+    imports = ['import pe.com.claro.eai.ebs.operaciones.consultaclaves.DesencriptarRequest;',
+               'import pe.com.claro.eai.ebs.operaciones.consultaclaves.DesencriptarResponse;',
+               f'import {package}.proxy.EbsConsultaClavesWSService;', f'import {package}.exception.WSException;'] if decrypting else []
+    if decrypting:
+        at = lines.index(f'import {package}.exception.SFTPException;') + 1
+        lines[at:at] = imports
+        at = lines.index('  private PropertiesExterno externalProperties;') + 1
+        lines[at:at] = ['  @Autowired', '  private EbsConsultaClavesWSService ebsConsultaClavesWSService;']
+        at = lines.index('    } catch (Exception e) {')
+        lines[at:at] = ['    } catch (WSException e) {',
+                        f'      logger.error(msjTrx + "[" + e.getCodigo() + "] " + e.getMensaje(), e);',
+                        f'      logger.error(msjTrx + {response("generalFailure", "Codigo")} + " " + {response("generalFailure", "Mensaje")});']
     return '\n'.join(lines + ['}', ''])
 
 
@@ -180,7 +214,7 @@ def test_source(plan):
 
 
 def render_project(plan, repo):
-    values, batch = plan['templateParameters'], validate(plan['batch'])
+    values, batch = plan['templateParameters'], validate(plan['batch'], features_of(plan['technicalProfile']))
     root = repo / plan['inputs']['archetype']['path'] / 'template'
     result = {}
     for entry in plan['files']['generate']:
@@ -249,11 +283,14 @@ def materialize(repo, service, dry_run=False):
         require(not set(previous) - set(rendered), 'obsolete tracked files require explicit migration; nothing written')
     except (ValueError, KeyError, TypeError, OSError) as error:
         raise fm.MaterializationError('invalid-plan', str(error)) from error
-    decisions = fm.fp.evaluate(output, plan['files']['generate'], ws.dir)
-    blocked = fm.fp.blocked(decisions)
-    if blocked:
-        raise fm.MaterializationError('protected-files', 'manual files preserved; nothing written', {'blocked': blocked})
     payload = {p: text.encode('utf-8') for p, (_, text) in rendered.items()}
+    from artifact_integrity import prepare, publish, IntegrityError
+    try:
+        changed_payload, unchanged = prepare(output, ws.dir, payload, reject_obsolete=True)
+    except fm.fp.ProtectedFileError as error:
+        raise fm.MaterializationError('protected-files', str(error), getattr(error, 'details', {})) from error
+    except IntegrityError as error:
+        raise fm.MaterializationError('invalid-plan', str(error)) from error
     rows = [{'path': p, 'sha256': fm.sha(payload[p]), 'action': 'generated', 'componentType': rendered[p][0]} for p in sorted(payload)]
     tree_hash = fm.tree_hash({r['path']: r['sha256'] for r in rows})
     dump = lambda obj: yaml.safe_dump(obj, sort_keys=False, allow_unicode=True, width=200).encode('utf-8')
@@ -261,7 +298,7 @@ def materialize(repo, service, dry_run=False):
                 'inputs': {'implementationPlanSha256': fm.sha(plan_raw), 'serviceSpecSha256': inputs['serviceSpec']['artifactSha256'],
                            'archetypeFingerprint': inputs['archetype']['fingerprint']},
                 'fileInventory': rows, 'payloadTreeSha256': tree_hash, 'unsupportedComponents': []}
-    changed = [p for p in sorted(payload) if not (output / p).is_file() or (output / p).read_bytes() != payload[p]]
+    changed = sorted(changed_payload)
     report = {'schemaVersion': 1, 'materializer': VERSION, 'service': service, 'profile': PROFILE, 'status': 'complete',
               'written': changed, 'unchanged': sorted(set(payload) - set(changed)), 'dryRun': dry_run,
               'payloadTreeSha256': tree_hash, 'manifestSha256': fm.sha(dump(manifest)), 'unsupported': [],
@@ -270,11 +307,7 @@ def materialize(repo, service, dry_run=False):
     if dry_run:
         return report
     # Manifest is guarded too. Excluded local environment files are never enumerated/read.
-    for path in changed:
-        if fm.fp.guard_write(output, path, ws.dir):
-            fm.write_atomic(output / path, payload[path])
-    if fm.fp.guard_write(output, fm.MANIFEST, ws.dir):
-        fm.write_atomic(output / fm.MANIFEST, dump(manifest))
+    publish(output, ws.dir, payload, dump(manifest))
     properties = {'schemaVersion': 1, 'service': service, 'keys': [
         {'key': k, 'source': 'archetype', 'value': 'operator-required'} for k in sorted(GENERIC_KEYS)] +
         [{'key': p['key'], 'secret': p['secret'], 'evidence': p['evidence'], 'value': 'operator-required'} for p in plan['batch']['properties']]}

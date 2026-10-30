@@ -4,6 +4,7 @@ Specs are synthetic, plans/parameters come from the real guarded planner CLI.
 No mailing-info fixture is materialized and no gate is mocked or disabled.
 """
 import copy
+import os
 import shutil
 import sys
 import tempfile
@@ -253,7 +254,8 @@ class RealPlanTests(unittest.TestCase):
         guard = fp.guard_write
         with patch.object(fp, 'guard_write', side_effect=lambda out, path, ws: (calls.append(path), guard(out, path, ws))[1]):
             report = self.materialize()
-        self.assertEqual(sorted(calls), report['written'])
+        self.assertEqual(set(calls), set(report['written']) | {mz.MANIFEST})
+        self.assertTrue(all(path in calls for path in report['written']))
         (self.out / 'pom.xml').write_text('manual', encoding='utf-8')
         with self.assertRaises(mz.MaterializationError) as err:
             self.materialize()
@@ -282,7 +284,7 @@ class RealPlanTests(unittest.TestCase):
         self.assertEqual(before, fx.tree(self.out))
 
 
-@unittest.skipUnless(shutil.which('mvn'), 'Maven unavailable')
+@unittest.skipUnless(os.environ.get('SERVICE_GENERATOR_AUTHORIZED_MAVEN_TESTS') == '1' and shutil.which('mvn'), 'Explicit Maven test authorization required')
 class RealPlanMavenTests(unittest.TestCase):
     def test_real_planner_to_official_maven_for_two_synthetic_services(self):
         with tempfile.TemporaryDirectory(dir=r'C:\Users\proma\AppData\Local\Temp\opencode') as tmp:

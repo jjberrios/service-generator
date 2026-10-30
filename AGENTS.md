@@ -403,6 +403,22 @@ The materializer also assembles the archetype technical files into a complete Ma
 Existing output files modified by hand (or listed as user-owned) are preserved; replacing them needs an authorization bound to their exact content.
 `src/main/resources/application*.properties` is local environment configuration: never read, analyzed, reported, compared or overwritten by the generator.
 
+## Archetype Selection, Contract and Lifecycle
+
+- The archetype is never defaulted: it comes from an explicit instruction or the
+  service checkpoint (`generation_context.py`); conflicting sources stop with a
+  technical error.
+- `archetype_contract.py` normalizes each manifest through a versioned read-only
+  adapter and maps its `generation.profile` to a backend capability. A profile
+  without backend support fails explicitly; rules of one archetype are never
+  borrowed by another.
+- `artifact_integrity.py` provides the shared protection, atomic per-file writes
+  with manifest last, per-service locking and allowlisted archetype fingerprints.
+- `workspace_cli.py lifecycle <service>` reports the separated lifecycle states
+  (`question-policy.md`): clear reference evidence, approved decisions and
+  unsupported backends are never turned into repeated questions.
+- Official Maven tests run only with `SERVICE_GENERATOR_AUTHORIZED_MAVEN_TESTS=1`.
+
 ## Service Generation Orchestrator
 
 ### Non-HTTP batch backend

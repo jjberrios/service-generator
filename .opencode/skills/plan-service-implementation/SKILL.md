@@ -5,6 +5,11 @@ description: Deterministically plans scaffold or full functional service impleme
 
 # Plan Service Implementation
 
+All profile planners use the shared versioned declared-inventory archetype
+fingerprint and atomic artifact writer (`service-workspace/scripts/artifact_integrity.py`).
+Old all-tree fingerprints are stale and require replanning against reviewed inputs;
+do not refresh stored hashes or modify baseline decisions to bypass validation.
+
 Read repository-root `AGENTS.md` first. The authoritative service input is
 `.factory/service-spec.yml`; the selected versioned archetype is the technical
 baseline. Never consult raw OpenAPI or Sparx inputs, Sparx indexes/contexts, or
@@ -36,6 +41,14 @@ and all unresolved work is carried forward. Stop after the plan and parameters;
 do not generate Java.
 
 ## Full functional planning
+
+For JDBC/WAR use the closed evidence-backed contract in
+`../materialize-full-service/docs/jdbc-binding-v1.md`. The normalized operation
+must contain `jdbcBinding` v1 and the planning input must supply
+`technical.jdbcNames`. Never infer procedure order, cursor, row destination,
+response codes or target-specific partial-operation behavior. Missing or
+unsupported data is an explicit technical planning error; no legacy target
+decisions are automatically applied to another service.
 
 ### Non-HTTP batch profile
 

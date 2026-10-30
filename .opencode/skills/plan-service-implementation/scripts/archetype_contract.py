@@ -14,11 +14,11 @@ CAPABILITIES = {
     JDBC_WAR: {'version': 1, 'planner': 'jdbc_war_plan',
                'materializer': 'jdbc_war_materializer', 'inputKind': 'http',
                'templateDialect': '@@TOKEN@@', 'scaffold': False,
-               'limits': ['jdbc-callablestatement', 'legacy-target-coupling-pending-refactor']},
+               'limits': ['jdbc-callablestatement', 'explicit-jdbc-binding-v1']},
     BATCH_SHELL: {'version': 1, 'planner': 'batch_shell_plan',
                   'materializer': 'batch_shell_materializer', 'inputKind': 'batch',
                   'templateDialect': '@@TOKEN@@', 'scaffold': False,
-                  'limits': ['bounded-sftp-ir-v1', 'no-soap-decryption', 'no-persistence']},
+                  'limits': ['bounded-sftp-ir-v1', 'soap-decryption-only-with-archetype-feature', 'no-persistence', 'no-mail']},
 }
 
 

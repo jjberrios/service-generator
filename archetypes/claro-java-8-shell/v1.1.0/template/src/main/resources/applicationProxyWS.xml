@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:task="http://www.springframework.org/schema/task" xmlns:jee="http://www.springframework.org/schema/jee"
+       xmlns:aop="http://www.springframework.org/schema/aop" xmlns:util="http://www.springframework.org/schema/util"
+       xmlns:ws="http://jax-ws.dev.java.net/spring/core" xmlns:wss="http://jax-ws.dev.java.net/spring/servlet"
+       xmlns:oxm="http://www.springframework.org/schema/oxm"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+                           http://www.springframework.org/schema/context
+                           http://www.springframework.org/schema/context/spring-context-3.1.xsd
+                           http://www.springframework.org/schema/task
+                           http://www.springframework.org/schema/task/spring-task-3.1.xsd
+                           http://www.springframework.org/schema/aop
+                           http://www.springframework.org/schema/aop/spring-aop-3.1.xsd
+                           http://www.springframework.org/schema/context
+                           http://www.springframework.org/schema/context/spring-context-3.1.xsd
+                           http://www.springframework.org/schema/jee
+                           http://www.springframework.org/schema/jee/spring-jee-3.1.xsd
+                           http://www.springframework.org/schema/util
+                           http://www.springframework.org/schema/util/spring-util-3.1.xsd
+                           http://jax-ws.dev.java.net/spring/core
+                           http://jax-ws.dev.java.net/spring/core.xsd
+                           http://jax-ws.dev.java.net/spring/servlet
+                           http://jax-ws.dev.java.net/spring/servlet.xsd">
+
+   <util:map id="ConsultaClavesProperties">
+      <entry key="com.sun.xml.ws.request.timeout">
+         <value type="java.lang.Integer">${ws.ebsConsultaClavesWS.max.request.timeout}
+         </value>
+      </entry>
+      <entry key="com.sun.xml.ws.connect.timeout">
+         <value type="java.lang.Integer">${ws.ebsConsultaClavesWS.max.connection.timeout}
+         </value>
+      </entry>
+   </util:map>
+
+   <bean id="ConsultaClavesWS"
+         class="org.springframework.remoting.jaxws.JaxWsPortProxyFactoryBean">
+      <property name="wsdlDocumentUrl" value="${ws.ebsConsultaClavesWS.url}" />
+      <property name="namespaceUri"
+                value="http://claro.com.pe/eai/ebs/operaciones/consultaclaves" />
+      <property name="serviceName" value="ebsConsultaClavesService" />
+      <property name="portName" value="ebsConsultaClavesSB11" />
+      <property name="serviceInterface"
+                value="pe.com.claro.eai.ebs.operaciones.consultaclaves.EbsConsultaClavesPortType" />
+      <property name="lookupServiceOnStartup" value="false" />
+      <property name="customProperties">
+         <ref local="ConsultaClavesProperties" />
+      </property>
+   </bean>
+
+</beans>

@@ -1,5 +1,12 @@
 # Approved Decisions — claro-spring-ms 1.0.0
 
+## Metadata maintenance — package 4 (2026-10-30)
+
+Explicit user instruction: “Continua con el punto 4 tambien, lo que quedo pendiente.”
+The BASE_PACKAGE_PATH affected_paths inventory now includes the existing test
+template directory. No template, baseline engineering choice or D-001–D-014
+decision changes; this corrects the incomplete parameter-location metadata only.
+
 These decisions are approved for this archetype version. They take precedence over reference-project evidence in accordance with `AGENTS.md`. Approval is confirmed by the explicit revision instruction dated 2026-09-30. They do not automatically apply to another archetype version.
 
 ## D-001 — Logging baseline
@@ -127,4 +134,3 @@ The reference `application.properties` is the approved technical baseline for th
 **Style patterns known to violate the baseline (generation must avoid them, derived from the reference configuration):** annotation-array children (for example `@ApiResponses({ ... })`) indented at 8 where the rule requires 6 (basic offset 4 + `arrayInitIndent` 2) or 12; `switch` expressions directly after `(` (`WhitespaceAround`; assign to a local variable first); local variables declared more than 3 statements before first use (`VariableDeclarationUsageDistance`); numeric literals in code other than -1, 0, 1, 2, 4, 200, 201, 400, 401, 403, 404, 418, 500 and 1000 (`MagicNumber`; use constants named by their meaning, including in tests), plus line length 250, star/unused/redundant imports, braces, operator wrap on a new line, comma wrap at end of line, one statement per line, modifier order and name formats.
 
 **Evidence:** E-009 (reference `checkstyle.xml` and `pom.xml` Checkstyle plugin configuration); E-026 (offline execution of the gate against the first generated service).
-

@@ -1,6 +1,7 @@
 ﻿"""Phase 2 / P4: deterministic Maven project assembler and official validation evidence (synthetic services, temporary directories only)."""
 import copy
 import hashlib
+import os
 import re
 import shutil
 import sys
@@ -410,7 +411,7 @@ class EvidenceTests(Base):
             ve.run_official(self.repo, 'inventory-service', self.repo / 'work', True)
 
 
-@unittest.skipUnless(shutil.which('mvn') and (Path.home() / '.m2' / 'repository').is_dir(), 'Maven or the local repository is not available')
+@unittest.skipUnless(os.environ.get('SERVICE_GENERATOR_AUTHORIZED_MAVEN_TESTS') == '1' and shutil.which('mvn') and (Path.home() / '.m2' / 'repository').is_dir(), 'Explicit Maven test authorization and local Maven cache required')
 class OfficialMavenValidationTests(unittest.TestCase):
     """Real offline Maven builds (mvn -o -B -s settings.xml verify) of both synthetic services in temporary directories."""
     @classmethod

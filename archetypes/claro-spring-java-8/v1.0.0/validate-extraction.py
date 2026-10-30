@@ -269,6 +269,10 @@ serialized = json.dumps(records, ensure_ascii=True, separators=(",", ":"))
 # mtimes. It cannot prove this target's content identity independently. Preserve it
 # in the manifest; do not overwrite it with a fresh, self-approving baseline.
 reference_current_sha256 = hashlib.sha256(serialized.encode()).hexdigest()
+local_baseline = yaml.load((target / 'reference-content-baseline.yml').read_text(encoding='utf-8'), Loader=UniqueLoader)
+assert local_baseline['scope'] == a['provenance']['reference']
+assert local_baseline['excluded'] == 'application*.properties'
+assert reference_current_sha256 == local_baseline['permittedContentSha256'], 'Target-local reference content changed since package-4 observation'
 paths_serialized = json.dumps(sorted(paths), ensure_ascii=True, separators=(",", ":"))
 assert hashlib.sha256((reference / "pom.xml").read_bytes()).hexdigest() == a["provenance"]["referencePomSha256"]
 print(json.dumps({
@@ -284,6 +288,7 @@ print(json.dumps({
     "permittedReferenceRecordsInspected": len(records), "referenceFileCount": len(paths),
     "referenceFilePathInventory": "target-only-current-inventory",
     "referenceContentIdentity": "unverified-legacy-baseline-has-global-scope",
+    "referenceContentSincePackage4": "unchanged-target-local-content-only",
     "referenceCurrentContentSha256": reference_current_sha256,
     "protectedFileContentAndMetadataComparison": "not-performed",
     "mavenTestsJacocoSonar": "not-run", "checkstyle": "not-applicable; not-present-in-reference",

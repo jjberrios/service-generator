@@ -29,16 +29,31 @@ Generador de microservicios Java/Spring a partir de tres fuentes:
 @service-generator
 
 Target service: dom-example-service
+Archetype: archetypes/<nombre>/<version>
 OpenAPI: input/contracts/dom-example-service.yml
 Sparx: input/sparx/PROYECT/
 
 Generate the complete functional service.
 ```
 
-El agente reutiliza el arquetipo aprobado, comprueba la consistencia entre las
-fuentes y se detiene si necesita una decisión. No inventa reglas de negocio.
-La ejecución de Maven, el acceso a bases de datos y los despliegues requieren
-autorización explícita.
+El arquetipo se elige siempre de forma explícita (o se reanuda desde el checkpoint
+del servicio); no existe un arquetipo por defecto. Cada arquetipo declara su
+perfil de generación y solo se genera con perfiles que tengan backend soportado
+(`archetype_contract.py`); un perfil sin backend produce un error técnico, no una
+pregunta de negocio.
+
+Servicios sin API HTTP (por ejemplo, tipo shell/batch) no tienen OpenAPI: se
+indica solo `Target service`, `Archetype` y `Sparx`, y la autoridad Sparx se
+resuelve con `--non-http`. Ver
+`.opencode/skills/materialize-full-service/docs/batch-shell-contract.md`.
+
+El agente comprueba la consistencia entre las fuentes y se detiene si necesita
+una decisión. No inventa reglas de negocio. `workspace_cli.py lifecycle <servicio>`
+muestra por separado los estados del arquetipo y del servicio (aprobado,
+congelado, habilitado, generado, completo, verificado). La ejecución de Maven, el
+acceso a bases de datos y los despliegues requieren autorización explícita
+(las pruebas oficiales con Maven solo corren con
+`SERVICE_GENERATOR_AUTHORIZED_MAVEN_TESTS=1`).
 
 ## Crear un arquetipo
 

@@ -298,6 +298,10 @@ def fresh_registry(ws_dir: Path, repo: Path, service: str, persist: bool = False
 
 def current_decision(ws_dir: Path, repo: Path, service: str, persist: bool = False) -> dict:
     spec = load(Path(ws_dir) / 'service-spec.yml') or {}
+    if not spec:  # batch candidate: the normalized Sparx spec exists before the service spec is consolidated
+        candidate = load(Path(ws_dir) / 'sparx-spec.yml') or {}
+        if (candidate.get('service') or {}).get('profile') == 'batch-shell':
+            spec = candidate
     if (spec.get('service') or {}).get('profile') == 'batch-shell':
         import batch_gate
         return batch_gate.evaluate(Path(ws_dir), Path(repo), service, sys.modules[__name__])
@@ -325,7 +329,8 @@ def check_cleared(ws_dir: Path, repo: Path, service: str | None = None) -> dict:
     """Raise GateError unless the gate is CLEARED right now, recomputed from the files (never from a stored status)."""
     ws_dir = Path(ws_dir)
     authority = load(ws_dir / 'sparx-target-authority.yml') or {}
-    service = service or (authority.get('target') or {}).get('name')
+    state = load(ws_dir / 'service-generation-state.yml') or {}
+    service = service or state.get('targetService') or (authority.get('target') or {}).get('name')
     if not service:
         raise GateError(NO_AUDIT, 'no service identity: the workspace has no resolved Sparx authority')
     result = current_decision(ws_dir, repo, service)

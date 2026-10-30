@@ -6,6 +6,9 @@ permission:
     "*": deny
     ".factory/implementation-plan.yml": allow
     ".factory/generation-parameters.yml": allow
+    ".factory/services/*/implementation-plan.yml": allow
+    ".factory/services/*/generation-parameters.yml": allow
+    ".factory/services/*/full-planning-input.yml": allow
   bash: ask
 ---
 

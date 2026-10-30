@@ -38,9 +38,11 @@ every class is servlet.config. The historic whole-input/reference fingerprint
 cannot prove this reference independently; it remains recorded, with identity
 reported unverified. The exact reference POM SHA check is retained.
 
-Legacy claro-spring-ms: BASE_PACKAGE_PATH also occurs in the test template path,
-outside the declared main-source directory scope. The common validator reports
-this metadata mismatch; it does not silently modify the frozen baseline or
-pretend the check passed. Full POM fidelity remains its profile's responsibility.
+Legacy claro-spring-ms: the user explicitly requested completion of the remaining
+package-4 items. BASE_PACKAGE_PATH now declares the already-existing test template
+directory as well. This is a metadata correction only, not a template change.
+Java 8 now has reference-content-baseline.yml, an independently scoped content
+observation used to detect future changes; historical identity remains unverified.
+The old global hash is retained and is not silently re-approved.
 
 No Maven, Java compilation, runtime or remote verification is claimed.

@@ -388,7 +388,11 @@ class FileProtectionTests(Base):
         original = fp.guard_write
         with patch.object(fp, 'guard_write', side_effect=lambda out, rel, ws: (calls.append(rel), original(out, rel, ws))[1]):
             report = mz.materialize(self.repo, 'inventory-service')
-        self.assertEqual(sorted(calls), sorted(report['written']))
+        # Metadata publication is now guarded too; preflight/rechecks may call
+        # the manifest guard more than once. Every payload + commit marker must
+        # still pass the same guard, with no unexpected writes.
+        self.assertEqual(set(calls), set(report['written']) | {mz.MANIFEST})
+        self.assertTrue(all(path in calls for path in report['written']))
         self.assertTrue(calls)
 
     def test_a_guard_that_refuses_at_write_time_aborts_without_writing_that_file(self):

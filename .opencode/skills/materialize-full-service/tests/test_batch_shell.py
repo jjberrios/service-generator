@@ -30,6 +30,9 @@ def dump(path, obj):
 
 
 class BatchShellTests(unittest.TestCase):
+    ARCH = 'archetypes/claro-java-8-shell/v1.0.0'
+    FILES = 19
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix='batch-shell-test-')
         self.addCleanup(self.tmp.cleanup)
@@ -37,7 +40,7 @@ class BatchShellTests(unittest.TestCase):
         self.service = 'batch-example'
         self.ws = self.repo / '.factory/services' / self.service
         self.ws.mkdir(parents=True)
-        self.arch_rel = 'archetypes/claro-java-8-shell/v1.0.0'
+        self.arch_rel = self.ARCH
         self.arch = self.repo / self.arch_rel
         shutil.copytree(REPO / self.arch_rel, self.arch)
         arch = yaml.safe_load((self.arch / 'archetype.yml').read_bytes())
@@ -46,7 +49,7 @@ class BatchShellTests(unittest.TestCase):
         source = self.repo / 'input/sparx/flow.htm'
         source.parent.mkdir(parents=True)
         source.write_text('<html>SYNTHETIC transfer flow, abort on failure, empty list succeeds</html>', encoding='utf-8')
-        evidence = ['ea#flow']
+        evidence = ['ea#synthetic transfer flow']
         properties = [{'key': 'ftp.test.' + key, 'field': field, 'secret': key == 'password', 'evidence': evidence}
                       for key, field in [('host', 'HOST'), ('username', 'USER'), ('port', 'PORT'), ('password', 'PASSWORD'),
                                          ('remote', 'REMOTE'), ('local', 'LOCAL'), ('date', 'DATE'), ('format', 'FORMAT')]]
@@ -72,13 +75,13 @@ class BatchShellTests(unittest.TestCase):
         dump(self.ws / 'service-generation-state.yml', {'targetService': self.service, 'archetype': {'path': self.arch_rel}})
         dump(self.ws / 'service-spec.yml', self.spec)
         dump(self.ws / 'sparx-spec.yml', {'service': self.spec['service'], 'batch': batch})
-        dump(self.ws / 'sparx-target-authority.yml', {'target': {'name': self.service}, 'selection': {'status': 'resolved', 'authoritativeBranchRootId': '0.1'}})
+        dump(self.ws / 'sparx-target-authority.yml', {'kind': 'sparx-target-authority', 'hierarchySources': {'openapi': None}, 'target': {'name': self.service}, 'selection': {'status': 'resolved', 'authoritativeBranchRootId': '0.1'}})
         dump(self.ws / 'full-planning-input.yml', self.cfg)
         self.review()
         self.authorize()
 
     def review(self):
-        hashes = {name: sha(self.ws / filename) for name, filename in (('serviceSpecSha256', 'service-spec.yml'),
+        hashes = {name: sha(self.ws / filename) for name, filename in (
                   ('sparxSpecSha256', 'sparx-spec.yml'), ('authoritySha256', 'sparx-target-authority.yml'))}
         hashes['archetypeSha256'] = sha(self.arch / 'archetype.yml')
         dump(self.ws / 'consistency/batch-review.yml', {'reviewed': True, 'reviewedBy': 'test-semantic-review', 'reviewedAgainst': hashes, 'findings': []})
@@ -95,7 +98,7 @@ class BatchShellTests(unittest.TestCase):
         first = (self.ws / 'implementation-plan.yml').read_bytes()
         self.plan()
         self.assertEqual(first, (self.ws / 'implementation-plan.yml').read_bytes())
-        self.assertEqual(len(yaml.safe_load(first)['files']['generate']), 19)
+        self.assertEqual(len(yaml.safe_load(first)['files']['generate']), self.FILES)
 
     def test_cli_dispatch_in_workspace_sandbox_and_parameter_resolver(self):
         import workspace
@@ -110,7 +113,7 @@ class BatchShellTests(unittest.TestCase):
     def test_listing_by_filename_empty_abort_and_explicit_disconnect(self):
         spec = copy.deepcopy(self.spec)
         spec['batch']['steps'][1].update(kind='list-name', emptyPolicy='abort')
-        spec['batch']['steps'].append({'id': 'close', 'kind': 'disconnect', 'connection': 'Source', 'evidence': ['ea#flow']})
+        spec['batch']['steps'].append({'id': 'close', 'kind': 'disconnect', 'connection': 'Source', 'evidence': ['ea#synthetic transfer flow']})
         plan = bp.build(self.repo, spec, self.cfg)
         text = bm.service_source(plan)
         self.assertIn('listarArchivosPorNombreFecha', text)
@@ -316,6 +319,86 @@ public class SyntaxCheck {
         sources = [str(p) for p in output.rglob('*.java')]
         parsed = subprocess.run([java, '-cp', str(self.repo), 'SyntaxCheck', *sources], capture_output=True, text=True)
         self.assertEqual(parsed.returncode, 0, parsed.stdout + parsed.stderr)
+
+
+class BatchFlowPackage7Tests(BatchShellTests):
+    def test_ungrounded_evidence_is_rejected_by_the_gate(self):
+        for section in (self.spec['batch'],):
+            section['steps'][0]['evidence'] = ['ea#slug-that-the-page-never-says']
+        dump(self.ws / 'sparx-spec.yml', {'service': self.spec['service'], 'batch': self.spec['batch']})
+        dump(self.ws / 'service-spec.yml', self.spec)
+        result = gate.current_decision(self.ws, self.repo, self.service)
+        self.assertEqual(result['status'], gate.BLOCKED)
+        self.assertIn('ungrounded', ' '.join(result['problems']))
+
+    def test_gate_clears_before_the_service_spec_exists_and_consolidation_copies_only_the_candidate(self):
+        (self.ws / 'service-spec.yml').unlink()
+        self.review()
+        self.authorize()
+        self.assertEqual(gate.current_decision(self.ws, self.repo, self.service)['status'], gate.CLEARED)
+        script = REPO / '.opencode/skills/reconcile-service-spec/scripts/consolidate_batch_spec.py'
+        import workspace
+        (self.repo / '.opencode').mkdir(exist_ok=True)
+        run = workspace.run_script(workspace.Workspace(self.repo, self.service), script, [])
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        produced = yaml.safe_load((self.ws / 'service-spec.yml').read_bytes())
+        self.assertEqual(produced['batch'], self.spec['batch'])
+        self.assertEqual(set(produced), {'service', 'batch', 'readiness', 'unresolved', 'warnings'})
+
+    def test_consolidation_is_refused_without_authorization(self):
+        (self.ws / 'service-spec.yml').unlink()
+        (self.ws / 'consistency/authorization.yml').unlink()
+        import workspace
+        (self.repo / '.opencode').mkdir(exist_ok=True)
+        with self.assertRaises(Exception):
+            run = workspace.run_script(workspace.Workspace(self.repo, self.service),
+                                       REPO / '.opencode/skills/reconcile-service-spec/scripts/consolidate_batch_spec.py', [])
+            if run.returncode == 0:
+                return
+            raise RuntimeError(run.stderr)
+        self.assertFalse((self.ws / 'service-spec.yml').exists())
+
+    def test_authority_must_come_from_the_non_http_resolver(self):
+        dump(self.ws / 'sparx-target-authority.yml', {'target': {'name': self.service}, 'selection': {'status': 'resolved', 'authoritativeBranchRootId': '0.1'}})
+        self.review()
+        self.assertEqual(gate.current_decision(self.ws, self.repo, self.service)['status'], gate.BLOCKED)
+
+
+class BatchShellV11Tests(BatchShellTests):
+    ARCH = 'archetypes/claro-java-8-shell/v1.1.0'
+    FILES = 22
+
+    def decrypted_spec(self):
+        spec = copy.deepcopy(self.spec)
+        for prop in spec['batch']['properties']:
+            if prop['field'] in ('USER', 'PASSWORD'):
+                prop['secret'] = True
+        spec['batch']['connections'][0]['credentialMode'] = 'decrypted-soap'
+        return spec
+
+    def test_decrypted_soap_connection_generates_decrypt_then_connect(self):
+        text = bm.service_source(bp.build(self.repo, self.decrypted_spec(), self.cfg))
+        self.assertIn('desencriptarCredenciales(msjTrx,', text)
+        self.assertIn('credenciales.getUsuarioAplicacion()', text)
+        self.assertIn('catch (WSException e)', text)
+        self.assertIn('EbsConsultaClavesWSService ebsConsultaClavesWSService', text)
+
+    def test_decrypted_soap_requires_secret_properties(self):
+        spec = self.decrypted_spec()
+        spec['batch']['properties'][1]['secret'] = False
+        with self.assertRaises(Exception):
+            bp.build(self.repo, spec, self.cfg)
+
+    def test_v100_still_rejects_decrypted_soap(self):
+        v100 = self.repo / 'archetypes/claro-java-8-shell/v1.0.0'
+        shutil.copytree(REPO / 'archetypes/claro-java-8-shell/v1.0.0', v100)
+        arch = yaml.safe_load((v100 / 'archetype.yml').read_bytes())
+        arch['identity']['generationEnabled'] = True
+        dump(v100 / 'archetype.yml', arch)
+        cfg = copy.deepcopy(self.cfg)
+        cfg['target']['archetype'] = 'archetypes/claro-java-8-shell/v1.0.0'
+        with self.assertRaises(Exception):
+            bp.build(self.repo, self.decrypted_spec(), cfg)
 
 
 if __name__ == '__main__':

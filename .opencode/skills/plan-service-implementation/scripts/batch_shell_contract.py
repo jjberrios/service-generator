@@ -6,6 +6,9 @@ KEYWORDS = set(('abstract assert boolean break byte case catch char class const 
 IDENTIFIER = re.compile(r'^[A-Za-z][A-Za-z0-9_]*$')
 PROPERTY = re.compile(r'^[a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*)+$')
 GENERIC_KEYS = {'log4j.file.dir', *(f'{code}.{part}' for code in ('idf0', 'idf1', 'idt1', 'idt2', 'idt3') for part in ('codigo', 'mensaje'))}
+DECRYPT_FEATURE = 'credential-decrypt-soap'
+DECRYPT_FIELDS = {'wsEbsConsultaClavesWSUrl', 'wsEbsConsultaClavesWSMaxRequestTimeout',
+                  'wsEbsConsultaClavesWSMaxConnectionTimeout', 'wsEbsConsultaClavesWSCodigoAplicacion'}
 GENERIC_FIELDS = {'log4jDir', *(code + part for code in ('idf0', 'idf1', 'idt1', 'idt2', 'idt3') for part in ('Codigo', 'Mensaje'))}
 
 
@@ -26,8 +29,15 @@ def keys(obj, allowed, required):
     require(set(required) <= set(obj), f'missing fields {sorted(set(required) - set(obj))}')
 
 
-def validate(batch):
+def features_of(generation):
+    """Feature modules the selected archetype declares AND this backend implements."""
+    return frozenset(m['id'] for m in (generation or {}).get('featureModules', ())
+                     if isinstance(m, dict) and str(m.get('backendSupport', '')).startswith('supported'))
+
+
+def validate(batch, features=frozenset()):
     """Validate normalized functional spec; evidence uses source binding ids, e.g. ea#node."""
+    decrypt = DECRYPT_FEATURE in features
     keys(batch, ('version', 'properties', 'connections', 'steps', 'outcomes', 'sourceBindings'),
          ('version', 'properties', 'connections', 'steps', 'outcomes', 'sourceBindings'))
     require(batch['version'] == 1, 'unsupported IR version')
@@ -49,7 +59,7 @@ def validate(batch):
                 and r.split('#', 1)[0] in bindings and r.split('#', 1)[1].strip() for r in refs), 'bound evidence required')
 
     require(isinstance(batch['properties'], list), 'properties must be a list')
-    props, fields = {}, set(GENERIC_FIELDS)
+    props, fields = {}, set(GENERIC_FIELDS) | (DECRYPT_FIELDS if decrypt else set())
     for prop in batch['properties']:
         keys(prop, ('key', 'field', 'secret', 'evidence'), ('key', 'field', 'secret', 'evidence'))
         key, field = prop['key'], identifier(prop['field'])
@@ -72,10 +82,12 @@ def validate(batch):
         require(name not in connections, 'duplicate connection')
         connections.add(name)
         evidence(conn)
-        require(conn['credentialMode'] == 'resolved-external',
-                'credential decryption is unsupported; a specified externally resolved secret is required')
+        mode = conn['credentialMode']
+        require(mode == 'resolved-external' or (mode == 'decrypted-soap' and decrypt),
+                'unsupported credential mode: resolved-external, or decrypted-soap only when the selected archetype '
+                'implements the credential-decrypt-soap feature')
         for key in ('username', 'host', 'port', 'password'):
-            prop(conn[key], secret=(key == 'password'))
+            prop(conn[key], secret=(key == 'password' or (mode == 'decrypted-soap' and key == 'username')))
 
     outcomes = batch['outcomes']
     keys(outcomes, ('success', 'sftpFailure', 'generalFailure', 'evidence'), ('success', 'sftpFailure', 'generalFailure', 'evidence'))

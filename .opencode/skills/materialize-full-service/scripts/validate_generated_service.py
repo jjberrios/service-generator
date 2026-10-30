@@ -17,6 +17,7 @@ HERE = Path(__file__).resolve().parent
 SKILLS = HERE.parents[1]
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(SKILLS / 'service-workspace' / 'scripts'))
+sys.path.insert(0, str(SKILLS / 'plan-service-implementation' / 'scripts'))
 import consistency_gate as gate  # noqa: E402
 import file_protection as fp  # noqa: E402
 import style_lint  # noqa: E402

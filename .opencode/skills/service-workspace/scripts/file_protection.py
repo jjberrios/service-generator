@@ -48,7 +48,8 @@ def generated_hashes(output_dir: Path) -> dict:
     manifest = Path(output_dir) / MANIFEST
     if not manifest.is_file():
         return {}
-    rows = (yaml.safe_load(manifest.read_bytes()) or {}).get('fileInventory') or []
+    from generation_context import load_mapping
+    rows = load_mapping(manifest).get('fileInventory') or []
     return {norm(r['path']): r['sha256'] for r in rows if isinstance(r, dict) and r.get('path') and r.get('sha256')}
 
 
@@ -101,6 +102,9 @@ def evaluate(output_dir: Path, planned: list[dict], ws_dir: Path) -> list[dict]:
     for entry in planned:
         rel = norm(entry['path'])
         if rel == MANIFEST:
+            if any(fnmatch(rel, norm(p)) for p in owned):
+                out.append(decide(entry['action'], classify(output_dir, rel, recorded, owned, authorizations)))
+                continue
             out.append({'path': rel, 'state': GENERATED, 'action': entry['action'], 'decision': 'write' if entry['action'] in WRITE_ACTIONS else 'keep'})
             continue
         out.append(decide(entry['action'], classify(output_dir, rel, recorded, owned, authorizations)))

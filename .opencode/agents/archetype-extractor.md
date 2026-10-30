@@ -3,11 +3,14 @@ description: Extracts, revises, and validates a reusable Java/Spring microservic
 mode: subagent
 
 permission:
-  edit:
+  read:
     "*": allow
+    "**/application*.properties": deny
+  edit:
+    "*": deny
+    "archetypes/**": allow
     "input/reference/**": deny
     "**/input/reference/**": deny
-
   bash: ask
 ---
 

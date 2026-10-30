@@ -165,7 +165,8 @@ def properties_example(archetype_dir: Path, values: dict) -> bytes:
 
 
 def template_files(template_dir: Path) -> list[str]:
-    return sorted(p.relative_to(template_dir).as_posix() for p in template_dir.rglob('*') if p.is_file())
+    from artifact_integrity import template_paths
+    return template_paths(template_dir.parent)
 
 
 def is_deployment(rel: str) -> bool:

@@ -5,6 +5,7 @@ permission:
   read:
     "*": allow
     "input/reference/**": deny
+    "**/application*.properties": deny
   edit:
     "*": deny
     ".factory/**": allow
@@ -17,7 +18,6 @@ permission:
     "sparx-analyzer": allow
     "spec-analyzer": allow
     "implementation-planner": allow
-    "general": allow
   bash:
     "*": ask
     "python .opencode/skills/parse-openapi/scripts/*": allow
@@ -141,7 +141,13 @@ source ownership and local-reference provenance. Reuse a matching valid output.
 Delegate to `sparx-analyzer` / `parse-sparx`. Prefer
 `resolve_target_authority.py <sparx_export_path> .factory/sparx-target-authority.yml
 --target <target_service> --openapi .factory/openapi-spec.yml`, with the scoped
-reviewed-decisions file when present. Locate the actual export root containing
+reviewed-decisions file when present. For a non-HTTP batch/shell archetype
+(`generationOwnership.apiContract: not-applicable-non-http-batch`) no OpenAPI exists:
+use `--non-http` instead of `--openapi` and follow the batch flow in
+`.opencode/skills/materialize-full-service/docs/batch-shell-contract.md`
+(normalized candidate `sparx-spec.yml` -> batch review -> human authorization ->
+`consolidate_batch_spec.py` -> plan -> materialize); never fabricate an OpenAPI or a
+Swagger audit. Locate the actual export root containing
 the hierarchy metadata without changing the user-supplied source scope.
 
 Require unique evidence-backed authority. Preserve candidate branch/root UUIDs,
@@ -231,6 +237,16 @@ existing capability cannot faithfully represent this target, preserve artifacts
 and report a technical stage failure instead of claiming full readiness.
 
 ### 7. Human decision gate and continuation
+
+Before asking anything, classify the situation with `lifecycle.py` `decide(kind)`
+(`.opencode/skills/service-workspace/question-policy.md`): clear reference evidence
+-> apply and cite; technology absent in the reference -> record it as absent, never
+offer another stack; decision already approved for this target/version -> reuse it;
+the request already covers the phase -> proceed; unsupported backend -> technical
+failure, not a business question. Ask only for real source conflicts, missing required
+parameters (one grouped question), intentional deviations (scoped approval) and gate
+release (bound to the evaluation hash). Use `workspace_cli.py lifecycle <service>` to
+report archetype and service states separately; never summarize them as "ready".
 
 If a real business/source conflict blocks functionality, pause before dependent
 planning/generation. Present **only blocking items**, grouped into one concise

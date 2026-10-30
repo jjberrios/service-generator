@@ -828,8 +828,11 @@ def build_full(root: Path, yaml: Any, input_path: Path) -> tuple[dict, dict]:
 
 def write_full_plan(root: Path, yaml: Any, input_path: Path) -> int:
     plan, params = build_full(root, yaml, input_path)
-    (root / PARAMS).write_bytes(base.dump_yaml(params, yaml))
-    plan['inputs']['generationParameters'] = {'path': PARAMS.as_posix(), 'sha256': digest(root / PARAMS)}
-    (root / PLAN).write_bytes(base.dump_yaml(plan, yaml))
+    from artifact_integrity import write_atomic, safe_path
+    params_raw = base.dump_yaml(params, yaml)
+    plan['inputs']['generationParameters'] = {'path': PARAMS.as_posix(), 'sha256': base.sha256(params_raw)}
+    destinations = [safe_path(root / '.factory', p.name) for p in (PARAMS, PLAN)]
+    for destination, data in zip(destinations, (params_raw, base.dump_yaml(plan, yaml))):
+        write_atomic(destination, data)
     print({'mode': 'full', 'persistence': plan['persistenceAuthority']['technology'], **plan['statistics'], 'planSha256': digest(root / PLAN), 'parametersSha256': digest(root / PARAMS)})
     return 0

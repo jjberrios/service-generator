@@ -5,6 +5,7 @@ permission:
   edit:
     "*": deny
     ".factory/service-spec.yml": allow
+    ".factory/services/*/service-spec.yml": allow
   bash: ask
 ---
 

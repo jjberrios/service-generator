@@ -38,6 +38,8 @@ def main(argv=None) -> int:
     m.add_argument('service')
     m.add_argument('archive')
     sub.add_parser('migrate-root')
+    lc = sub.add_parser('lifecycle')
+    lc.add_argument('service')
     r = sub.add_parser('run')
     r.add_argument('service')
     r.add_argument('script')
@@ -81,6 +83,14 @@ def main(argv=None) -> int:
             ws.ensure()
             ws.set_state(schemaVersion=1, status=ws.state().get('status', 'idle'))
             print(ws.dir)
+        elif args.command == 'lifecycle':
+            import lifecycle
+            state = ws.state()
+            path = (state.get('archetype') or {}).get('path')
+            out = {'service': lifecycle.service_lifecycle(repo, args.service, gate)}
+            if path:
+                out['archetype'] = lifecycle.archetype_lifecycle(repo, path)
+            print(yaml.safe_dump(out, allow_unicode=True, sort_keys=False))
         elif args.command == 'status':
             print(yaml.safe_dump({'workspace': ws.dir.relative_to(repo).as_posix(), 'state': ws.state(), 'gate': gate.load(gate.paths(ws.dir)['gate'])}, allow_unicode=True, sort_keys=False))
         elif args.command == 'migrate-archive':

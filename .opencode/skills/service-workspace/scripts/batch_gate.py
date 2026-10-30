@@ -1,4 +1,4 @@
-"""Source-only batch gate. HTTP is N/A, never a fabricated successful Swagger audit.
+﻿"""Source-only batch gate. HTTP is N/A, never a fabricated successful Swagger audit.
 
 Still requires current authoritative Sparx, explicit semantic review and the existing
 human resume authorization. A profile label alone can never release a workspace.
@@ -7,7 +7,8 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'plan-service-implementation' / 'scripts'))
-from batch_shell_contract import PROFILE, require, validate
+import batch_evidence
+from batch_shell_contract import PROFILE, features_of, require, validate
 
 
 def evaluate(ws, repo, service, gate):
@@ -15,7 +16,8 @@ def evaluate(ws, repo, service, gate):
               'coveredByDecision': [], 'coverageProblems': [], 'topics': [], 'evaluationHash': None,
               'problems': [], 'comparison': 'not-applicable-non-http-batch', '_registry': None}
     try:
-        spec = gate.load(ws / 'service-spec.yml')
+        sparx = gate.load(ws / 'sparx-spec.yml') or {}
+        spec = gate.load(ws / 'service-spec.yml') if (ws / 'service-spec.yml').is_file() else dict(sparx)
         state = gate.load(ws / 'service-generation-state.yml') or {}
         require(state.get('targetService') == service, 'checkpoint service mismatch')
         path = (state.get('archetype') or {}).get('path', '')
@@ -29,25 +31,28 @@ def evaluate(ws, repo, service, gate):
                 'selected archetype is not a non-HTTP batch')
         require(spec.get('service') == {'name': service, 'profile': 'batch-shell'}, 'batch service identity required')
         require(not (ws / 'openapi-spec.yml').exists(), 'batch workspace must not silently ignore an OpenAPI contract')
-        batch = validate(spec.get('batch'))
-        sparx = gate.load(ws / 'sparx-spec.yml') or {}
+        batch = validate(spec.get('batch'), features_of(arch.get('generation') or {}))
         require(sparx.get('service') == spec['service'] and sparx.get('batch') == batch,
                 'batch IR must equal the authoritative normalized Sparx behavior')
         require(not any((spec.get('unresolved') or {}).values()) and not any((sparx.get('unresolved') or {}).values()),
                 'unresolved Sparx behavior/conflicts')
+        require(sparx.get('service') == {'name': service, 'profile': 'batch-shell'}, 'normalized Sparx spec identity mismatch')
         require(not spec.get('operations') and not spec.get('inactive'), 'HTTP or inactive operations are not valid batch IR')
         require(not spec.get('validation', {}).get('errors'), 'invalid consolidated spec')
         authority = gate.load(ws / 'sparx-target-authority.yml') or {}
         selection = authority.get('selection') or {}
-        require(authority.get('target', {}).get('name') == service and selection.get('status') == 'resolved'
+        flat = lambda name: ''.join(ch for ch in str(name).lower() if ch.isalnum())
+        require(authority.get('kind') == 'sparx-target-authority' and (authority.get('hierarchySources') or {}).get('openapi') is None,
+                'authority must be produced by resolve_target_authority.py --non-http')
+        require(flat(authority.get('target', {}).get('name')) == flat(service) and selection.get('status') == 'resolved'
                 and selection.get('authoritativeBranchRootId') is not None, 'resolved target-local Sparx authority required')
         for binding in batch['sourceBindings']:
             source = repo / binding['path']
             require(source.resolve().is_relative_to((repo / 'input/sparx').resolve()), 'source escapes Sparx root')
             require(source.is_file() and gate.sha_bytes(source.read_bytes()) == binding['sha256'], 'Sparx source missing or changed')
+        batch_evidence.verify(batch, repo)
         hashes = {name: gate.sha_bytes((ws / filename).read_bytes()) for name, filename in
-                  (('serviceSpecSha256', 'service-spec.yml'), ('sparxSpecSha256', 'sparx-spec.yml'),
-                   ('authoritySha256', 'sparx-target-authority.yml'))}
+                  (('sparxSpecSha256', 'sparx-spec.yml'), ('authoritySha256', 'sparx-target-authority.yml'))}
         hashes['archetypeSha256'] = gate.sha_bytes((root / 'archetype.yml').read_bytes())
         review = gate.load(ws / 'consistency/batch-review.yml') or {}
         result['evaluationHash'] = gate.digest({'service': service, 'hashes': hashes, 'review': review, 'sources': batch['sourceBindings']})

@@ -101,14 +101,12 @@ def valid_kebab(value: str) -> bool:
 
 
 def archetype_fingerprint(path: Path) -> str:
-    parts = []
-    for file in sorted((item for item in path.rglob("*") if item.is_file()),
-                       key=lambda item: item.relative_to(path).as_posix()):
-        if file.is_symlink():
-            raise PlanError(f"Archetype contains a symlink: {file}")
-        rel = file.relative_to(path).as_posix()
-        parts.append(f"{rel}\0{sha256(file.read_bytes())}\n")
-    return sha256("".join(parts).encode("utf-8"))
+    from artifact_integrity import archetype_hashes, IntegrityError
+    try:
+        hashes = archetype_hashes(path)
+    except (IntegrityError, ValueError, OSError) as error:
+        raise PlanError(f"Invalid archetype fingerprint: {error}") from error
+    return sha256(json.dumps(hashes, sort_keys=True, separators=(',', ':')).encode())
 
 
 def field_java_type(schema: dict[str, Any]) -> str:
@@ -561,15 +559,8 @@ def main() -> int:
         output = root / PLAN_PATH
         if output.is_symlink() or output.parent.resolve() != (root / ".factory").resolve():
             raise PlanError("Plan output must be a regular file directly under .factory/.")
-        temp = None
-        try:
-            with tempfile.NamedTemporaryFile(dir=output.parent, prefix=".implementation-plan-", delete=False) as stream:
-                temp = Path(stream.name)
-                stream.write(payload)
-            os.replace(temp, output)
-        finally:
-            if temp is not None:
-                temp.unlink(missing_ok=True)
+        from artifact_integrity import write_atomic
+        write_atomic(output, payload)
         print({"mode": result["plan"]["mode"], "operations": len(result["api"]["operations"]),
                "models": len(result["models"]), "plannedFiles": len(result["files"]["generate"]),
                "planningBlockers": len(result["planningBlockers"]), "bytes": len(payload),

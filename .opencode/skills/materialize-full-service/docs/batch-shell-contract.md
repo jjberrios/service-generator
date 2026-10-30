@@ -94,6 +94,14 @@ No raw Java snippets, arbitrary expressions, SOAP/decryption, persistence, retri
 new file filters, midnight business windows, branching or inferred error policy.
 Unknown requirements stop the whole generation, never become stubs or empty success.
 
+## Non-HTTP flow (package 7: no OpenAPI, no gate cycle)
+
+1. Authority without OpenAPI: `python .opencode/skills/parse-sparx/scripts/resolve_target_authority.py input/sparx <ws>/sparx-target-authority.yml --target <exact Sparx element name> --non-http` (exactly one of `--openapi` / `--non-http`). The gate rejects an authority that was not produced this way (`kind: sparx-target-authority`, no OpenAPI source). The authority target is the Sparx element name; the gate compares it with the service name ignoring case/punctuation.
+2. The normalized candidate is `<ws>/sparx-spec.yml` (`service`, `batch`, optional `warnings`). The gate evaluates this candidate, so it can be CLEARED **before** `service-spec.yml` exists.
+3. After the gate is CLEARED, run `workspace_cli.py run <service> .opencode/skills/reconcile-service-spec/scripts/consolidate_batch_spec.py`: it copies the approved IR into `service-spec.yml` (readiness and `unresolved: {}` added; no behavior added) and is refused while the gate is not CLEARED.
+4. Evidence is grounded: each entry is `<bindingId>#<literal text>` and the literal (case/accent/whitespace insensitive, at least 5 characters) must occur in the visible text of the bound Sparx page (`batch_evidence.py`, enforced by the gate). A slug or paraphrase fails. Grounding proves the words exist in the cited source, not that the interpretation is right: that is still the semantic review.
+5. Planning and materialization are unchanged.
+
 ## Non-HTTP consistency gate
 
 `sparx-target-authority.yml` must have the correct target and a resolved selection.
@@ -103,12 +111,13 @@ Unknown requirements stop the whole generation, never become stubs or empty succ
 reviewed: true
 reviewedBy: <semantic reviewer>
 reviewedAgainst:
-  serviceSpecSha256: <hash>
   sparxSpecSha256: <hash>
   authoritySha256: <hash>
   archetypeSha256: <hash of selected archetype.yml>
 findings: []
 ```
+
+When `service-spec.yml` already exists its `service` and `batch` must equal the candidate's.
 
 Pending findings block; resolve them against authoritative evidence and review again.
 The backend never fills this review or approves it automatically. Human authorization

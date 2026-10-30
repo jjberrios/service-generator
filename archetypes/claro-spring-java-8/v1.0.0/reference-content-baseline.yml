@@ -1,0 +1,9 @@
+schemaVersion: 1
+scope: input/reference/rest-sb-claro-post-atencion
+algorithm: sha256-json-sorted-relative-repository-path-and-content-sha256
+excluded: application*.properties
+permittedContentSha256: 00d08b39da5210ce269c299fe995766ac1236e7f33b2241286be24dca30dcf57
+purpose: detect-changes-from-package-4-observation-forward
+historicalIdentity: unverified-legacy-baseline-has-global-scope
+authorization: user-request-to-complete-package-4-pending-items
+notes: No timestamps or other reference projects participate. This is not retroactive provenance approval.

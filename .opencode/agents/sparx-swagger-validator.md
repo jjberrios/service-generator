@@ -5,6 +5,7 @@ permission:
   read:
     "*": allow
     "input/reference/**": deny
+    "**/application*.properties": deny
   edit:
     "*": deny
     "reports/inconsistencias/**": allow
