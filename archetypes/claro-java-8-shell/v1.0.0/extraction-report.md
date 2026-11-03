@@ -1,64 +1,73 @@
-# Informe de extracción — claro-java-8-shell / 1.0.0
+# Informe de extracción — claro-java-8-shell / 1.0.0 (version nueva)
 
-Fecha: 2026-10-29. Operación: extracción inicial (destino nuevo). Referencia (solo lectura):
-`input/reference/SH_ObtenerTrasladarArchivosMTC`. Estado: extracción completa; **congelado**;
-`generationEnabled: true`; 10 decisiones aprobadas y preguntas SH-Q-001 a 012 resueltas
-por la instrucción humana de seguir enteramente la referencia (ver `decisions.md`).
-Los artefactos externos ausentes y la compatibilidad siguen sin verificarse.
+Fecha: 2026-10-30. Operación: extracción de **versión nueva** derivada de 1.0.0 (la 1.0.0
+permanece congelada e intacta). Referencia (solo lectura):
+`input/reference/SH_ObtenerTrasladarArchivosMTC`. Instrucción del usuario (SH-D-011): recuperar la
+infraestructura técnica reutilizable que 1.0.0 excluyó por considerarla negocio.
 
-## Resumen del proyecto de referencia
+Estado: aprobada por instrucción del usuario; `frozen: false`, `generationEnabled: true` (SH-D-017),
+`readyToFreeze: false` (SH-D-016). Decisiones SH-D-001…010 preservadas; nuevas SH-D-011…016.
 
-- Batch/shell Java 8 (jar ejecutable, `main`), Spring 3.1.0 (XML + component-scan), log4j 1.2,
-  jsch (SFTP), JUnit4/Mockito 2/AssertJ, JaCoCo 0.8.2, Sonar, plugins jar/shade/dependency/resources.
-- Sin endpoints HTTP; se ejecuta con `java -Dproperties=<archivo> -jar <jar> <idTransaccion>`
-  (comando derivado, sin script lanzador) y se prueba con un running.
-- Sin persistencia implementada, sin Checkstyle de build, sin Docker/K8s/Jenkinsfile.
+## Qué se incluyó de nuevo respecto a 1.0.0
+
+| Elemento | Archivo / lugar | Decisión |
+|---|---|---|
+| Proxy SOAP de descifrado (interfaz) | `template/src/main/java/@@BASE_PACKAGE_PATH@@/proxy/EbsConsultaClavesWSService.java` | SH-D-012 |
+| Proxy SOAP de descifrado (impl, clasificación idt1/idt2/idt3) | `.../proxy/EbsConsultaClavesWSServiceImpl.java` | SH-D-012 |
+| Contexto Spring del cliente JAX-WS | `template/src/main/resources/applicationProxyWS.xml` (verbatim) | SH-D-012/013 |
+| `import` del contexto de proxy | `applicationContext.xml` (idéntico a la referencia tras tokens) | SH-D-012 |
+| Constantes `DESENCRIPTAR`, `ID_TRANSACCION`, `CODIGO_APLICACION`, `USUARIO` | `Constantes.java` | SH-D-012 |
+| Propiedades `ws.ebsConsultaClavesWS.{url,max.request.timeout,max.connection.timeout,codigo.aplicacion}` | `PropertiesExterno.java` (solo si se descifra) | SH-D-012/013 |
+| Prerrequisito `Lib/` + endpoint del operador | `README.MD`, `externalPrerequisites` | SH-D-013 |
+| Patrones técnicos del servicio (método a método) | `generation.servicePatterns` (9 entradas, rangos de línea verificados) | SH-D-014 |
+| Contrato técnico del descifrador (operación/campos/namespace/servicio/puerto) | `servicePatterns.credentialDecryptContract` (verificado contra el WSDL) | SH-D-013 |
+
+## Qué se excluyó y por qué
+
+- **Lógica de negocio MTC** (mapa SUSPENSION/NOTIFICACION/IDENTIFICACION/REPORTE, rutas, filtros por
+  nombre/mtime, ventana de medianoche, de-duplicación Reporte/Identificación, contadores, regla
+  idf0/idf1, textos MTC; `MTC_`, `REPLACE_FECHA_*`, `ERROR_CONEXION_MTC`; claves `ftp.*`,
+  `sftp.mtc.*`, `ruta.temp.trasladar.mtc`): Sparx (SH-D-014).
+- **WSDL** del descifrador: contiene `soap:address` con IP/puerto de entorno; el cliente ya está
+  en el jar de `Lib/`; contrato técnico documentado sin la dirección (SH-D-013).
+- **Jars de `Lib/`** y **clases `pe/**`**: binarios propietarios; el cliente de descifrado es
+  prerrequisito externo declarado en el POM.
+- **Correo/notificación**: la referencia no tiene código, XML, constantes ni POM que lo use; solo
+  `EnvioCorreoSB-Client` en `Lib/` sin uso ni declaración. No se inventa nada (SH-D-015).
+- `ojdbc6` (sin persistencia), `applicationDatasource.xml`, IDE, `.properties` protegidos
+  (no abiertos en esta extracción), tests de negocio: como en 1.0.0.
+
+## Parámetros
+
+Sin parámetros `@@` nuevos (9 usados exactamente; `BASE_PACKAGE`/`BASE_PACKAGE_PATH` alcanzan 2
+archivos más). Nuevas **variables externas jinja2** (valor del operador, no secreto):
+`ws_ebsconsultaclavesws_url`, `_max_request_timeout`, `_max_connection_timeout`, `_codigo_aplicacion`.
 
 ## Resultado
 
 | Elemento | Cantidad |
 |---|---|
 | Archivos de la referencia (todos con disposición) | 51 |
-| Archivos del template | 17 |
-| Utilitarios/excepciones declarados en `generation.utilities` | 9 |
-| Plantillas de configuración en `generation.configuration` | 2 |
-| Parámetros (todos usados) | 9 |
-| Dependencias / plugins inventariados | 14 / 7 |
-| Decisiones aprobadas / propuestas / preguntas pendientes | 10 / 0 / 0 |
+| Archivos del template | 16 (sin config j2, UtilSFTP, BaseException ni PropertiesException) |
+| Utilitarios/proxies en `generation.utilities` | 9 → 11 |
+| Dependencias / plugins | 14 / 7 (POM sin cambios) |
+| Decisiones aprobadas | 16 (10 heredadas + 6 nuevas) |
 
-## Validación estática (`validate-extraction.py`)
+## Validación estática
 
-Pasa: YAML con claves únicas; template == inventario; parámetros usados exactamente en
-`affectedFiles`; XML bien formado (original y renderizado); estructura Java renderizada;
-11 plantillas idénticas a la referencia tras el render de tokens; archivos mixtos
-(Constantes, PropertiesExterno, SFTPConnectionManager) solo con eliminaciones; POM idéntico
-salvo la parametrización autorizada y la eliminación de patrones Sonar concretos;
-dependencias/plugins == POM; uso de dependencias vs imports; cobertura de la referencia;
-trazabilidad decisiones; sin fuga de dominio/integración ni secretos/IP; referencia sin
-cambios (hash de 49 archivos permitidos + inventario de rutas).
+`validate_inventory.py` (común): passed. `validate-extraction.py` (1.0.0): passed — incluye
+hash de la referencia sin cambios (49 archivos permitidos + inventario de 51 rutas), plantillas
+idénticas a la referencia tras tokens (15), solo eliminaciones exactas en `Constantes`/`PropertiesExterno`,
+consistencia de claves `.j2` = `@Value` = marcadores del XML, contrato del descifrador == WSDL,
+rangos de `servicePatterns`, ausencia de WSDL/jar/dirección de entorno, sin comportamiento de correo,
+sin secretos/IP, 1.0.0 sigue congelada.
 
-## No verificado (honestamente)
+## No verificado
 
-Maven (compilación, `package`, resolución de `Lib/`), pruebas, JaCoCo, Sonar, compatibilidad
-Spring 3.1.0 con bytecode Java 8 (SH-Q-010), ejecución real del jar y compilación Java
-del nuevo backend. Checkstyle no aplica. El backend batch implementa un IR SFTP acotado;
-sus pruebas Python sintéticas pasan, sin afirmar pruebas Maven/runtime.
+Maven, compilación (requiere el jar de `Lib/` fuera del arquetipo), JUnit, JaCoCo, Sonar,
+compatibilidad Spring 3.1/Java 8, comportamiento real del proxy JAX-WS. Checkstyle: no aplica.
 
-## Cierre y alcance habilitado (SH-D-010)
+## Backend
 
-La instrucción «Porque?, termina el arquetipo.» autoriza finalizar, congelar y habilitar
-esta versión. El planificador/materializador conserva el baseline de referencia y
-soporta únicamente el IR SFTP cerrado documentado; SOAP/descifrado, persistencia y
-pasos no soportados bloquean la generación. No hay interpretación automática de
-prosa Sparx. Cada destino requiere revisión semántica y autorización propias.
-
-Evidencia del backend: suite completa de materialización, 258 pruebas ejecutadas,
-resultado OK con 1 omitida por falta de JSch local; prueba focalizada del perfil,
-16 pruebas, 15 satisfactorias y 1 omitida. El parseo de sintaxis Java 8 pasa;
-no equivale a compilar, ejecutar JUnit ni probar el jar. No se ejecutó Maven.
-
-Revisión de estilo: el servicio generado usa `@Service`, interfaz `run(String,String)`,
-inyección de `PropertiesExterno`, log4j por clase, prefijo de transacción,
-`MessageFormat` con constantes de inicio/fin/tiempo y cierre SFTP en `finally`,
-como el servicio de referencia. Conserva utilitarios, excepciones, contexto XML y
-plantilla de configuración. La integración de descifrado concreta no se trasplanta.
+El backend batch actual (IR v1: connect/disconnect/list/for-each/download/upload) **no soporta** el
+correo; el descifrado SOAP está soportado de forma acotada (SH-D-021).

@@ -159,3 +159,26 @@ applied to this profile.
 
 A separate JDK parser test validates all rendered Java at source level 8 without
 resolving dependencies. This is syntax-only evidence, never compilation/runtime proof.
+
+## Scopes structure-only and ports-flow (SH-D-022, SH-D-023)
+
+Both scopes require explicit `omittedBehavior` (`id` Java identifier, `description`, grounded `evidence`), declare no `properties`,
+`connections` or `steps` and keep readiness honest: `scaffoldImplementationReady: true`, functional/strict `false` and `blockers` equal to the
+omitted ids. The `sftp-transfer` and `credential-decrypt-soap` modules are pruned when unused (no unused code, SH-D-019).
+
+- `structure-only`: `outcomes = {generalFailure, evidence}`; `run()` logs the configured failure outcome and never simulates success.
+- `ports-flow`: adds `dtos` (String/Integer/Long/Boolean fields), `ports` (`db|rest|mail` with typed methods) and `flow`:
+  `call` (`port`, `method`, `args`, optional `result`, `onFailure` = `abort` | `skip-item` | `log`), `for-each` (no nesting; `abort` is
+  not allowed inside; each item is isolated with `skip-item`) and `if` (`<` over Integer operands or `present` over a dto variable). Every declared
+  port method must be used. `outcomes = {success, generalFailure, evidence}`.
+  Generated: `dto/*`, `port/<Port>` + `port/<Port>Impl` (the adapter throws `OperacionNoImplementadaException`; no SQL, HTTP, mail,
+  URL or scheduling is implemented), the service flow and JUnit4/Mockito tests derived from every condition path and every failure policy
+  (at most 16 paths; contradictory operand constraints are a technical error).
+
+## Nested loops, guards and compound conditions (SH-D-027)
+
+`for-each` may nest to depth 2 (`skip-item` applies at any loop depth; `abort` only outside loops). The `guard` step (only inside a `for-each`) skips the current item when its condition is false. Conditions (`if`, `guard`) are simple `{left, op, right?}` or exactly one of `all`/`any` over at least two simple ones. Operators: `<` (Integer), `present` (dto variable), `nonempty` (list variable), `equals` (Integer/Long/String with literal `right`), `true` (Boolean). Tests are derived per condition path (max 16; contradictory constraints on one operand are a technical error). REST methods may return `Boolean` with optional `okStatus` (extra accepted HTTP codes besides 2xx); any communication error yields `false`.
+
+## Adapters (ports-flow, SH-D-024)
+
+`batch.adapters` (optional, ports-flow only) gives each port a concrete implementation: `db` methods declare `sql`, `bind` (`arg` or `arg.field`), `result` (none|scalar|single|list) and `columns`; `rest` methods declare `httpMethod` (GET|POST|PATCH), `path`, `query` and `body` items (`json` plus exactly one of `from` or literal `value`); `mail` methods declare `placeholders`. Every method is `assumed: true` with Sparx literal evidence and each adapter implements all methods of its port. Generated: `util/ConexionBd` (plain JDBC, external driver), `util/RestClienteHttp` (Apache HttpClient + Jackson), `<Port>Impl` adapters, JUnit4/Mockito tests for db and rest (not mail). Environment values (`bd.*`, `rest.<port>.url`, `rest.timeout.ms`, `mail.*`) are blank external properties listed in `required-properties.yml`; extra POM dependencies are justified additions (baseline never pruned). Assumptions are recorded in `assumptions-register.yml`; readiness stays partial and scheduling is external. No Maven, network or runtime verification.

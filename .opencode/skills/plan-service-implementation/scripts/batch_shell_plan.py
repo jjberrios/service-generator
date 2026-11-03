@@ -3,7 +3,7 @@ from pathlib import Path
 import re
 
 import build_implementation_plan as base
-from batch_shell_contract import PROFILE, identifier, require, validate, features_of
+from batch_shell_contract import PROFILE, STRUCTURE_ONLY, PORTS_FLOW, identifier, require, validate, features_of, adapter_kinds, maven_additions
 
 TOKEN = re.compile(r'@@([A-Z][A-Z0-9_]*)@@')
 
@@ -32,13 +32,24 @@ def build(repo, spec, cfg):
     service = target['service']
     require(re.fullmatch(r'[a-z][a-z0-9]*(?:-[a-z0-9]+)*', service), 'unsafe service name')
     require(spec.get('service', {}).get('name') == service and spec['service'].get('profile') == 'batch-shell', 'wrong service/profile')
-    require(target.get('output_directory') == f'output/{service}', 'output must be output/<service>')
+    artifact = (cfg.get('template_parameters') or {}).get('ARTIFACT_ID')
+    require(target.get('output_directory') in (f'output/{service}', f'output/{artifact}' if isinstance(artifact, str) and re.fullmatch(r'[A-Za-z][A-Za-z0-9_-]*', artifact) else None),
+            'output must be output/<service> or output/<ARTIFACT_ID>')
     require(not spec.get('operations') and not spec.get('inactive'), 'HTTP/inactive operations are not supported by this batch IR')
     require(not any((spec.get('unresolved') or {}).values()), 'unresolved functional specification')
     require(not (spec.get('validation') or {}).get('errors'), 'specification validation failed')
     ready = spec.get('readiness') or {}
-    require(ready.get('functionalCodeGenerationReady') is True and ready.get('strictImplementationReady') is True
-            and not ready.get('blockers') and not ready.get('incompleteOperations'), 'full batch readiness is required')
+    structure = isinstance(spec.get('batch'), dict) and spec['batch'].get('scope') in (STRUCTURE_ONLY, PORTS_FLOW)
+    ports_flow = structure and spec['batch']['scope'] == PORTS_FLOW
+    scope = spec['batch']['scope'] if structure else 'full'
+    if structure:
+        omitted_ids = sorted(i.get('id') for i in spec['batch'].get('omittedBehavior') or () if isinstance(i, dict))
+        require(ready.get('scaffoldImplementationReady') is True and ready.get('functionalCodeGenerationReady') is False
+                and ready.get('strictImplementationReady') is False and sorted(ready.get('blockers') or ()) == omitted_ids,
+                'structure-only scope requires scaffold readiness, functional/strict false and blockers equal to omitted behavior')
+    else:
+        require(ready.get('functionalCodeGenerationReady') is True and ready.get('strictImplementationReady') is True
+                and not ready.get('blockers') and not ready.get('incompleteOperations'), 'full batch readiness is required')
     arch_path = safe_path(target['archetype'])
     require(arch_path.startswith('archetypes/'), 'archetype must be versioned under archetypes/')
     arch_root = repo / arch_path
@@ -51,6 +62,20 @@ def build(repo, spec, cfg):
                    and m.get('defaultEnabled') is True and m['id'] not in features]
     require(not unsupported, f'archetype feature modules not implemented by this backend: {unsupported}')
     batch = validate(spec.get('batch'), features)
+    modes = {c['credentialMode'] for c in batch['connections']}
+    def inactive(module):
+        when = module.get('enabledWhen')
+        if not isinstance(when, dict):
+            return False
+        if 'credentialMode' in when and when['credentialMode'] not in modes:
+            return True
+        return when.get('connections') == 'present' and not batch['connections']
+    unused = [m for m in generation.get('featureModules', ()) if isinstance(m, dict) and inactive(m)]
+    usage = {'prunedFeatures': sorted(m['id'] for m in unused),
+             'prunedTemplates': sorted(t for m in unused for t in m.get('templates', ())),
+             'prunedPropertiesFields': sorted(f for m in unused for f in (m.get('prune') or {}).get('propertiesFields', ())),
+             'prunedLines': sorted(({'template': l['template'], 'text': l['text']} for m in unused
+                                    for l in (m.get('prune') or {}).get('lines', ())), key=lambda l: (l['template'], l['text']))}
     require(generation.get('profile') == PROFILE and identity.get('profile') == 'batch-shell', 'archetype profile mismatch')
     require(identity.get('approved') is True and identity.get('generationEnabled') is True, 'archetype not approved/enabled for generation')
     platform = arch.get('platform') or {}
@@ -90,6 +115,8 @@ def build(repo, spec, cfg):
     require(actual == declared, 'archetype template inventory differs from actual files')
     for rel in sorted(declared):
         safe_path(rel)
+        if rel in usage['prunedTemplates']:
+            continue
         require(not Path(rel).name.lower().startswith('application') or not rel.lower().endswith('.properties'), 'protected configuration in template')
         source = template_root / rel
         require(source.resolve().is_relative_to(template_root.resolve()), 'template symlink escapes archetype')
@@ -98,18 +125,41 @@ def build(repo, spec, cfg):
         entries.append({'path': path, 'action': 'update' if (repo / target['output_directory'] / path).exists() else 'create',
                         'componentType': 'batch-archetype-template', 'template': rel})
     package = values['BASE_PACKAGE_PATH']
+    def entry(path, ct):
+        return {'path': path, 'action': 'update' if (repo / target['output_directory'] / path).exists() else 'create', 'componentType': ct}
+    if ports_flow:
+        for dto in batch['dtos']:
+            entries.append(entry(f"src/main/java/{package}/dto/{dto['name']}.java", 'batch-dto'))
+        for port in batch['ports']:
+            entries.append(entry(f"src/main/java/{package}/port/{port['id']}.java", 'batch-port'))
+            entries.append(entry(f"src/main/java/{package}/port/{port['id']}Impl.java", 'batch-port-impl'))
+        if {p['id'] for p in batch['ports']} - {a['port'] for a in batch.get('adapters', ())}:
+            entries.append(entry(f"src/main/java/{package}/exception/OperacionNoImplementadaException.java", 'batch-exception'))
+        kinds = adapter_kinds(batch)
+        if 'db' in kinds:
+            entries.append(entry(f"src/main/java/{package}/util/ConexionBd.java", 'batch-support'))
+        if 'rest' in kinds:
+            entries.append(entry(f"src/main/java/{package}/util/RestClienteHttp.java", 'batch-support'))
+        adapted = {a['port'] for a in batch.get('adapters', ())}
+        ports_kind = {p['id']: p['kind'] for p in batch['ports']}
+        for pid in sorted(adapted):
+            if ports_kind[pid] in ('db', 'rest'):
+                entries.append(entry(f"src/test/java/{package}/port/{pid}ImplTest.java", 'batch-adapter-test'))
     for root, name, ct in (('src/main/java', values['SERVICE_INTERFACE'] + 'Impl', 'batch-service'),
                            ('src/test/java', values['SERVICE_INTERFACE'] + 'ImplTest', 'batch-unit-test')):
         path = f'{root}/{package}/service/{name}.java'
         entries.append({'path': path, 'action': 'update' if (repo / target['output_directory'] / path).exists() else 'create', 'componentType': ct})
+    entries.append(entry(f"config/{values['PROPERTIES_FILE_BASENAME']}.properties", 'batch-config'))
     require(len({e['path'] for e in entries}) == len(entries), 'planned path collision')
     return {'plan': {'version': 3, 'mode': 'full', 'profile': PROFILE},
             'service': {'name': service, 'profile': 'batch-shell', 'basePackage': values['BASE_PACKAGE'], 'outputDirectory': target['output_directory']},
             'inputs': {'archetype': {'path': arch_path, 'fingerprint': base.archetype_fingerprint(arch_root)}},
-            'templateParameters': values, 'batch': batch, 'technicalProfile': generation,
+            'templateParameters': values, 'batch': batch, 'technicalProfile': generation, 'usage': usage,
+            'mavenAdditions': maven_additions(batch) if ports_flow else [],
             'readiness': ready, 'qualityGates': {'checkstyle': {'status': 'not-applicable', 'reason': 'not-present-in-reference'}},
-            'files': {'generate': entries}, 'generation': {'functionalGenerationReady': True},
-            'limitations': ['Database persistence, mail notification, nested loops and unrecognized steps are unsupported; SOAP credential decryption only when the archetype feature credential-decrypt-soap is implemented.',
+            'files': {'generate': entries}, 'generation': {'functionalGenerationReady': not structure},
+            'scope': scope,
+            'limitations': ([('Ports-flow scope: the Sparx flow is orchestrated against generated ports; ' + ('adapters declared in batch.adapters are implemented from ASSUMPTIONS (SQL, columns, payloads, URLs deduced from Sparx names; see assumptions-register) and every port without adapter raises OperacionNoImplementadaException; scheduling is external. ' if batch.get('adapters') else 'concrete adapters (persistence, REST, mail) and scheduling are NOT implemented; adapters raise OperacionNoImplementadaException. ') if ports_flow else 'Structure-only scope: ') + 'the behavior listed in batch.omittedBehavior is NOT implemented or NOT specified by Sparx; run() never simulates concrete integrations as successful.'] if structure else []) + ['Nested loops and unrecognized steps are unsupported; SOAP credential decryption only when the archetype feature credential-decrypt-soap is implemented.',
                             'External properties/log4j and Lib/ artifacts must be supplied by the operator.',
                             'Maven, runtime, remote connections and coverage are not verified by materialization.']}
 

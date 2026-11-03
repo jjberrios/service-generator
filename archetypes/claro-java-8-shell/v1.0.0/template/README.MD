@@ -2,7 +2,7 @@
 
 ## Descripción
 
-<Descripción funcional del batch: se obtiene de la especificación funcional (Sparx).>
+{{DESCRIPTION}}
 
 ## Tipo de componente
 
@@ -13,15 +13,17 @@ Batch / shell Java 8. No expone endpoints HTTP (ni GET ni POST): se ejecuta como
 
 - Java JDK 8
 - Maven 3.x
-- Accesos de red a los recursos externos que declare la especificación funcional
+- Accesos de red a los servidores SFTP/FTP indicados en la configuración
 - Archivo externo de configuración `@@PROPERTIES_FILE_BASENAME@@.properties` (valores del entorno, fuera del jar)
-- Repositorio local `Lib/` con los artefactos no públicos declarados en el POM
+{{PREREQUISITES}}
 
 ## Configuración
 
-El archivo externo `@@PROPERTIES_FILE_BASENAME@@.properties` contiene la configuración del entorno
-(credenciales cifradas, hosts, rutas, códigos de respuesta). No se versiona con valores reales.
-La plantilla de claves está en `config/@@PROPERTIES_FILE_BASENAME@@.properties.j2`.
+El archivo `config/@@PROPERTIES_FILE_BASENAME@@.properties` se entrega con todas las claves y valores vacíos;
+el operador completa la configuración del entorno (credenciales, hosts, rutas, códigos de respuesta).
+No se versiona con valores reales. Claves que debe definir:
+
+{{PROPERTIES}}
 
 ## Construcción
 

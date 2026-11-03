@@ -1,7 +1,8 @@
-# Convenciones — claro-java-8-shell / 1.0.0
+# Convenciones — claro-java-8-shell / 1.0.0 (version nueva, SH-D-018..021)
 
-Estado: baseline aprobado y **congelado**, generación habilitada para el perfil SFTP
-acotado (SH-D-010). No implica compilación ni ejecución verificadas.
+Estado: versión nueva derivada de 1.0.0 (intacta y congelada); aprobada por instrucción del
+usuario (SH-D-011); **no congelada y sin generación habilitada** (SH-D-016). No implica
+compilación ni ejecución verificadas.
 Todo lo aquí descrito es **observado en la referencia**
 `input/reference/SH_ObtenerTrasladarArchivosMTC`. Decisiones aprobadas siguiendo
 íntegramente esa referencia (ver `decisions.md`); limitaciones externas no verificadas.
@@ -65,8 +66,8 @@ registrar fin y tiempo.
 
 14 dependencias directas (11 compile, 3 test) y 7 plugins, inventariados en `archetype.yml`
 (`build.dependencies`, `build.dependencyUsage`, `build.plugins`). Declarar no implica usar:
-`commons-logging`, `commons-lang`, `slf4j-api`, `slf4j-log4j12`, `spring-web` (solo uso XML en
-archivo excluido) no tienen import directo observado; la propiedad `com.fasterxml.jackson.core`
+`commons-logging`, `commons-lang`, `slf4j-api`, `slf4j-log4j12` no tienen import directo observado (`spring-web` se usa desde el
+XML plantillado `applicationProxyWS.xml`); la propiedad `com.fasterxml.jackson.core`
 y `endorsed.dir` no se referencian. Todo se preserva sin podar ni modernizar.
 
 ## 5. Estructura de código (E-MAIN, E-SERVICE-IFACE, E-EXCEPTIONS)
@@ -76,10 +77,11 @@ src/main/java/<paquete>/
   <Nombre>Main.java                 # @Component con main
   service/<Nombre>Service.java      # interface: run(String messageTransaction, String idTransaccion)
   service/<Nombre>ServiceImpl.java  # (Sparx) @Service, @Autowired PropertiesExterno
-  proxy/...                         # (Sparx) proxies SOAP, interfaz + impl
-  util/Constantes.java  PropertiesExterno.java  SFTPConnectionManager.java  UtilSFTP.java
-  exception/BaseException BaseExceptionSFTP SFTPException WSException PropertiesException
-src/main/resources/applicationContext.xml   (+ contextos de integración generados)
+  proxy/EbsConsultaClavesWSService.java  EbsConsultaClavesWSServiceImpl.java   # (template, SH-D-012) proxy SOAP de descifrado; otros proxies: Sparx
+  util/Constantes.java  PropertiesExterno.java  SFTPConnectionManager.java
+  exception/BaseExceptionSFTP SFTPException WSException
+src/main/resources/applicationContext.xml   (importa applicationProxyWS.xml; + otros contextos generados)
+src/main/resources/applicationProxyWS.xml   (JaxWsPortProxyFactoryBean del descifrador)
 src/test/java/<paquete>/service/<Nombre>ServiceImplTest.java
 ```
 
@@ -101,14 +103,13 @@ Inyección por campo (`@Autowired`), sin constructores; sin DTOs ni mappers (no 
   patrones de log/SFTP, pero el servicio y las utilidades usan además literales inline
   (textos de log, `"ERROR: "`, `"ALERTA: "`, claves de mapa). La referencia no prohíbe
   literales; se mantiene este estilo por SH-Q-007. Los valores de entorno nunca van en código.
-- Excepciones: `BaseException`/`BaseExceptionSFTP`/`WSException` heredan de `Exception`
-  (comprobadas); `PropertiesException` de `RuntimeException`; `SFTPException extends
-  BaseExceptionSFTP`. `BaseException` y `PropertiesException` no se usan en la referencia.
+- Excepciones: `BaseExceptionSFTP`/`WSException` heredan de `Exception` (comprobadas);
+  `SFTPException extends BaseExceptionSFTP`. `BaseException`, `PropertiesException` y
+  `UtilSFTP` no se incluyen: el servicio generado no los usa (SH-D-019).
 - Nombres: `<Nombre>Main`, `<Nombre>Service`/`ServiceImpl`, `<Ws>WSService`/`WSServiceImpl`,
   `*Test`. Indentación Java de 2 espacios (utilidades SFTP usan 4/2: se conserva), XML 3
   espacios (`.editorConfig`).
-- Testabilidad: métodos `protected` de fábrica/delegación (`crearConexionSFTP`,
-  `invocarUtilSFTP*`) para espiar con Mockito sin PowerMock.
+- Testabilidad: métodos `protected` de fábrica/delegación (`crearConexionSFTP`) para espiar con Mockito sin PowerMock.
 
 ## 7. Logging (E-MAIN, E-SFTP-MANAGER)
 
@@ -127,11 +128,12 @@ Inyección por campo (`@Autowired`), sin constructores; sin DTOs ni mappers (no 
 
 ## 8. Configuración externa y secretos (E-CONTEXT, E-PROPERTIES-CLASS)
 
-- Un archivo `<Nombre>.properties` fuera del jar, indicado con `-Dproperties`. En la
-  referencia existen dos archivos de este tipo en la raíz (valores con hosts/credenciales
-  cifradas): **no se leyeron sus valores ni se copian** (SH-D-004).
-- Credenciales: en la referencia se guardan cifradas y se descifran en ejecución con un
-  servicio web corporativo; el valor jamás se incluye en el arquetipo.
+- Un archivo `<Nombre>.properties` fuera del jar, indicado con `-Dproperties`.
+- En la referencia existen dos archivos `.properties` de entorno en la raíz (hosts/credenciales cifradas):
+  **no se leyeron ni se copian** (SH-D-004); en esta extracción no se abrieron.
+- Credenciales: en la referencia se guardan cifradas y se descifran en ejecución con el
+  servicio web SOAP corporativo de descifrado a través del proxy plantillado (§11); el valor
+  jamás se incluye en el arquetipo.
 - Persistencia: **no implementada** en la referencia (SH-Q-009).
 
 ## 9. Pruebas y calidad (E-TEST, E-POM)
@@ -151,5 +153,33 @@ Inyección por campo (`@Autowired`), sin constructores; sin DTOs ni mappers (no 
 - Sin Dockerfile, Kubernetes ni Jenkinsfile; `.editorConfig` incluye una sección
   Jenkinsfile; esto no demuestra que exista un pipeline. Planificador
   desconocido, no se genera ninguno (SH-Q-012).
-- Prerrequisitos externos: JDK 8, Maven 3.x, repositorio `Lib/`, archivos de
-  propiedades y log4j del entorno, conectividad a los recursos remotos.
+- Prerrequisitos externos: JDK 8, Maven 3.x, repositorio `Lib/` (cliente
+  `eai:ebsConsultaClavesService-Client:1.0.0`), archivos de propiedades y log4j del entorno,
+  endpoint/código de aplicación del servicio de descifrado, conectividad a los recursos remotos.
+
+## 11. Proxy SOAP de descifrado de credenciales (SH-D-012/013/014, E-PROXY-*)
+
+- Interfaz `EbsConsultaClavesWSService.desencriptar(String mensajeTransaccion,
+  DesencriptarRequest request) throws WSException`; implementación `@Service` con
+  `@Autowired PropertiesExterno prop` y `@Autowired EbsConsultaClavesPortType consultaClavesWS`
+  (bean XML `ConsultaClavesWS`). Los tipos `Desencriptar*`/`EbsConsultaClavesPortType`
+  (paquete `pe.com.claro.eai.ebs.operaciones.consultaclaves`) vienen del jar externo de `Lib/`.
+- `applicationProxyWS.xml`: `util:map` con `com.sun.xml.ws.request.timeout` y
+  `com.sun.xml.ws.connect.timeout` tomados de `ws.ebsConsultaClavesWS.max.request.timeout`/
+  `max.connection.timeout`; `JaxWsPortProxyFactoryBean` con `wsdlDocumentUrl=${ws.ebsConsultaClavesWS.url}`,
+  `lookupServiceOnStartup=false`. El endpoint nunca se fija en código ni en el template.
+- Respuesta con `codigoResultado != "0"` → `WSException(codigo, mensaje)`. Errores de red:
+  recorrido de la cadena de causas: `SocketTimeoutException` → idt1; `ConnectException`/
+  `UnknownHostException`/`NoRouteToHostException` → idt2; otro → idt3, con `[RECURSO]`
+  reemplazado por la URL y `[DETALLE]` por el mensaje de la excepción; el proxy registra con `logger.error`.
+- Patrón de uso en el servicio (SH-D-014, `generation.servicePatterns`): construir
+  `DesencriptarRequest` (idTransaccion, codigoAplicacion de propiedad, usuario/clave cifrados)
+  y usar `getUsuarioAplicacion()`/`getClave()` para conectar. Los demás campos del request
+  (`ipAplicacion`, `ipTransicion`, `usrAplicacion`, `idAplicacion`) no los fija la referencia.
+- Riesgos observados (no corregidos): sin reintentos; la URL se registra; credenciales
+  descifradas solo en variables locales (no registradas por la referencia).
+
+## 12. Correo / notificación
+
+La referencia no implementa envío de correo (solo un jar de cliente sin uso en `Lib/`).
+Nada se plantilla ni se declara (SH-D-015).

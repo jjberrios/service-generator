@@ -26,7 +26,7 @@ public class Constantes {
   public static final String ERROR = "{0} Error: ";
   public static final String TIPO_TOTAL_PROCESO = "{0} Tiempo TOTAL Proceso: [{1} milisegundos]";
 
-  // Trazas de proxies de servicios web (patron tecnico; el proxy concreto lo define la especificacion)
+  // Trazas de proxies de servicios web (incluye las constantes del proxy SOAP de descifrado de credenciales)
   public static final String TRAZA = "[%s][%s] ";
   public static final String INICIO_METODO_PROXY = "{} [INICIO] - PROXY: [{}]";
   public static final String FIN_METODO_PROXY = "{} [FIN] - PROXY: [{}]";
@@ -37,6 +37,10 @@ public class Constantes {
   public static final String TIEMPO_TOTAL = "{} Tiempo total: [{} ms]";
   public static final String NESTED_EXCEPTION = "NestedRuntimeException: %s";
   public static final String EXCEPCION = "Exception: %s";
+  public static final String DESENCRIPTAR = "desencriptar";
+  public static final String ID_TRANSACCION = "idTransaccion";
+  public static final String CODIGO_APLICACION = "codigoAplicacion";
+  public static final String USUARIO = "usuarioAplicacionEncriptado";
   public static final String CODIGO_RESULTADO = "codigoResultado";
   public static final String MENSAJE_RESULTADO = "mensajeResultado";
   public static final String WS_EXITO = "0";

@@ -62,7 +62,9 @@ def service_lifecycle(repo, service, gate):
     result['specConsolidated'] = 'yes' if (ws / 'service-spec.yml').is_file() else 'no'
     result['planned'] = 'yes' if (ws / 'implementation-plan.yml').is_file() else 'no'
     report = _load(ws / 'materialization-report.yml')
-    manifest_seen = bool(report) and (repo / 'output' / service / '.generation-manifest.yml').is_file()
+    plan_doc = _load(ws / 'implementation-plan.yml') or {}
+    out_rel = ((plan_doc.get('service') or {}).get('outputDirectory') or f'output/{service}')
+    manifest_seen = bool(report) and (repo / out_rel / '.generation-manifest.yml').is_file()
     result['materialized'] = 'yes' if manifest_seen else 'no'
     if report:
         status_text = str(report.get('status', ''))

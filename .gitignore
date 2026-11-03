@@ -61,3 +61,6 @@ settings-local.xml
 *.swo
 *~
 ~$*
+
+/input/contracts/*
+!/input/contracts/.gitkeep

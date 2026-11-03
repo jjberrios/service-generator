@@ -53,8 +53,6 @@ public class SFTPConnectionManager {
 
   /**
    * Lista archivos en un directorio remoto, filtrando por fecha de modificación (mtime).
-   * Las reglas de ventana horaria propias de un proceso de negocio no forman parte del
-   * arquetipo: las determina la especificacion funcional.
    */
   public java.util.List<String> listarArchivos(String rutaRemota, String fechaEjecucion,
                                                String formatoFecha) {

@@ -1,4 +1,4 @@
-"""Read-only static checks for archetype claro-java-8-shell/1.0.0.
+"""Read-only static checks for archetype claro-java-8-shell/1.0.0 (new version, SH-D-018).
 
 No writes, Maven, network, database or protected-configuration value access.
 Run: python archetypes/claro-java-8-shell/v1.0.0/validate-extraction.py [--print-baseline]
@@ -86,19 +86,30 @@ assert pom_sha == a["provenance"]["referencePomSha256"]
 
 # ---------------------------------------------------------------- identity / governance
 ident = a["identity"]
-assert ident["name"] == "claro-java-8-shell" and ident["version"] == "1.0.0"
+assert ident["name"] == "claro-java-8-shell" and ident["version"] == "1.0.0" and a["provenance"]["replacesDeletedVersions"] == ["1.0.0", "1.1.0"]
 assert ident["operation"] == "extract" and ident["profile"] == "batch-shell"
-assert ident["frozen"] is True and ident["generationEnabled"] is True
-assert ident["readyToFreeze"] is True
-assert ident["status"] == "approved-frozen-generation-enabled"
+assert ident["frozen"] is False and ident["generationEnabled"] is True
+assert ident["readyToFreeze"] is False
+assert ident["status"] == "approved-generation-enabled-not-frozen"
 assert ident["approved"] is True
-assert ident["approvalScope"] == "reference-faithful-baseline-and-bounded-generation"
+assert ident["approvalScope"] == "user-instructed-clean-archetype-without-config-template-sonar-exclusions-or-unused-code"
+assert not (root / "archetypes/claro-java-8-shell/v1.1.0").exists(), "deleted version must not exist"
 assert a["provenance"]["futureContractsInspected"] is False and a["provenance"]["sparxInspected"] is False
 assert a["provenance"]["inheritedDecisions"] == []
-assert a["readiness"]["freezeAuthorized"] is True and a["readiness"]["serviceGenerationAuthorized"] is False
+assert a["readiness"]["freezeAuthorized"] is False and a["readiness"]["serviceGenerationAuthorized"] is False
 assert a["readiness"]["generationEnablementAuthorized"] is True
-assert a["readiness"]["releaseDecision"] == "SH-D-010"
-assert "SH-D-010" in a["provenance"]["approvedDecisionRefs"]
+assert a["readiness"]["releaseDecision"] == "SH-D-027"
+assert set(a["provenance"]["approvedDecisionRefs"]) == {"SH-D-%03d" % n for n in range(1, 28)}
+assert set(a["provenance"]["carriedForwardDecisions"]) <= set(a["provenance"]["approvedDecisionRefs"])
+# honest backend declaration: the IR v1 backend does not support the new steps
+assert a["readiness"]["generatorBackend"].startswith("implemented-bounded")
+assert a["readiness"]["generatorBackendValidation"].startswith("synthetic-python-tests")
+for step in ("decrypted-soap", "Mail"):
+    assert step in a["readiness"]["generatorBackendDetail"], step
+modules = {m["id"]: m for m in a["generation"]["featureModules"]}
+assert set(modules) == {"sftp-transfer", "credential-decrypt-soap", "mail-notification"}
+assert modules["credential-decrypt-soap"]["backendSupport"] == "supported-batch-ir-v1-decrypted-soap"
+assert modules["mail-notification"]["status"] == "not-present-in-reference-source"
 assert a["readiness"]["baselineDecisionsApproved"] is True
 assert a["platform"]["httpEndpoints"] == "none" and a["execution"]["httpEndpoints"] == "none"
 assert a["execution"]["kind"] == "batch-shell"
@@ -110,7 +121,17 @@ assert own["localConfigurationAndSecrets"] == "environment-operator"
 
 # ---------------------------------------------------------------- template inventory
 assert set(files) == {v["path"] for v in a["templateInventory"]}, "templateInventory != template tree"
-assert len(files) == 17, len(files)
+assert len(files) == 16, len(files)
+for gone in ("config/@@PROPERTIES_FILE_BASENAME@@.properties.j2",
+             "src/main/java/@@BASE_PACKAGE_PATH@@/util/UtilSFTP.java",
+             "src/main/java/@@BASE_PACKAGE_PATH@@/exception/PropertiesException.java",
+             "src/main/java/@@BASE_PACKAGE_PATH@@/exception/BaseException.java"):
+    assert gone not in files, "removed by SH-D-018/SH-D-019: " + gone
+assert not [n for n in files if n.endswith(".j2")]
+readme_text = rtext(files["README.MD"])
+for marker in ("{{DESCRIPTION}}", "{{PREREQUISITES}}", "{{PROPERTIES}}"):
+    assert readme_text.count(marker) == 1, marker
+assert not re.search(r"(?i)plantilla|arquetipo|template|\.j2", readme_text), "README must describe an implementation"
 for p in files.values():
     assert not (p.name.lower().startswith("application") and p.suffix.lower() == ".properties")
     assert p.suffix.lower() != ".jar" and p.suffix.lower() != ".class"
@@ -155,11 +176,6 @@ for name, p in files.items():
         assert "public class " + Path(rn).stem + " " in rt or "public interface " + Path(rn).stem + " " in rt, name
         assert rt.count("{") == rt.count("}") and rt.count("(") == rt.count(")")
         java_count += 1
-    if name.endswith(".j2"):
-        assert text.count("{{") == text.count("}}") and "{%" not in text
-        for line in text.splitlines():
-            if "=" in line and not line.lstrip().startswith("#"):
-                assert re.fullmatch(r"[a-z0-9.]+=\{\{ [a-z0-9_]+ \}\}", line.strip()), line
 
 # ---------------------------------------------------------------- exact fidelity to the reference
 ref_vals = {
@@ -174,17 +190,19 @@ identical = {
     ".editorConfig": reference / ".editorConfig",
     "src/main/java/@@BASE_PACKAGE_PATH@@/@@MAIN_CLASS@@.java": src_main / "ObtenerTrasladarArchivosMTCMain.java",
     "src/main/java/@@BASE_PACKAGE_PATH@@/service/@@SERVICE_INTERFACE@@.java": src_main / "service/ObtenerTrasladarArchivosService.java",
-    "src/main/java/@@BASE_PACKAGE_PATH@@/util/UtilSFTP.java": src_main / "util/UtilSFTP.java",
+    "src/main/java/@@BASE_PACKAGE_PATH@@/proxy/EbsConsultaClavesWSService.java": src_main / "proxy/EbsConsultaClavesWSService.java",
+    "src/main/java/@@BASE_PACKAGE_PATH@@/proxy/EbsConsultaClavesWSServiceImpl.java": src_main / "proxy/EbsConsultaClavesWSServiceImpl.java",
+    "src/main/resources/applicationProxyWS.xml": reference / "src/main/resources/applicationProxyWS.xml",
+    "src/main/resources/applicationContext.xml": reference / "src/main/resources/applicationContext.xml",
 }
-for exc in ["BaseException", "BaseExceptionSFTP", "SFTPException", "WSException", "PropertiesException"]:
+for exc in ["BaseExceptionSFTP", "SFTPException", "WSException"]:
     identical["src/main/java/@@BASE_PACKAGE_PATH@@/exception/%s.java" % exc] = src_main / ("exception/%s.java" % exc)
 for name, src in identical.items():
     assert render(rtext(files[name]), ref_vals).rstrip() == rtext(src).rstrip(), "Template differs from reference beyond tokens: " + name
 
-# applicationContext.xml: identical except the removed proxy import
+# applicationContext.xml: restores the proxy import (identical to the reference after token render, checked above)
 ctx_ref = rtext(reference / "src/main/resources/applicationContext.xml")
-ctx_tpl = render(rtext(files["src/main/resources/applicationContext.xml"]), ref_vals)
-assert ctx_ref.replace('   <import resource="applicationProxyWS.xml"/>\n\n', "").rstrip() == ctx_tpl.rstrip()
+assert '<import resource="applicationProxyWS.xml"/>' in rtext(files["src/main/resources/applicationContext.xml"])
 
 # Mixed files: every declaration line must exist in the reference (only removals allowed)
 for name, src in {
@@ -196,6 +214,32 @@ for name, src in {
         s = line.strip()
         if s.startswith(("public ", "@Value", "@Component")):
             assert s in ref_lines, "Not in reference (invented): " + s
+# exact removals from the mixed files (removes ONLY MTC business items and service-specific property keys)
+def public_lines(text):
+    return {l.strip() for l in text.splitlines() if l.strip().startswith("public ") and "=" in l}
+
+
+const_ref = rtext(src_main / "util/Constantes.java")
+const_tpl = render(rtext(files["src/main/java/@@BASE_PACKAGE_PATH@@/util/Constantes.java"]), ref_vals)
+removed_consts = public_lines(const_ref) - public_lines(const_tpl)
+assert {re.search(r"String (\w+)", l)[1] for l in removed_consts} == {"REPLACE_FECHA_DDMMYYYY", "REPLACE_FECHA_YYYYMMDD", "MTC_", "ERROR_CONEXION_MTC"}, removed_consts
+for name in ["DESENCRIPTAR", "ID_TRANSACCION", "CODIGO_APLICACION", "USUARIO", "CODIGO_RESULTADO", "MENSAJE_RESULTADO", "WS_EXITO", "TRAZA"]:
+    assert re.search(r"\b" + name + r"\b", const_tpl), name
+prop_ref = rtext(src_main / "util/PropertiesExterno.java")
+prop_tpl = render(rtext(files["src/main/java/@@BASE_PACKAGE_PATH@@/util/PropertiesExterno.java"]), ref_vals)
+keys_ref = set(re.findall(r'^\s*@Value\("\$\{([^}]+)\}"\)', prop_ref, re.M))
+keys_tpl = set(re.findall(r'^\s*@Value\("\$\{([^}]+)\}"\)', prop_tpl, re.M))
+assert keys_tpl < keys_ref
+assert all(k.startswith(("ftp.", "sftp.mtc.", "ruta.temp.")) for k in keys_ref - keys_tpl), keys_ref - keys_tpl
+assert keys_tpl == {"log4j.file.dir"} | {"idf%d.%s" % (i, f) for i in (0, 1) for f in ("codigo", "mensaje")} \
+    | {"idt%d.%s" % (i, f) for i in (1, 2, 3) for f in ("codigo", "mensaje")} \
+    | {"ws.ebsConsultaClavesWS.url", "ws.ebsConsultaClavesWS.max.request.timeout", "ws.ebsConsultaClavesWS.max.connection.timeout", "ws.ebsConsultaClavesWS.codigo.aplicacion"}, keys_tpl
+# external-property contract: PropertiesExterno keys == placeholders used by the proxy XML (no config template, SH-D-018)
+proxy_xml = rtext(files["src/main/resources/applicationProxyWS.xml"])
+assert set(re.findall(r"\$\{([^}]+)\}", proxy_xml)) <= keys_tpl
+assert not re.search(r"https?://[^\s\"<]*:[0-9]{2,5}", proxy_xml.replace("http://www.springframework.org", "").replace("http://jax-ws.dev.java.net", ""))
+assert a["generation"]["configuration"]["items"] == [] or all(not i["template"].endswith(".j2") for i in a["generation"]["configuration"]["items"])
+
 sftp_t = rtext(files["src/main/java/@@BASE_PACKAGE_PATH@@/util/SFTPConnectionManager.java"])
 sftp_r = rtext(src_main / "util/SFTPConnectionManager.java")
 sig = re.compile(r"^\s*public [^=;{]+\([^)]*\)", re.M)
@@ -220,16 +264,13 @@ def fields(e):
 
 
 s_props, d_props = fields(source.find("m:properties", ns)), fields(dest.find("m:properties", ns))
-assert set(s_props) == set(d_props)
-changed = {k for k in s_props if re.sub(r"\s+", "", s_props[k]) != re.sub(r"\s+", "", d_props[k])}
-assert changed == {"sonar.coverage.exclusions", "sonar.exclusions"}, changed
-for k in changed:  # only removals (concrete redundant patterns) and no new pattern
-    s_set = {x.strip() for x in s_props[k].split(",")}
-    d_set = {x.strip() for x in d_props[k].split(",")}
-    assert d_set < s_set, k
-    assert all(x.endswith(("/proxy/*.java", "/exception/*.java", "/util/*.java", "Main.java")) for x in d_set)
-for k in changed:
-    source.find("m:properties/m:" + k, ns).text = dest.find("m:properties/m:" + k, ns).text
+removed_props = {"sonar.coverage.exclusions", "sonar.exclusions"}
+assert set(s_props) - set(d_props) == removed_props, set(s_props) ^ set(d_props)  # SH-D-020: user decision over reference
+assert set(d_props) < set(s_props)
+assert all(re.sub(r"\s+", "", s_props[k]) == re.sub(r"\s+", "", d_props[k]) for k in d_props)
+assert "sonar.exclusions" not in rtext(files["pom.xml"]) and "sonar.coverage.exclusions" not in rtext(files["pom.xml"])
+for k in removed_props:
+    source.find("m:properties", ns).remove(source.find("m:properties/m:" + k, ns))
 assert canon(source) == canon(dest), "POM changed outside authorized transformations"
 deps = [fields(e) for e in dest.findall("m:dependencies/m:dependency", ns)]
 assert len(deps) == len(a["build"]["dependencies"]) == a["build"]["dependencyInventorySemantics"]["count"] == 14
@@ -247,6 +288,8 @@ for e, d in zip(plugins, a["build"]["plugins"]):
         assert ex == d["executions"], (ex, d["executions"])
 assert not any("checkstyle" in d["artifactId"].lower() for d in a["build"]["plugins"])
 assert not any("checkstyle" in x.name.lower() for x in reference.rglob("*") if ".idea" not in x.parts)
+dep_text = "\n".join(d["artifactId"] for d in a["build"]["dependencies"])
+assert "EnvioCorreo" not in rtext(files["pom.xml"]) and "enviocorreo" not in dep_text.lower() and "ojdbc" not in dep_text.lower()
 assert a["build"]["profiles"] == [] and a["build"]["pluginRepositories"] == []
 assert dest.find("m:profiles", ns) is None and dest.find("m:parent", ns) is None
 cs = a["quality"]["checkstyle"]
@@ -270,6 +313,8 @@ evidence = a["evidence"]["entries"]
 for item in usage_inv.values():
     assert item["status"] and item["observation"] and set(item["evidence"]).issubset(evidence)
 assert not re.search(r"System\.exit", java_text) and a["execution"]["exitCode"]["systemExitCalled"] is False
+assert not re.search(r"(?i)enviocorreo|enviarcorreo|javax\.mail", java_text + (reference / "pom.xml").read_text(encoding="utf-8")), "mail usage appeared in the reference"
+assert not re.search(r"(?i)enviocorreo", (reference / "src/main/resources/applicationContext.xml").read_text(encoding="utf-8") + proxy_xml)
 assert not re.search(r"@RestController|@Controller|@RequestMapping|springframework\.data|@Entity|ch\.qos\.logback", java_text)
 assert "ClassPathXmlApplicationContext(Constantes.CONFIG_PATH)" in java_text and 'file:${properties}' in ctx_ref
 assert "String idTransaction = args[0];" in java_text
@@ -289,7 +334,7 @@ for rel in paths:
     assert len(matched) >= 1, "Reference file without disposition: " + rel
     assert len([m for m in matched if m["disposition"] == "template"]) <= 1
 templated = {r["template"] for r in rules if r["disposition"] == "template"}
-assert templated == {n for n in files if n != "config/@@PROPERTIES_FILE_BASENAME@@.properties.j2"}, templated ^ set(files)
+assert templated == set(files), templated ^ set(files)
 for e in evidence.values():
     assert (reference / e["path"]).exists(), e["path"]
 for item in a["templateInventory"]:
@@ -327,7 +372,7 @@ assert a["generation"]["persistence"]["mechanism"] == "not-present-in-reference"
 assert a["generation"]["logging"]["activityLogger"] == "not-applicable"
 util_items = a["generation"]["utilities"]["items"]
 assert {i["template"] for i in util_items} <= set(files)
-assert len(util_items) == 9
+assert len(util_items) == 8, len(util_items)
 cfg_items = a["generation"]["configuration"]["items"]
 assert {i["template"] for i in cfg_items} <= set(files)
 const_text = rtext(files["src/main/java/@@BASE_PACKAGE_PATH@@/util/Constantes.java"])
@@ -342,12 +387,70 @@ for it in util_items:
 # ---------------------------------------------------------------- leakage and secrets
 leakage = re.compile(r"(?i)trasladararchivosmtc|ObtenerTrasladar|\bMTC\b|MTC_|Suspensi[oó]n|Notificaci[oó]n|Titular|SUSPEN|IDETIT|SFTPDMZ|cobsdb|biometr|ms-individual")
 ws_leak = re.compile(r"(?i)EbsConsultaClaves|consultaclaves|desencriptar")
+mail_leak = re.compile(r"(?i)EnvioCorreo|enviarcorreo|\bsmtp\b|javax\.mail")
 for name, p in files.items():
     text = name + "\n" + p.read_text(encoding="utf-8")
     assert not leakage.search(text), "Domain leakage: " + name
-    if name != "pom.xml":
-        assert not ws_leak.search(text), "Integration leakage: " + name
-assert len([n for n in files if ws_leak.search(files[n].read_text(encoding="utf-8"))]) == 1  # pom.xml only (policy-preserved dependency)
+    assert not mail_leak.search(text), "Mail behavior invented: " + name
+# this version intentionally includes the credential-decrypt module (SH-D-012): it may appear ONLY in these files
+expected_ws_files = {
+    "pom.xml",
+    "src/main/resources/applicationProxyWS.xml",
+    "src/main/java/@@BASE_PACKAGE_PATH@@/proxy/EbsConsultaClavesWSService.java",
+    "src/main/java/@@BASE_PACKAGE_PATH@@/proxy/EbsConsultaClavesWSServiceImpl.java",
+    "src/main/java/@@BASE_PACKAGE_PATH@@/util/Constantes.java",
+    "src/main/java/@@BASE_PACKAGE_PATH@@/util/PropertiesExterno.java",
+}
+actual_ws_files = {n for n in files if ws_leak.search(n + "\n" + files[n].read_text(encoding="utf-8"))}
+assert actual_ws_files == expected_ws_files, actual_ws_files ^ expected_ws_files
+module = next(m for m in a["generation"]["featureModules"] if m["id"] == "credential-decrypt-soap")
+assert set(module["templates"]) <= set(files) and set(module["touches"]) <= set(files)
+# no jar/WSDL/env endpoint copied; the WSDL decision is recorded
+assert not [n for n in files if n.lower().endswith((".jar", ".wsdl", ".class"))]
+assert not any("soap:address" in files[n].read_text(encoding="utf-8") for n in files)
+wsdl_rule = next(r for r in a["referenceInventory"]["rules"] if r["path"].endswith(".wsdl"))
+assert wsdl_rule["disposition"] == "excluded" and "environment" in wsdl_rule["reason"]
+
+# credential-decrypt contract documented in the manifest agrees with the reference WSDL (read-only, field names only)
+wsdl = (reference / "pe/com/claro/eai/ebs/operaciones/consultaclaves/ebsConsultaClavesService.wsdl").read_text(encoding="utf-8")
+contract = a["generation"]["servicePatterns"]["credentialDecryptContract"]
+req_block = re.search(r'name="desencriptarRequest">(.*?)</xsd:element>', wsdl, re.S)[1]
+res_block = re.search(r'name="desencriptarResponse">(.*?)</xsd:element>', wsdl, re.S)[1]
+assert re.findall(r'element name="(\w+)"', req_block) == contract["requestFields"]
+assert re.findall(r'element name="(\w+)"', res_block) == contract["responseFields"]
+assert contract["namespace"] in wsdl and contract["serviceName"] in wsdl and contract["portNameSoap11"] in wsdl
+assert contract["namespace"] in proxy_xml and contract["serviceName"] in proxy_xml and contract["portNameSoap11"] in proxy_xml
+impl_ref = rtext(src_main / "service/ObtenerTrasladarArchivosServiceImpl.java")
+for f in contract["requestFieldsSetByReferenceCode"]:
+    assert "request.set" + f[0].upper() + f[1:] + "(" in impl_ref, f
+for f in contract["requestFieldsNotSetByReferenceCode"]:
+    assert "request.set" + f[0].upper() + f[1:] + "(" not in impl_ref, f
+
+# servicePatterns: each documented technical/business method sits in the cited reference line range
+impl_lines = impl_ref.split("\n")
+expected_token = {
+    "SP-DECRYPT-HELPER": "desencriptarCredenciales", "SP-DECRYPT-CALL": "desencriptarCredenciales(",
+    "SP-CONN-FACTORY": "crearConexionSFTP", "SP-ERROR-HANDLING": "catch (", "SP-DATE-FORMAT": "obtenerFechaProcesoFormato", "SP-LOG-FRAME": "INICIO_METODO", "SP-FILE-TYPE-MAP": "tiposArchivos",
+    "SP-RESPONSE-RULE": "idf0Codigo",
+}
+pattern_items = {i["id"]: i for i in a["generation"]["servicePatterns"]["items"]}
+assert set(pattern_items) == set(expected_token), set(pattern_items) ^ set(expected_token)
+for pid, item in pattern_items.items():
+    chunk = ""
+    for part in item["lines"].split(" and "):
+        lo, hi = [int(x) for x in part.split("-")]
+        chunk += "\n".join(impl_lines[lo - 1:hi]) + "\n"
+    assert expected_token[pid] in chunk, (pid, item["lines"])
+assert {i["classification"] for i in pattern_items.values() if i["classification"].startswith("business")} == {"business-excluded"}
+assert {pid for pid, i in pattern_items.items() if i["classification"] == "business-excluded"} == {"SP-FILE-TYPE-MAP", "SP-RESPONSE-RULE"}
+
+# decrypt client jar content (entry listing only, nothing extracted) matches the documented package; mail jar is not declared/used
+import zipfile
+with zipfile.ZipFile(reference / "Lib/eai/ebsConsultaClavesService-Client/1.0.0/ebsConsultaClavesService-Client-1.0.0.jar") as z:
+    entries = set(z.namelist())
+for cls in ["DesencriptarRequest", "DesencriptarResponse", "EbsConsultaClavesPortType"]:
+    assert "pe/com/claro/eai/ebs/operaciones/consultaclaves/%s.class" % cls in entries, cls
+
 secret_patterns = [
     r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----", r"AKIA[A-Z0-9]{16}",
     r"(?i)https?://[^/\s<>]+:[^/\s<>]+@",
@@ -365,18 +468,21 @@ print(json.dumps({
     "yaml": "passed-unique-keys", "templates": len(files), "parametersUsedExactly": len(usage),
     "xmlWellFormedOriginalAndRendered": xml_count, "javaStructuralRenderOnly": java_count,
     "javaSyntaxCompilation": "not-run", "templatesIdenticalToReferenceAfterTokenRender": len(identical) + 1,
-    "mixedTemplatesOnlyRemovalsVsReference": 3, "pomAuthorizedTransformsOnly": True,
+    "mixedTemplatesOnlyRemovalsVsReference": 3, "credentialDecryptContractMatchesReferenceWsdl": True,
+    "servicePatternsVerifiedAgainstReferenceLines": len(pattern_items), "externalPropertyKeysConsistentPropertiesXml": len(keys_tpl),
+    "noConfigTemplateNoUnusedClassesNoSonarExclusions": True, "pomAuthorizedTransformsOnly": True,
     "dependencies": len(deps), "plugins": len(plugins), "dependencyUsageEntries": len(usage_inv),
     "referenceFiles": len(paths), "referenceFilesWithDisposition": len(paths),
     "permittedReferenceRecordsUnchanged": len(records), "protectedFilesNotHashed": len(paths) - len(records),
     "approvedDecisions": len(prov["approvedDecisionRefs"]), "proposedDecisions": len(prov["proposedDecisionRefs"]),
     "pendingQuestions": len(prov["pendingQuestionRefs"]),
-    "templateDomainAndIntegrationLeakageMatches": 0, "archetypeSecretOrIpHeuristicMatches": 0,
+    "templateDomainLeakageMatches": 0, "templateMailBehaviorMatches": 0,
+    "credentialDecryptFilesExactlyExpected": len(actual_ws_files), "archetypeSecretOrIpHeuristicMatches": 0,
     "maven": "not-run", "tests": "not-run", "checkstyle": "not-applicable; not-present-in-reference",
     "jacocoSonar": "not-run", "springJava8Compatibility": "unverified",
     "extractionComplete": a["readiness"]["extractionComplete"],
     "baselineDecisionsApproved": a["readiness"]["baselineDecisionsApproved"],
     "frozen": a["identity"]["frozen"],
     "generationEnabled": a["identity"]["generationEnabled"],
-    "generatorBackend": a["readiness"]["generatorBackend"],
+    "generatorBackend": a["readiness"]["generatorBackend"], "readyToFreeze": a["identity"]["readyToFreeze"],
 }, ensure_ascii=False, indent=2))

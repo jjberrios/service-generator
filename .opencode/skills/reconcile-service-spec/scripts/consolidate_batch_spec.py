@@ -26,7 +26,16 @@ def build(sparx: dict) -> dict:
         raise ValueError('batch-shell service identity required')
     if not all(isinstance(w, str) and w for w in sparx.get('warnings', [])):
         raise ValueError('warnings must be non-empty strings')
-    return {'service': sparx['service'], 'batch': sparx['batch'],
+    batch = sparx['batch']
+    if batch.get('scope') in ('structure-only', 'ports-flow'):
+        omitted = [item['id'] for item in batch['omittedBehavior']]
+        warnings = list(sparx.get('warnings', [])) + [f"Omitted behavior (not implemented): {item['id']} - {item['description']}"
+                                                      for item in batch['omittedBehavior']]
+        return {'service': sparx['service'], 'batch': batch,
+                'readiness': {'strictImplementationReady': False, 'functionalCodeGenerationReady': False,
+                              'scaffoldImplementationReady': True, 'blockers': omitted},
+                'unresolved': {}, 'warnings': warnings}
+    return {'service': sparx['service'], 'batch': batch,
             'readiness': {'strictImplementationReady': True, 'functionalCodeGenerationReady': True},
             'unresolved': {}, 'warnings': list(sparx.get('warnings', []))}
 

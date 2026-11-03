@@ -34,7 +34,26 @@ def _evidence_lists(batch: dict):
     for section in ('properties', 'connections', 'steps'):
         for item in batch.get(section, []):
             yield from _walk(item, f'{section}[{item.get("id", item.get("key"))}]')
+    for item in batch.get('omittedBehavior', []):
+        yield f'omittedBehavior[{item.get("id")}]', item.get('evidence', [])
+    for section in ('dtos', 'ports'):
+        for item in batch.get(section, []):
+            yield f'{section}[{item.get("name", item.get("id"))}]', item.get('evidence', [])
+            for method in item.get('methods', []) or []:
+                yield f'ports[{item.get("id")}].{method.get("name")}', method.get('evidence', [])
+    yield from _flow(batch.get('flow', []) or [], 'flow')
+    for adapter in batch.get('adapters', []) or []:
+        yield f'adapters[{adapter.get("port")}]', adapter.get('evidence', [])
+        for method in adapter.get('methods', []) or []:
+            yield f'adapters[{adapter.get("port")}].{method.get("name")}', method.get('evidence', [])
     yield 'outcomes', batch['outcomes'].get('evidence', [])
+
+
+def _flow(steps, label):
+    for step in steps:
+        yield f'{label}/{step.get("id")}', step.get('evidence', [])
+        for key in ('steps', 'then', 'else'):
+            yield from _flow(step.get(key, []) or [], f'{label}/{step.get("id")}')
 
 
 def _walk(item: dict, label: str):

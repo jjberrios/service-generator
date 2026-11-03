@@ -21,18 +21,6 @@
       <mockito.core>2.23.4</mockito.core>
       <assertj>2.6.0</assertj>
 
-      <sonar.coverage.exclusions>
-         **/@@BASE_PACKAGE_PATH@@/proxy/*.java,
-         **/@@BASE_PACKAGE_PATH@@/exception/*.java,
-         **/@@BASE_PACKAGE_PATH@@/util/*.java,
-         **/@@BASE_PACKAGE_PATH@@/@@MAIN_CLASS@@.java
-      </sonar.coverage.exclusions>
-      <sonar.exclusions>
-         **/@@BASE_PACKAGE_PATH@@/proxy/*.java,
-         **/@@BASE_PACKAGE_PATH@@/exception/*.java,
-         **/@@BASE_PACKAGE_PATH@@/util/*.java,
-         **/@@BASE_PACKAGE_PATH@@/@@MAIN_CLASS@@.java
-      </sonar.exclusions>
    </properties>
    <dependencies>
       <!-- spring -->

@@ -31,7 +31,7 @@ def dump(path, obj):
 
 class BatchShellTests(unittest.TestCase):
     ARCH = 'archetypes/claro-java-8-shell/v1.0.0'
-    FILES = 19
+    FILES = 15
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix='batch-shell-test-')
@@ -139,8 +139,10 @@ class BatchShellTests(unittest.TestCase):
         self.assertNotIn('System.exit', service)
         self.assertNotIn('org.springframework.boot', service)
         self.assertNotIn('jakarta.', service)
-        config = (out / 'config/Example.properties.j2').read_text()
-        self.assertEqual(config.count('\nftp.test.host='), 1)
+        cfgs = list((out / 'config').glob('*.properties'))
+        self.assertEqual(len(cfgs), 1)
+        self.assertTrue(all(l.endswith('=') or l.startswith('#') for l in cfgs[0].read_text(encoding='utf-8').splitlines()))
+        self.assertIn('`ftp.test.host`', (out / 'README.MD').read_text(encoding='utf-8'))
         self.assertNotIn('System.exit', (out / 'src/main/java/pe/com/claro/shell/example/ExampleMain.java').read_text())
 
     def test_gate_requires_review_authorization_and_live_sources(self):
@@ -364,10 +366,7 @@ class BatchFlowPackage7Tests(BatchShellTests):
         self.assertEqual(gate.current_decision(self.ws, self.repo, self.service)['status'], gate.BLOCKED)
 
 
-class BatchShellV11Tests(BatchShellTests):
-    ARCH = 'archetypes/claro-java-8-shell/v1.1.0'
-    FILES = 22
-
+class BatchShellDecryptTests(BatchShellTests):
     def decrypted_spec(self):
         spec = copy.deepcopy(self.spec)
         for prop in spec['batch']['properties']:
@@ -381,7 +380,6 @@ class BatchShellV11Tests(BatchShellTests):
         self.assertIn('desencriptarCredenciales(msjTrx,', text)
         self.assertIn('credenciales.getUsuarioAplicacion()', text)
         self.assertIn('catch (WSException e)', text)
-        self.assertIn('EbsConsultaClavesWSService ebsConsultaClavesWSService', text)
 
     def test_decrypted_soap_requires_secret_properties(self):
         spec = self.decrypted_spec()
@@ -389,16 +387,314 @@ class BatchShellV11Tests(BatchShellTests):
         with self.assertRaises(Exception):
             bp.build(self.repo, spec, self.cfg)
 
-    def test_v100_still_rejects_decrypted_soap(self):
-        v100 = self.repo / 'archetypes/claro-java-8-shell/v1.0.0'
-        shutil.copytree(REPO / 'archetypes/claro-java-8-shell/v1.0.0', v100)
-        arch = yaml.safe_load((v100 / 'archetype.yml').read_bytes())
-        arch['identity']['generationEnabled'] = True
-        dump(v100 / 'archetype.yml', arch)
-        cfg = copy.deepcopy(self.cfg)
-        cfg['target']['archetype'] = 'archetypes/claro-java-8-shell/v1.0.0'
+    def test_decrypt_module_is_pruned_when_unused_and_kept_when_used(self):
+        plain = bm.render_project(bp.build(self.repo, self.spec, self.cfg), self.repo)
+        used = bm.render_project(bp.build(self.repo, self.decrypted_spec(), self.cfg), self.repo)
+        base = 'src/main/java/pe/com/claro/shell/example/'
+        for rel in ('proxy/EbsConsultaClavesWSService.java', 'proxy/EbsConsultaClavesWSServiceImpl.java', 'exception/WSException.java'):
+            self.assertNotIn(base + rel, plain)
+            self.assertIn(base + rel, used)
+        self.assertNotIn('src/main/resources/applicationProxyWS.xml', plain)
+        self.assertNotIn('applicationProxyWS', plain['src/main/resources/applicationContext.xml'][1])
+        self.assertNotIn('wsEbsConsultaClavesWS', plain[base + 'util/PropertiesExterno.java'][1])
+        self.assertIn('wsEbsConsultaClavesWSUrl', used[base + 'util/PropertiesExterno.java'][1])
+        self.assertIn('ws.ebsConsultaClavesWS.url', used['README.MD'][1])
+        self.assertNotIn('ws.ebsConsultaClavesWS', plain['README.MD'][1])
+
+    def test_no_unused_classes_config_template_or_sonar_exclusions(self):
+        for spec in (self.spec, self.decrypted_spec()):
+            rendered = bm.render_project(bp.build(self.repo, spec, self.cfg), self.repo)
+            paths = set(rendered)
+            for name in ('UtilSFTP', 'PropertiesException', 'BaseException'):
+                self.assertFalse([p for p in paths if p.endswith('/' + name + '.java')])
+            self.assertEqual(len([p for p in paths if p.startswith('config/') and p.endswith('.properties')]), 1)
+            self.assertFalse([p for p in paths if p.endswith('.j2')])
+            self.assertNotIn('sonar.exclusions', rendered['pom.xml'][1])
+            self.assertNotIn('sonar.coverage.exclusions', rendered['pom.xml'][1])
+            self.assertNotIn('{{', rendered['README.MD'][1])
+
+    def test_unused_class_is_reported(self):
+        plan = bp.build(self.repo, self.spec, self.cfg)
+        rendered = bm.render_project(plan, self.repo)
+        rendered['src/main/java/pe/com/claro/shell/example/util/Orphan.java'] = ('x', 'class Orphan {}')
+        with self.assertRaises(ValueError):
+            bm.check_quality(rendered, plan, plan['batch'])
+
+
+class BatchStructureOnlyTests(BatchShellTests):
+    def structure_spec(self):
+        spec = copy.deepcopy(self.spec)
+        ev = ['ea#synthetic transfer flow']
+        spec['batch'] = {'version': 1, 'scope': 'structure-only', 'sourceBindings': spec['batch']['sourceBindings'],
+                         'properties': [], 'connections': [], 'steps': [],
+                         'omittedBehavior': [{'id': 'dbUpdate', 'description': 'Database update is not specified for this backend',
+                                              'evidence': ev}],
+                         'outcomes': {'generalFailure': 'idt3', 'evidence': ev}}
+        spec['readiness'] = {'strictImplementationReady': False, 'functionalCodeGenerationReady': False,
+                             'scaffoldImplementationReady': True, 'blockers': ['dbUpdate']}
+        return spec
+
+    def test_structure_only_renders_without_sftp_decrypt_or_simulated_success(self):
+        plan = bp.build(self.repo, self.structure_spec(), self.cfg)
+        rendered = bm.render_project(plan, self.repo)
+        paths = set(rendered)
+        for name in ('SFTPConnectionManager', 'SFTPException', 'BaseExceptionSFTP', 'WSException',
+                     'EbsConsultaClavesWSService', 'EbsConsultaClavesWSServiceImpl'):
+            self.assertFalse([p for p in paths if p.endswith('/' + name + '.java')], name)
+        service = rendered['src/main/java/pe/com/claro/shell/example/service/ExampleServiceImpl.java'][1]
+        self.assertIn('PENDIENTE', service)
+        self.assertNotIn('idf0', service)
+        self.assertIn('dbUpdate', rendered['README.MD'][1])
+        self.assertNotIn('sonar.exclusions', rendered['pom.xml'][1])
+
+    def test_structure_only_requires_omitted_behavior_and_honest_readiness(self):
+        spec = self.structure_spec()
+        spec['batch']['omittedBehavior'] = []
         with self.assertRaises(Exception):
-            bp.build(self.repo, self.decrypted_spec(), cfg)
+            bp.build(self.repo, spec, self.cfg)
+        spec = self.structure_spec()
+        spec['readiness']['functionalCodeGenerationReady'] = True
+        with self.assertRaises(Exception):
+            bp.build(self.repo, spec, self.cfg)
+
+    def test_structure_only_cannot_declare_steps(self):
+        spec = self.structure_spec()
+        spec['batch']['steps'] = self.spec['batch']['steps']
+        with self.assertRaises(Exception):
+            bp.build(self.repo, spec, self.cfg)
+
+
+class BatchPortsFlowTests(BatchShellTests):
+    def flow_spec(self):
+        spec = copy.deepcopy(self.spec)
+        ev = ['ea#synthetic transfer flow']
+        call = lambda i, port, method, args, policy, result=None: {
+            'id': i, 'kind': 'call', 'port': port, 'method': method, 'args': args, 'onFailure': policy, 'evidence': ev,
+            **({'result': result} if result else {})}
+        spec['batch'] = {
+            'version': 1, 'scope': 'ports-flow', 'sourceBindings': spec['batch']['sourceBindings'],
+            'properties': [], 'connections': [], 'steps': [],
+            'omittedBehavior': [{'id': 'dbAdapter', 'description': 'Database adapter is not specified', 'evidence': ev}],
+            'dtos': [{'name': 'Job', 'evidence': ev, 'fields': [{'name': 'tries', 'type': 'Integer'}]}],
+            'ports': [{'id': 'JobStore', 'kind': 'db', 'evidence': ev, 'methods': [
+                {'name': 'pending', 'params': [], 'returns': 'List<Job>', 'evidence': ev},
+                {'name': 'limit', 'params': [], 'returns': 'Integer', 'evidence': ev},
+                {'name': 'retry', 'params': [{'name': 'job', 'type': 'Job'}], 'returns': 'void', 'evidence': ev},
+                {'name': 'close', 'params': [{'name': 'job', 'type': 'Job'}], 'returns': 'void', 'evidence': ev}]}],
+            'flow': [call('listPending', 'JobStore', 'pending', [], 'abort', 'jobs'),
+                     call('readLimit', 'JobStore', 'limit', [], 'abort', 'max'),
+                     {'id': 'eachJob', 'kind': 'for-each', 'list': 'jobs', 'item': 'job', 'evidence': ev, 'steps': [
+                         {'id': 'withinLimit', 'kind': 'if', 'left': 'job.tries', 'op': '<', 'right': 'max', 'evidence': ev,
+                          'then': [call('retryJob', 'JobStore', 'retry', ['job'], 'skip-item')],
+                          'else': [call('closeJob', 'JobStore', 'close', ['job'], 'skip-item')]}]}],
+            'outcomes': {'success': 'idf0', 'generalFailure': 'idt3', 'evidence': ev}}
+        spec['readiness'] = {'strictImplementationReady': False, 'functionalCodeGenerationReady': False,
+                             'scaffoldImplementationReady': True, 'blockers': ['dbAdapter']}
+        return spec
+
+    def test_ports_flow_renders_flow_adapters_and_path_tests_without_simulating_integrations(self):
+        plan = bp.build(self.repo, self.flow_spec(), self.cfg)
+        rendered = bm.render_project(plan, self.repo)
+        base = 'src/main/java/pe/com/claro/shell/example/'
+        service = rendered[base + 'service/ExampleServiceImpl.java'][1]
+        self.assertIn('job.getTries().intValue() < max.intValue()', service)
+        self.assertIn('jobStore.retry(job);', service)
+        adapter = rendered[base + 'port/JobStoreImpl.java'][1]
+        self.assertIn('OperacionNoImplementadaException', adapter)
+        self.assertIn('@Repository', adapter)
+        for name in ('dto/Job', 'port/JobStore', 'exception/OperacionNoImplementadaException'):
+            self.assertIn(base + name + '.java', rendered)
+        test = rendered['src/test/java/pe/com/claro/shell/example/service/ExampleServiceImplTest.java'][1]
+        for method in ('run_ruta_withinLimitSi_debeRegistrarExito', 'run_ruta_withinLimitNo_debeRegistrarExito',
+                       'run_falla_listPending_debeRegistrarFalloGeneral', 'run_falla_retryJob_debeContinuarConSiguiente'):
+            self.assertIn(method, test)
+        self.assertIn('times(2)', test)
+        self.assertNotIn('Sftp', service)
+
+    def test_ports_flow_rejects_unused_methods_abort_in_loop_and_unknown_types(self):
+        spec = self.flow_spec()
+        spec['batch']['ports'][0]['methods'].append({'name': 'extra', 'params': [], 'returns': 'void', 'evidence': ['ea#x']})
+        with self.assertRaises(Exception):
+            bp.build(self.repo, spec, self.cfg)
+        spec = self.flow_spec()
+        spec['batch']['flow'][2]['steps'][0]['then'][0]['onFailure'] = 'abort'
+        with self.assertRaises(Exception):
+            bp.build(self.repo, spec, self.cfg)
+        spec = self.flow_spec()
+        spec['batch']['ports'][0]['methods'][2]['params'][0]['type'] = 'Missing'
+        with self.assertRaises(Exception):
+            bp.build(self.repo, spec, self.cfg)
+
+    def test_ports_flow_requires_honest_readiness(self):
+        spec = self.flow_spec()
+        spec['readiness']['functionalCodeGenerationReady'] = True
+        with self.assertRaises(Exception):
+            bp.build(self.repo, spec, self.cfg)
+
+    def test_ports_flow_has_no_unused_classes(self):
+        plan = bp.build(self.repo, self.flow_spec(), self.cfg)
+        bm.check_quality(bm.render_project(plan, self.repo), plan, plan['batch'])
+
+    def adapters_spec(self):
+        spec = self.flow_spec()
+        ev = ['ea#synthetic transfer flow']
+        batch = spec['batch']
+        batch['dtos'].append({'name': 'Cfg', 'evidence': ev, 'fields': [{'name': n, 'type': 'String'} for n in ('subject', 'to', 'cc', 'bcc', 'bodyFormat', 'body')]})
+        batch['dtos'][0]['fields'].append({'name': 'label', 'type': 'String'})
+        batch['ports'] += [
+            {'id': 'Remote', 'kind': 'rest', 'evidence': ev, 'methods': [
+                {'name': 'fetchCfg', 'params': [], 'returns': 'Cfg', 'evidence': ev},
+                {'name': 'push', 'params': [{'name': 'job', 'type': 'Job'}], 'returns': 'void', 'evidence': ev}]},
+            {'id': 'Mailer', 'kind': 'mail', 'evidence': ev, 'methods': [
+                {'name': 'send', 'params': [{'name': 'cfg', 'type': 'Cfg'}, {'name': 'job', 'type': 'Job'}], 'returns': 'void', 'evidence': ev}]}]
+        call = lambda i, port, method, args, policy, result=None: {
+            'id': i, 'kind': 'call', 'port': port, 'method': method, 'args': args, 'onFailure': policy, 'evidence': ev,
+            **({'result': result} if result else {})}
+        batch['flow'] = [call('getCfg', 'Remote', 'fetchCfg', [], 'log', 'cfg')] + batch['flow']
+        loop = next(s for s in batch['flow'] if s['kind'] == 'for-each')
+        loop['steps'] += [call('pushJob', 'Remote', 'push', ['job'], 'skip-item'), call('mailJob', 'Mailer', 'send', ['cfg', 'job'], 'log')]
+        batch['adapters'] = [
+            {'port': 'JobStore', 'evidence': ev, 'methods': [
+                {'name': 'pending', 'sql': 'SELECT TRIES, LABEL FROM JOBS WHERE STATE = 0', 'bind': [], 'result': 'list',
+                 'columns': [{'column': 'TRIES', 'field': 'tries'}, {'column': 'LABEL', 'field': 'label'}], 'assumed': True, 'evidence': ev},
+                {'name': 'limit', 'sql': 'SELECT MAX(N) FROM LIMITS', 'bind': [], 'result': 'scalar', 'columns': [], 'assumed': True, 'evidence': ev},
+                {'name': 'retry', 'sql': 'UPDATE JOBS SET STATE = 1 WHERE LABEL = ?', 'bind': ['job.label'], 'result': 'none', 'columns': [], 'assumed': True, 'evidence': ev},
+                {'name': 'close', 'sql': 'UPDATE JOBS SET STATE = 2 WHERE LABEL = ?', 'bind': ['job.label'], 'result': 'none', 'columns': [], 'assumed': True, 'evidence': ev}]},
+            {'port': 'Remote', 'evidence': ev, 'methods': [
+                {'name': 'fetchCfg', 'httpMethod': 'GET', 'path': '/api/v1/cfg', 'query': [{'name': 'status', 'value': '1'}], 'body': [], 'assumed': True, 'evidence': ev},
+                {'name': 'push', 'httpMethod': 'POST', 'path': '/api/v1/jobs', 'query': [], 'body': [{'json': 'label', 'from': 'job.label'}], 'assumed': True, 'evidence': ev}]},
+            {'port': 'Mailer', 'evidence': ev, 'methods': [
+                {'name': 'send', 'placeholders': [{'token': '{label}', 'from': 'job.label'}], 'assumed': True, 'evidence': ev}]}]
+        return spec
+
+    def test_adapters_render_concrete_integrations_from_assumptions_and_keep_pom_baseline(self):
+        plan = bp.build(self.repo, self.adapters_spec(), self.cfg)
+        rendered = bm.render_project(plan, self.repo)
+        base = 'src/main/java/pe/com/claro/shell/example/'
+        db = rendered[base + 'port/JobStoreImpl.java'][1]
+        self.assertIn('SELECT TRIES, LABEL FROM JOBS', db)
+        self.assertNotIn('OperacionNoImplementada', db)
+        self.assertIn('sentencia.setObject(1, job.getLabel());', db)
+        rest = rendered[base + 'port/RemoteImpl.java'][1]
+        self.assertIn('externalProperties.restRemoteUrl', rest)
+        self.assertIn('"/api/v1/cfg" + "?status=1"', rest)
+        mail = rendered[base + 'port/MailerImpl.java'][1]
+        self.assertIn('{label}', mail)
+        for path in (base + 'util/ConexionBd.java', base + 'util/RestClienteHttp.java',
+                     'src/test/java/pe/com/claro/shell/example/port/JobStoreImplTest.java',
+                     'src/test/java/pe/com/claro/shell/example/port/RemoteImplTest.java'):
+            self.assertIn(path, rendered)
+        self.assertNotIn('src/test/java/pe/com/claro/shell/example/port/MailerImplTest.java', rendered)
+        props = rendered[base + 'util/PropertiesExterno.java'][1]
+        for key in ('bd.url', 'bd.password', 'rest.remote.url', 'rest.timeout.ms', 'mail.smtp.host', 'mail.from'):
+            self.assertIn('${' + key + '}', props)
+        pom = rendered['pom.xml'][1]
+        for artifact in ('jackson-databind', 'httpclient', 'javax.mail'):
+            self.assertIn(artifact, pom)
+        self.assertIn('<artifactId>jsch</artifactId>', pom)
+        self.assertNotIn('sonar.exclusions', pom)
+        bm.check_quality(rendered, plan, plan['batch'])
+
+    def test_adapters_without_assumed_flag_or_with_wrong_shape_are_rejected(self):
+        spec = self.adapters_spec()
+        spec['batch']['adapters'][0]['methods'][0]['assumed'] = False
+        with self.assertRaises(Exception):
+            bp.build(self.repo, spec, self.cfg)
+        spec = self.adapters_spec()
+        spec['batch']['adapters'][0]['methods'][2]['bind'] = []
+        with self.assertRaises(Exception):
+            bp.build(self.repo, spec, self.cfg)
+        spec = self.adapters_spec()
+        spec['batch']['adapters'][0]['methods'].pop()
+        with self.assertRaises(Exception):
+            bp.build(self.repo, spec, self.cfg)
+
+    def nested_spec(self):
+        spec = self.flow_spec()
+        ev = ['ea#synthetic transfer flow']
+        batch = spec['batch']
+        batch['dtos'].append({'name': 'Sub', 'evidence': ev, 'fields': [{'name': 'kind', 'type': 'Integer'}, {'name': 'ok', 'type': 'Boolean'}]})
+        batch['dtos'][0]['fields'].append({'name': 'status', 'type': 'Integer'})
+        batch['ports'].append({'id': 'Remote', 'kind': 'rest', 'evidence': ev, 'methods': [
+            {'name': 'subs', 'params': [{'name': 'job', 'type': 'Job'}], 'returns': 'List<Sub>', 'evidence': ev},
+            {'name': 'create', 'params': [{'name': 'sub', 'type': 'Sub'}], 'returns': 'Boolean', 'evidence': ev},
+            {'name': 'mark', 'params': [{'name': 'sub', 'type': 'Sub'}], 'returns': 'void', 'evidence': ev}]})
+        call = lambda i, port, method, args, policy, result=None: {
+            'id': i, 'kind': 'call', 'port': port, 'method': method, 'args': args, 'onFailure': policy, 'evidence': ev,
+            **({'result': result} if result else {})}
+        batch['flow'] = [
+            call('listPending', 'JobStore', 'pending', [], 'abort', 'jobs'),
+            call('readLimit', 'JobStore', 'limit', [], 'abort', 'max'),
+            {'id': 'anyJobs', 'kind': 'if', 'left': 'jobs', 'op': 'nonempty', 'evidence': ev, 'then': [
+                {'id': 'eachJob', 'kind': 'for-each', 'list': 'jobs', 'item': 'job', 'evidence': ev, 'steps': [
+                    {'id': 'eligible', 'kind': 'guard', 'evidence': ev, 'any': [
+                        {'left': 'job.status', 'op': 'equals', 'right': 5}, {'left': 'job.status', 'op': 'equals', 'right': 6}]},
+                    call('retryJob', 'JobStore', 'retry', ['job'], 'skip-item'),
+                    call('closeJob', 'JobStore', 'close', ['job'], 'skip-item'),
+                    call('listSubs', 'Remote', 'subs', ['job'], 'skip-item', 'subs'),
+                    {'id': 'eachSub', 'kind': 'for-each', 'list': 'subs', 'item': 'sub', 'evidence': ev, 'steps': [
+                        call('createSub', 'Remote', 'create', ['sub'], 'skip-item', 'created'),
+                        {'id': 'wasCreated', 'kind': 'if', 'left': 'created', 'op': 'true', 'evidence': ev,
+                         'then': [call('markSub', 'Remote', 'mark', ['sub'], 'skip-item')]}]}]}]}]
+        batch['adapters'] = [
+            {'port': 'Remote', 'evidence': ev, 'methods': [
+                {'name': 'subs', 'httpMethod': 'GET', 'path': '/api/v1/subs', 'query': [], 'body': [], 'assumed': True, 'evidence': ev},
+                {'name': 'create', 'httpMethod': 'POST', 'path': '/api/v1/subs', 'query': [], 'body': [{'json': 'kind', 'from': 'sub.kind'}],
+                 'okStatus': [409], 'assumed': True, 'evidence': ev},
+                {'name': 'mark', 'httpMethod': 'PATCH', 'path': '/api/v1/subs', 'query': [], 'body': [], 'assumed': True, 'evidence': ev}]}]
+        return spec
+
+    def test_nested_loops_guards_compound_conditions_and_boolean_rest(self):
+        plan = bp.build(self.repo, self.nested_spec(), self.cfg)
+        rendered = bm.render_project(plan, self.repo)
+        base = 'src/main/java/pe/com/claro/shell/example/'
+        service = rendered[base + 'service/ExampleServiceImpl.java'][1]
+        self.assertIn('continue;', service)
+        self.assertIn('||', service)
+        self.assertIn('isEmpty()', service)
+        self.assertIn('Boolean.TRUE.equals(created)', service)
+        rest = rendered[base + 'port/RemoteImpl.java'][1]
+        self.assertIn('ejecutarEstado', rest)
+        self.assertIn('409', rest)
+        test = rendered['src/test/java/pe/com/claro/shell/example/service/ExampleServiceImplTest.java'][1]
+        self.assertIn('run_falla_listPending_debeRegistrarFalloGeneral', test)
+        self.assertIn('times(4)', test)
+        bm.check_quality(rendered, plan, plan['batch'])
+
+    def test_nested_loops_beyond_depth_two_and_guard_outside_loop_are_rejected(self):
+        spec = self.nested_spec()
+        inner = spec['batch']['flow'][2]['then'][0]['steps'][4]
+        inner['steps'].append({'id': 'deep', 'kind': 'for-each', 'list': 'subs', 'item': 'x', 'evidence': ['ea#x'], 'steps': []})
+        with self.assertRaises(Exception):
+            bp.build(self.repo, spec, self.cfg)
+        spec = self.nested_spec()
+        spec['batch']['flow'].insert(0, {'id': 'g', 'kind': 'guard', 'left': 'jobs', 'op': 'nonempty', 'evidence': ['ea#x']})
+        with self.assertRaises(Exception):
+            bp.build(self.repo, spec, self.cfg)
+
+    def test_adapters_generated_java_parses_as_java8(self):
+        plan = bp.build(self.repo, self.adapters_spec(), self.cfg)
+        rendered = bm.render_project(plan, self.repo)
+        import shutil
+        import subprocess
+        import tempfile
+        javac = shutil.which('javac')
+        if not javac:
+            self.skipTest('javac unavailable')
+        with tempfile.TemporaryDirectory() as tmp:
+            files = []
+            for path, (_, text) in rendered.items():
+                if path.endswith('.java'):
+                    target = Path(tmp) / path
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_text(text, encoding='utf-8')
+                    files.append(str(target))
+            probe = Path(tmp) / 'Probe.java'
+            probe.write_text('public class Probe {}', encoding='utf-8')
+            # Syntax only: unresolved dependencies are expected; any 'error: ... expected' style parse failure is reported.
+            out = subprocess.run([javac, '-proc:none', '-Xdiags:compact', '-d', tmp, *files], capture_output=True, text=True).stderr
+            syntax = [l for l in out.splitlines() if 'error:' in l and any(w in l for w in ('expected', 'illegal', 'unclosed', 'not a statement', 'reached end'))]
+            self.assertEqual([], syntax, out[:2000])
 
 
 if __name__ == '__main__':

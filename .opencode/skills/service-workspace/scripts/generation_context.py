@@ -114,13 +114,14 @@ def resolve_context(root, *, workspace=None, service=None, explicit=None, enviro
     actual = root / selected
     if not actual.resolve().is_relative_to(base) or actual.is_symlink() or not (actual / 'archetype.yml').is_file():
         raise SelectionError(f"missing-or-unsafe-archetype: {selected}")
-    for key in ('outputDirectory',):
-        value = dig(plan, 'service', key)
-        if value and target and value.rstrip('/') != f'output/{target}':
-            raise SelectionError('output-selection-conflict')
-    value = dig(cfg, 'target', 'output_directory')
-    if value and target and value.rstrip('/') != f'output/{target}':
-        raise SelectionError('output-selection-conflict')
+    plan_out = (dig(plan, 'service', 'outputDirectory') or '').rstrip('/')
+    cfg_out = (dig(cfg, 'target', 'output_directory') or '').rstrip('/')
+    shell_profile = str(dig(load_mapping(actual / 'archetype.yml'), 'generation', 'profile') or '').startswith('batch-shell')
+    for value in (plan_out, cfg_out):
+        if value and target and value != f'output/{target}':
+            safe = re.fullmatch(r'output/[A-Za-z][A-Za-z0-9_-]*', value)
+            if not (shell_profile and safe):
+                raise SelectionError('output-selection-conflict')
     return GenerationContext(root, ws.resolve(), target, selected, tuple(choices))
 
 

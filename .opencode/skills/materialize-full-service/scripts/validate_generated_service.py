@@ -88,7 +88,7 @@ def validate(repo: Path, service: str) -> dict:
         check('archetypeContract', False, str(error))
         checkstyle_applicability = 'unknown'
     out = repo / plan['service']['outputDirectory']
-    check('outputDirectoryBelongsToService', plan['service']['outputDirectory'] == f'output/{service}' and out.is_dir(), plan['service']['outputDirectory'])
+    check('outputDirectoryBelongsToService', (plan['service']['outputDirectory'] == f'output/{service}' or (plan.get('plan', {}).get('profile', '').startswith('batch-shell') and plan['service']['outputDirectory'].startswith('output/') and '/' not in plan['service']['outputDirectory'][7:])) and out.is_dir(), plan['service']['outputDirectory'])
     planned = {f['path']: f for f in plan['files']['generate']}
     manifest_path = out / MANIFEST
     manifest = yaml.safe_load(manifest_path.read_bytes()) if manifest_path.is_file() else None

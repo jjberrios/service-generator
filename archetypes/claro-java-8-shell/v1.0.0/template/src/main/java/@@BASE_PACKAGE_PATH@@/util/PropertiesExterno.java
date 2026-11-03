@@ -4,10 +4,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Propiedades externas del batch (shell). Contiene unicamente las propiedades tecnicas
- * observadas en toda la referencia; las propiedades propias de un servicio (endpoints SFTP,
- * rutas, servicios web, fechas de ejecucion) las agrega el generador a partir de la
- * especificacion funcional, con el mismo estilo: campo publico + @Value("${clave.en.minusculas}").
+ * Propiedades externas del batch (shell): campo publico + @Value("${clave.en.minusculas}"),
+ * valores provistos por el archivo externo indicado con -Dproperties.
  */
 @Component
 public class PropertiesExterno {
@@ -46,4 +44,17 @@ public class PropertiesExterno {
 
   @Value("${idt3.mensaje}")
   public String idt3Mensaje;
+
+  // WS EbsConsultaClavesWS (descifrado de credenciales; endpoint y timeouts son valores de entorno)
+  @Value("${ws.ebsConsultaClavesWS.url}")
+  public String wsEbsConsultaClavesWSUrl;
+
+  @Value("${ws.ebsConsultaClavesWS.max.request.timeout}")
+  public String wsEbsConsultaClavesWSMaxRequestTimeout;
+
+  @Value("${ws.ebsConsultaClavesWS.max.connection.timeout}")
+  public String wsEbsConsultaClavesWSMaxConnectionTimeout;
+
+  @Value("${ws.ebsConsultaClavesWS.codigo.aplicacion}")
+  public String wsEbsConsultaClavesWSCodigoAplicacion;
 }

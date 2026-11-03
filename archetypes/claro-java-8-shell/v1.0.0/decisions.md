@@ -1,11 +1,26 @@
-# Decisiones — claro-java-8-shell / 1.0.0
+# Decisiones - claro-java-8-shell / 1.0.0 (version nueva)
 
-Estado: **extracción completa; baseline técnico basado en la referencia aprobado;
-preguntas SH-Q-001 a 012 resueltas por fidelidad a la referencia; congelado;
-generación habilitada para el backend SFTP acotado (SH-D-010)**. No implica compilación,
-compatibilidad runtime ni autorización de generar un servicio concreto. Las menciones
-de deshabilitación en las decisiones anteriores describen su alcance histórico;
-SH-D-010 las actualiza exclusivamente respecto al cierre de esta versión.
+Estado: **version nueva 1.0.0 creada por instruccion explicita del usuario (SH-D-018)**;
+las versiones anteriores 1.0.0 y 1.1.0 de este arquetipo fueron eliminadas y esta las
+reemplaza. SH-D-001..017 se conservan abajo como historico de las versiones eliminadas;
+SH-D-018..021 prevalecen donde difieren (sin plantilla de configuracion, sin UtilSFTP /
+BaseException / PropertiesException, sin exclusiones Sonar, modulo de descifrado solo si
+se usa). `generationEnabled: true`, `frozen: false`, `readyToFreeze: false`.
+Los textos historicos que dicen "version 1.1.0" o "v1.0.0 congelada" describen las versiones
+eliminadas y no son un estado de esta version.
+
+---
+
+## Historico (versiones eliminadas)
+
+Estado: **nueva versión 1.1.0 derivada de 1.0.0 (que permanece congelada e intacta);
+aprobada por instrucción explícita del usuario (SH-D-011); NO congelada;
+`generationEnabled: true` desde SH-D-017 (SH-D-016 queda superada solo en ese punto)**. Preserva SH-D-001…SH-D-010 y SH-Q-001…012 de 1.0.0
+sin reabrirlas; SH-D-011…016 son nuevas de esta versión. Donde SH-D-004, SH-D-006 y
+SH-D-009 de 1.0.0 excluían la integración de descifrado de credenciales, SH-D-011…013
+reemplazan **únicamente esa exclusión**. SH-D-010 (congelación/habilitación) es propia de
+1.0.0 y **no se hereda**: aquí el texto de SH-D-010 describe su alcance histórico. No
+implica compilación, compatibilidad runtime ni autorización de generar un servicio.
 
 Los identificadores SH-D-* (decisiones) y SH-Q-* (preguntas) son locales a esta versión;
 no reutilizan D-001…D-014 (claro-spring-ms) ni J8-D-* (claro-spring-java-8), y esas
@@ -216,6 +231,137 @@ persistencia y pasos desconocidos detienen la generación. No implica habilitar
 - Revisión futura: modificación explícitamente autorizada o nueva versión cuando
   cambie el baseline; conservar decisiones y trazabilidad de esta versión congelada.
 
+## Decisiones de la versión 1.1.0 (instrucción del usuario, 2026-10-30)
+
+Instrucción literal del usuario (evidencia H-EXT-2026-10-30, precedencia máxima): «la
+version v1.0.0 excluyo cosas que el servicio generado necesita (cliente SOAP/proxy de
+descifrado de credenciales, y todo lo reutilizable tecnico que quedo fuera). Hay que crear
+un NUEVO arquetipo con el mismo nombre claro-java-8-shell, version 1.1.0, que tenga en
+cuenta todo lo reutilizable del proyecto de referencia», separando método a método lo
+técnico de la regla de negocio (lógica MTC, nombres de archivos de negocio y ventana de
+medianoche NO van al arquetipo).
+
+### SH-D-011 — Nueva versión 1.1.0 que recupera infraestructura técnica reutilizable
+
+- Decisión: crear `claro-java-8-shell/1.1.0` partiendo de 1.0.0 (archetype.yml,
+  conventions, generation-rules, decisions, template, validador), sin tocar 1.0.0.
+  Se reincorpora lo técnico reutilizable que 1.0.0 dejó fuera por considerarlo negocio:
+  proxy SOAP de descifrado, su wiring XML, constantes y propiedades asociadas.
+- Estado: **aprobada** (instrucción explícita); `approved: true`, `frozen: false`,
+  `generationEnabled: false`, `readyToFreeze: false`.
+- Alcance: solo esta versión. No reabre SH-D-001…010 ni SH-Q-001…012.
+- Razón: el servicio generado necesita lo excluido; un cambio de baseline requiere
+  versión nueva (AGENTS.md, Version Safety).
+- Áreas: identity, provenance, template, referenceInventory, generation, readiness.
+- Evidencia: instrucción del usuario; E-PROXY-IMPL, E-PROXY-IFACE, E-PROXY-XML.
+- Temporalidad: vigente hasta congelar o sustituir esta versión.
+
+### SH-D-012 — Proxy SOAP de descifrado de credenciales incluido en el template
+
+- Decisión: incluir en `template/`: `proxy/EbsConsultaClavesWSService.java` y
+  `proxy/EbsConsultaClavesWSServiceImpl.java` (solo cambia el paquete; cuerpo, clasificación
+  de excepciones de red SocketTimeout→idt1, Connect/UnknownHost/NoRouteToHost→idt2,
+  otras→idt3, reemplazo de `[RECURSO]`/`[DETALLE]` y textos de log idénticos a la
+  referencia), `src/main/resources/applicationProxyWS.xml` verbatim,
+  `applicationContext.xml` con el `import` restaurado, y en `Constantes` las constantes
+  `DESENCRIPTAR`, `ID_TRANSACCION`, `CODIGO_APLICACION`, `USUARIO`; en `PropertiesExterno` las
+  cuatro propiedades `ws.ebsConsultaClavesWS.{url,max.request.timeout,max.connection.timeout,codigo.aplicacion}`.
+  Módulo declarado como `credential-decrypt-soap`, `defaultEnabled: true`
+  (incondicional, como en la referencia). Cuáles credenciales se descifran y en qué orden
+  sigue siendo de Sparx.
+- Estado: **aprobada** (instrucción explícita). Alcance: 1.1.0.
+- Razón: son clases/configuración técnicas (cliente SOAP, timeouts, clasificación de
+  errores), no regla de negocio MTC. El nombre del servicio corporativo
+  (`EbsConsultaClaves…`, namespace, servicio y puerto) es la identidad técnica de un
+  servicio corporativo compartido, no del dominio MTC; se conserva literal, igual que
+  `Constantes`/`PropertiesExterno` conservan nombres observados.
+- Áreas: template, archetype.yml (templateInventory, parameters.affectedFiles,
+  generation.utilities/featureModules/configuration), generation-rules.md,
+  conventions.md, validate-extraction.py (la regla de fuga de integración se invierte).
+- Evidencia: E-PROXY-IMPL (1-107), E-PROXY-IFACE, E-PROXY-XML (1-53), E-CONSTANTS,
+  E-PROPERTIES-CLASS (109-120), E-CONTEXT.
+- Riesgos conservados (no corregidos): sin reintentos; se registra la URL del servicio;
+  la dependencia de compilación proviene de `Lib/` (SH-D-013); los comentarios Javadoc de la
+  referencia tienen codificación doble y se conservan byte a byte.
+- Revisión futura: hacerlo opcional por servicio requiere flag de materializador y
+  plantillas condicionales (no implementado).
+
+### SH-D-013 — Endpoint como propiedad externa; Lib/ prerrequisito; WSDL y jars excluidos
+
+- Decisión: (a) el endpoint, timeouts y código de aplicación del descifrador son
+  **propiedades externas** (`ws.ebsConsultaClavesWS.*`) con variables jinja2
+  `ws_ebsconsultaclavesws_*` en `config/@@PROPERTIES_FILE_BASENAME@@.properties.j2`, sin
+  valores; (b) la dependencia `eai:ebsConsultaClavesService-Client:1.0.0` (ya declarada
+  en el POM, preservado) y el repositorio `file://${project.basedir}/Lib` se documentan como
+  **prerrequisito externo** (README, externalPrerequisites, readiness); (c) NO se copian
+  jars ni clases `pe/**`; (d) el WSDL se evaluó y **se excluye**: el contrato técnico
+  (operación `desencriptar`, campos de request/response, namespace, servicio, puerto) se
+  documenta en `generation.servicePatterns.credentialDecryptContract`, pero el archivo
+  contiene elementos `soap:address` con una IP privada y puerto de entorno; el cliente real
+  ya viene en el jar de `Lib/`; (e) el jar de correo y `ojdbc6` no se declaran como
+  prerrequisitos (SH-D-015, SH-Q-009).
+- Estado: **aprobada** (instrucción: parametrizar el endpoint, declarar y documentar la
+  dependencia de `Lib/`, no copiar jars ni WSDL con datos de entorno, decidir con motivo).
+- Alcance: 1.1.0.
+- Razón: evitar datos de entorno y binarios propietarios con procedencia no verificada,
+  manteniendo reproducible el contrato técnico.
+- Áreas: template/config, README, referenceInventory, externalPrerequisites.
+- Evidencia: E-WSDL, E-LIB-DECRYPT (solo listado de entradas del jar, sin extraer), E-PROXY-XML.
+- Revisión futura: si se aprueba publicar el WSDL sin direcciones, podría añadirse como recurso.
+
+### SH-D-014 — Partición técnico/negocio método a método del servicio de la referencia
+
+- Decisión: `ObtenerTrasladarArchivosServiceImpl` sigue excluido como archivo (es de
+  Sparx), pero sus partes técnicas se registran en `generation.servicePatterns`:
+  `desencriptarCredenciales`, llamada de descifrado previa a conectar, `crearConexionSFTP`
+  (fábrica protegida con envoltura `SFTPException`), manejo de errores por tipo con cierre
+  en `finally`, delegaciones de prueba hacia `UtilSFTP`, `obtenerFechaProcesoFormato` y el
+  marco de log (banners, marcadores, tiempo). Se excluyen como negocio: mapa de tipos
+  SUSPENSION/NOTIFICACION/IDENTIFICACION/REPORTE y sus rutas, filtro por nombre o fecha de
+  modificación, margen de medianoche, de-duplicación Reporte/Identificación, contadores
+  por tipo, regla idf0/idf1 y textos MTC (`MTC_`, `REPLACE_FECHA_*`, `ERROR_CONEXION_MTC`,
+  claves `ftp.*`, `sftp.mtc.*`, `ruta.temp.trasladar.mtc`).
+- Estado: **aprobada** (instrucción explícita de separar método a método).
+- Alcance: 1.1.0. Los patrones son un contrato para el generador/materializador; no son
+  archivos del template.
+- Áreas: archetype.yml (generation.servicePatterns, excludedBusinessMethods),
+  generation-rules.md.
+- Evidencia: E-SERVICE-IMPL con rangos de líneas por patrón.
+- Revisión futura: promover alguno a clase de `util` solo con decisión explícita.
+
+### SH-D-015 — Correo/notificación: sin implementación en la referencia; no se inventa
+
+- Decisión: la referencia no contiene código, XML, constantes, propiedades ni entrada de
+  POM de envío de correo o notificación; solo el binario
+  `Lib/pe/com/claro/eai/EnvioCorreoSB-Client/1.0.0/…jar` (cliente SOAP; clases
+  `EnvioCorreoSBPortType`, `EnviarCorreoRequest/Response`, `ArchivoAdjunto`, …) que ninguna
+  fuente usa y que el POM no declara. No se crea plantilla, propiedad ni dependencia; no se
+  copia el jar; el módulo `mail-notification` queda registrado como
+  `not-present-in-reference-source`. Los textos "Notificación" de la referencia son un
+  tipo de archivo de negocio (excluido), no un envío de correo.
+- Estado: **aprobada** (instrucción: incluir lo que la referencia tenga; no inventar).
+- Alcance: 1.1.0. Un envío de correo futuro sería propiedad de Sparx y requiere una
+  decisión nueva con evidencia (dependencia, coordenadas Maven y contrato).
+- Áreas: archetype.yml (featureModules, referenceInventory, externalPrerequisites).
+- Evidencia: E-LIB-MAIL (listado de entradas del jar); ausencia verificada por búsqueda
+  de referencias en `src/` y POM.
+- Revisión futura: decidir si el jar debe declararse en el POM.
+
+### SH-D-016 — Estado de la versión: no congelada, sin generación; backend sin soporte
+
+- Decisión: 1.1.0 queda `approved: true`, `frozen: false`, `generationEnabled: false`,
+  `readyToFreeze: false`. El backend batch actual (IR v1: connect, disconnect, list,
+  for-each, download, upload) **no soporta** el descifrado SOAP ni correo, ni conoce los
+  archivos nuevos del template; debe extenderse (nuevos pasos IR, inventario de plantillas,
+  pruebas, gate de consistencia) antes de habilitar esta versión. Los planificadores deben
+  detenerse con esta versión; no se rebajan a 1.0.0 en silencio.
+- Estado: **aprobada** (instrucción explícita).
+- Alcance: 1.1.0. SH-D-010 no se hereda.
+- Áreas: identity, readiness.generatorBackend*, limitations.
+- Evidencia: instrucción del usuario; contrato del backend
+  `batch-shell-contract.md` (solo referencia, no modificado).
+- Revisión futura: freeze tras validar, revisar SH-D-011…015 y extender el backend.
+
 ## Preguntas originales (histórico, resueltas arriba)
 
 El arquetipo conserva lo observado; las interrogantes siguientes no reabren las resoluciones.
@@ -264,3 +410,79 @@ El arquetipo conserva lo observado; las interrogantes siguientes no reabren las 
 
 Todas las referencias E-* están en `archetype.yml` (`evidence.entries`) con ruta y líneas
 dentro de `input/reference/SH_ObtenerTrasladarArchivosMTC/`.
+
+### SH-D-017 - Habilitacion de generacion de la version 1.1.0 (backend extendido)
+
+- Estado: aprobada por instruccion explicita del usuario; fecha 2026-10-30.
+- Evidencia textual del usuario: "Generalo de todas formas" y "Si el arquetipo lo excluyo, seria mejor generar un nuevo arquetipo que tenga en consideracion todo eso. Osea un arquetipo con el mismo nombre claro-java-8-shell".
+- Decision: `generationEnabled: true`; `frozen: false` y `readyToFreeze: false` (compilacion con `Lib/`, Spring 3.1/Java 8 y ejecucion sin verificar). Reemplaza solo el estado "sin generacion" de SH-D-016.
+- Backend: el planificador/materializador batch soporta el modulo `credential-decrypt-soap` mediante `credentialMode: decrypted-soap` (usuario/clave cifrados desde propiedades externas secretas, descifrado con `EbsConsultaClavesWSService.desencriptar`, `WSException` registrada y mapeada al resultado de falla general). El correo sigue NO soportado (SH-D-015) y detiene la generacion.
+- No se infiere autorizacion para Maven, red, ejecucion ni congelacion. v1.0.0 queda intacta.
+
+## Decisiones de la version 1.0.0 nueva (instruccion del usuario, 2026-10-31)
+
+Evidencia textual del usuario (H-NEW-2026-10-31): "Elimina las versiones de arquetipos que tenemos y genera una nueva. Quitar la config del arquetipo. En el caso de UtilSFTP, lo que se requiere es validar codigo no utilizado. Es decir, no deberia tener clases o utilidades que al final no se usan en el servicio. Ya que eso afecta a SonarQube."
+Observaciones de revision del documento "REVISION CODIGO GENERADO MTC.docx": (1) quitar config `.properties.j2` (no pasa por integracion continua); (2) evitar exclusiones para inflar la cobertura; (3) README y comentarios describen la plantilla, no una implementacion; (4) UtilSFTP y PropertiesException sin referencias.
+
+### SH-D-018 - Version nueva y retiro de las versiones anteriores
+
+- Estado: aprobada por instruccion explicita del usuario.
+- Decision: se eliminan las versiones 1.0.0 y 1.1.0 de `claro-java-8-shell` y se crea una version `1.0.0` nueva. No se tocan `claro-spring-ms` ni `claro-spring-java-8`. El arquetipo ya no incluye la plantilla de configuracion `config/*.properties.j2`; las claves externas requeridas se listan en el README generado y en el registro `required-properties.yml` del workspace.
+- Alcance: solo este arquetipo. Reemplaza lo dicho sobre la plantilla `.j2` en SH-D-004, SH-D-009 y SH-D-013.
+
+### SH-D-019 - Sin codigo no utilizado
+
+- Estado: aprobada por instruccion explicita del usuario.
+- Decision: el proyecto generado no contiene clases, utilidades ni campos de configuracion que el servicio no use (afecta a SonarQube). `UtilSFTP`, `BaseException` y `PropertiesException` no se incluyen en la plantilla (en la referencia solo `UtilSFTP` tiene llamadores, a traves de metodos delegadores del servicio de negocio excluido; las otras dos no se referencian). El planificador poda los modulos de plantilla no usados y el materializador falla si una clase principal queda sin referencias.
+- Limite: la poda es a nivel de clase, recurso y campo del modulo de descifrado; no elimina metodos sin uso dentro de clases conservadas ni dependencias del POM base.
+- Reemplaza SH-Q-006 (mantener UtilSFTP) y el patron de servicio `SP-TESTABILITY-DELEGATIONS`.
+
+### SH-D-020 - Sin exclusiones de cobertura ni de analisis
+
+- Estado: aprobada por instruccion explicita del usuario (prevalece sobre la evidencia de la referencia, cuyo POM declara `sonar.coverage.exclusions` y `sonar.exclusions`).
+- Decision: el POM de plantilla y el proyecto generado no declaran `sonar.coverage.exclusions` ni `sonar.exclusions`. El materializador falla si aparecen. Reemplaza SH-D-007 y SH-Q-008.
+- Consecuencia: SonarQube medira todas las clases; sin pruebas adicionales la cobertura sera baja en `util`, `proxy`, `exception` y la clase principal. No se generan pruebas extra salvo peticion.
+
+### SH-D-021 - Modulo de descifrado condicional y README de implementacion
+
+- Estado: aprobada por instruccion explicita del usuario (observaciones 3 y 4 del documento de revision).
+- Decision: el modulo `credential-decrypt-soap` (proxy, `WSException`, `applicationProxyWS.xml`, import del contexto y las cuatro propiedades `ws.ebsConsultaClavesWS.*`) solo se incluye cuando la especificacion usa `credentialMode: decrypted-soap`; si no, se poda. El README de plantilla usa marcadores que el materializador rellena (descripcion desde la IR, prerrequisitos y propiedades requeridas); el proyecto generado no describe una plantilla ni el arquetipo.
+- Estado de la version: `generationEnabled: true`, `frozen: false`, `readyToFreeze: false`; no se infiere autorizacion para Maven, red, ejecucion ni congelacion.
+
+### SH-D-022 - Alcance solo estructura y modulo SFTP condicional
+
+- Estado: aprobada por instruccion explicita del usuario. Contexto: el servicio `sh_batch_invoiceUpdateError` requiere persistencia en BD, clientes REST, correo y programacion, que este arquetipo no soporta (ninguno existe en su referencia). El usuario eligio generar solo lo posible: "La opcion 3, por el momento no tengo otro proyecto de referencia."
+- Decision: la IR admite `scope: structure-only` con `omittedBehavior` explicito (id, descripcion, evidencia Sparx literal), sin propiedades, conexiones ni pasos, y un unico resultado `generalFailure` (grupo idt1/idt2/idt3). El servicio generado no simula exito: registra el resultado de fallo e identifica el comportamiento omitido. La disponibilidad del modulo `sftp-transfer` (`SFTPConnectionManager`, `SFTPException`, `BaseExceptionSFTP`) depende de que existan conexiones SFTP; en estructura se poda (SH-D-019). No se inventa estilo de BD, REST ni correo.
+- Estado de la version: sin cambios (`generationEnabled: true`, `frozen: false`); no se autoriza Maven, red ni ejecucion.
+
+### SH-D-023 - Ambito ports-flow: flujo Sparx orquestado contra puertos
+
+- Estado: aprobada por instruccion explicita del usuario: "Genera el servicio tomando de base el arquetipo, y lo demas queda a tu criterio." (servicio sh_batch_invoiceUpdateError).
+- Decision: la IR admite `scope: ports-flow` ademas de `structure-only`. Declara `dtos` (campos String/Integer/Long/Boolean con evidencia Sparx literal), `ports` (kind db/rest/mail; metodos con parametros y retorno), `flow` (pasos `call` con politica de fallo abort/skip-item/log, `for-each` sin anidar e `if` con `<` sobre Integer o `present`) y `omittedBehavior` obligatorio. El materializador genera DTO POJO, interfaz y adaptador por puerto (el adaptador lanza `OperacionNoImplementadaException`; nunca simula una integracion), el servicio con el flujo y pruebas JUnit4/Mockito derivadas de cada ruta del flujo y de cada politica de fallo. Paquetes generados: `dto`, `port`, `exception`.
+- Limite: no implementa SQL, clientes HTTP, correo, URLs, propiedades de conexion ni programacion periodica; esos elementos permanecen en `omittedBehavior` y la readiness funcional/estricta sigue en false. No traslada JDBC, Spring Boot ni logging de otros arquetipos.
+- Estado de la version: sin cambios (`generationEnabled: true`, `frozen: false`); no se autoriza Maven, red ni ejecucion.
+
+### SH-D-024 - Adaptadores concretos por supuestos (JDBC, REST, correo) en ports-flow
+
+- Estado: aprobada por instruccion explicita del usuario: "Implementar con supuestos", "Si, solo para este caso de shell.", "Continua con todo lo que falta, hasta terminar el servicio." y "Generalo completamente. Librerias externas y maven obvialo por ahora, ya que no tengo VPN, continua hasta terminar de geenrar el proyecto por completo."
+- Decision: la IR ports-flow admite dapters opcionales por puerto. Cada metodo declara explicitamente (y siempre ssumed: true con evidencia Sparx literal) el SQL con sus binds y mapeo de columnas (db), el verbo, ruta, query y cuerpo (rest) o los placeholders (mail). El materializador genera util/ConexionBd (JDBC plano, driver externo), util/RestClienteHttp (Apache HttpClient + Jackson) y adaptadores <Port>Impl con pruebas JUnit4/Mockito para db y rest. Las propiedades de entorno (d.*, est.<puerto>.url, est.timeout.ms, mail.*) son campos @Value de PropertiesExterno, sin valores ni secretos, listadas en equired-properties.yml. Dependencias adicionales (jackson-databind, httpclient, javax.mail) se anaden al POM como adicion justificada sin podar el baseline. Un puerto sin adaptador sigue lanzando OperacionNoImplementadaException.
+- Limite: SQL, columnas, payloads, URLs, autenticacion, SMTP y tipo de base de datos son supuestos a validar contra los sistemas reales (registrados en ssumptions-register.yml); la programacion periodica es externa. La readiness funcional/estricta no se mejora. No traslada JDBC/Spring Boot de otros arquetipos ni se aplica a otros perfiles.
+- Estado de la version: sin cambios (generationEnabled: true, rozen: false); no se autoriza Maven, red ni ejecucion.
+
+### SH-D-025 - Configuracion generada en /config y nombre con underscores
+
+- Estado: aprobada por instruccion explicita del usuario: "Generar properties", "Va en /config. underscores solo en artifactId, jar y archivo de properties. Solo a este arquetipo shell y a este servicio. Continua."
+- Decision: el materializador genera config/<PROPERTIES_FILE_BASENAME>.properties con todas las claves requeridas y valores vacios (las secretas marcadas con comentario); no es plantilla del arquetipo. Reemplaza lo dicho en SH-D-018 sobre no incluir configuracion. ARTIFACT_ID y PROPERTIES_FILE_BASENAME admiten underscores (patrones ya vigentes).
+- Limite: sin valores reales ni secretos; solo perfil shell.
+- Estado de la version: sin cambios (generationEnabled: true, frozen: false); no se autoriza Maven, red ni ejecucion.
+
+### SH-D-026 - Carpeta del proyecto con el nombre de Sparx
+- Estado: aprobada por instruccion explicita del usuario: "El nombre del proyecto y el jar debe estar con guiones, igual como aparece en sparx." y "Asi como esta en sparx".
+- Decision: para este perfil shell la carpeta de salida puede ser output/<ARTIFACT_ID> (p. ej. output/sh_batch_invoiceUpdateError); el workspace sigue en kebab-case.
+- Estado de la version: sin cambios (generationEnabled: true, frozen: false); no se autoriza Maven, red ni ejecucion.
+
+### SH-D-027 - Flujos con bucles anidados, guardas y condiciones compuestas (ports-flow)
+- Estado: aprobada por instruccion explicita del usuario: "Genera todo el servicio completo hasta donde se pueda."; antecedentes: "Implementar con supuestos" y "Si, solo para este caso de shell.".
+- Decision: el modo ports-flow admite bucles for-each anidados (profundidad 2), pasos guard, condiciones simples o compuestas (all/any con <, present, nonempty, equals, true) y metodos REST con retorno Boolean (okStatus). Todo adaptador sigue marcado assumed y el comportamiento no definido en Sparx permanece en omittedBehavior.
+- Limite: solo perfil shell; sin Maven, red ni ejecucion.
+- Estado de la version: sin cambios (generationEnabled: true, frozen: false).
