@@ -111,12 +111,12 @@ class ValidatorTests(unittest.TestCase):
         direct.write_text('package com.acme.inventory.core.service;\n\npublic class HandWritten {\n}\n', encoding='utf-8')
         self.assertIn('noUnplannedJava', self.failed('inventory-service'))
 
-    def test_partial_runs_are_validated_against_the_supported_subset_and_flagged_incomplete(self):
+    def test_partial_runs_are_rejected_before_creating_output(self):
         fx.ready_service(self.repo, 'inventory-service', with_unsupported=True)
-        mz.materialize(self.repo, 'inventory-service', supported_only=True)
-        result = vg.validate(self.repo, 'inventory-service')
-        self.assertEqual(result['status'], 'passed', result['violations'])
-        self.assertFalse(result['complete'])
+        with self.assertRaises(mz.MaterializationError) as error:
+            mz.materialize(self.repo, 'inventory-service', supported_only=True)
+        self.assertFalse(error.exception.details['preflight']['feasible'])
+        self.assertFalse((self.repo / 'output/inventory-service').exists())
 
     def test_application_properties_is_neither_read_nor_reported(self):
         out = self.generate('inventory-service')

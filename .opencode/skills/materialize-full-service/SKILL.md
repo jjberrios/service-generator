@@ -25,9 +25,15 @@ Scripts (`.opencode/skills/materialize-full-service/scripts/`): `full_materializ
 Run through `python .opencode/skills/service-workspace/scripts/workspace_cli.py materialize <service> [--supported-only] [--dry-run]`.
 
 ## Controls (nothing is written before all pass)
+The FULL technical preflight is mandatory before generated writes, including
+direct public backend calls. See `docs/feasibility-preflight-v1.md` and
+`workspace_cli.py preflight <service>`. Unsupported, unknown or blocked mandatory
+requirements stop FULL generation. Historical `--supported-only` guidance below
+is superseded: that flag now fails preflight; no partial mode is authorized.
+Feasibility never replaces business authorization or the consistency gate.
 1. The Sparx/Swagger consistency gate is recomputed and must be CLEARED (a blocked service writes no Java and leaves its workspace untouched). The skill is registered as post-gate, so the sandbox runner refuses it too.
 2. The workspace plan must be a ready full plan of this service, built from the current workspace `service-spec.yml` and the current archetype fingerprint; planned paths must be relative and safe.
-3. Components outside the supported set stop the operation (exit 4, nothing written). `--supported-only` writes only the supported ones and marks the manifest `complete: false`.
+3. Components outside the supported set stop the operation (exit 4, nothing written). `--supported-only` is rejected by FULL preflight.
 4. Every file goes through `file_protection`: manual, untracked or user-owned content is preserved (exit 3, nothing written) unless an authorization bound to its exact content exists; `application*.properties` is never read, listed, written or blocking.
 5. `guard_write` is re-checked immediately before each write; writes are atomic and recorded with hashes in `.generation-manifest.yml`. The orchestrator has no edit permission on `output/**`.
 
@@ -46,7 +52,7 @@ Supported pattern: one JPA entity with a Long IDENTITY key; at most one search (
 
 ## Not supported (the WHOLE generation stops, nothing is written)
 `repository-persistence-test` (needs an in-memory database absent from the approved POM; adding one needs authorization), test files whose name matches no generator, `remove` actions, other key/column types, enum parameters, cookie parameters, second search operation, write responses with extra fields (for example a generated id: needs an approved decision), unknown rule kinds or filter matches,
-activity flows other than validation+behavior, an empty-result or not-found outcome the contract does not declare, a success message absent from the contract example. `--supported-only` writes the supported files and marks the manifest `complete: false`.
+activity flows other than validation+behavior, an empty-result or not-found outcome the contract does not declare, a success message absent from the contract example. There is no FULL partial-generation override.
 
 ## Assumption register
 `assumptions-register.yml` (workspace) lists every implemented rule by source: `sparx`, `swagger`, `human-decision`, `archetype-technical`. Human decisions the plan relies on must exist as approved reviews in the workspace. Functional assumptions

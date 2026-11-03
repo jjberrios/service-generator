@@ -21,6 +21,9 @@ import os
 import sys
 import yaml
 
+# Keep one backend/error identity when invoked as a CLI and reused by preflight.
+sys.modules.setdefault('full_materializer', sys.modules[__name__])
+
 HERE = Path(__file__).resolve().parent
 SKILLS = HERE.parents[1]
 sys.path.insert(0, str(HERE))
@@ -313,6 +316,8 @@ def materialize(repo: Path, service: str, supported_only: bool = False, dry_run:
     gate.check_cleared(wsm.Workspace(repo, service).dir, repo, service)
     try:
         with service_lock(repo, service):
+            import feasibility_preflight
+            feasibility_preflight.enforce(repo, service, supported_only=supported_only, assemble=assemble)
             return _materialize_unlocked(repo, service, supported_only, dry_run, assemble)
     except IntegrityError as error:
         raise MaterializationError('integrity', str(error)) from error
@@ -350,11 +355,11 @@ def _materialize_unlocked(repo: Path, service: str, supported_only: bool = False
         if profile == batch.PROFILE:
             if supported_only or not assemble:
                 raise MaterializationError('unsupported', 'batch requires full atomic project assembly; partial generation is not supported')
-            return batch.materialize(repo, service, dry_run)
+            return batch._materialize_checked(repo, service, dry_run)
         import jdbc_war_materializer as jdbc
         if profile != jdbc.PROFILE:
             raise MaterializationError('unsupported', f'generation profile {profile!r} has no materializer', {'unsupported': [{'path': 'implementation-plan.yml', 'componentType': 'profile', 'reason': profile}]})
-        return jdbc.materialize(repo, service, dry_run)
+        return jdbc._materialize_checked(repo, service, dry_run)
     plan, plan_bytes = load_plan(ws, repo)
     out_dir = repo / plan['service']['outputDirectory']
     for entry in plan['files']['generate']:
@@ -471,7 +476,7 @@ def main(argv=None) -> int:
     except MaterializationError as error:
         print(f'full_materializer: {error}', file=sys.stderr)
         print(yaml.safe_dump(error.details, allow_unicode=True), file=sys.stderr)
-        return 4 if error.kind == 'unsupported' else 3 if error.kind in ('protected-files', 'pending-functional-assumptions', 'missing-decision', 'missing-parameter', 'invalid-parameter', 'parameter-conflict') else 2
+        return 4 if error.kind in ('unsupported', 'preflight-failed') else 3 if error.kind in ('protected-files', 'pending-functional-assumptions', 'missing-decision', 'missing-parameter', 'invalid-parameter', 'parameter-conflict') else 2
 
 
 if __name__ == '__main__':

@@ -450,6 +450,12 @@ def render_project(plan, repo):
 
 
 def materialize(repo, service, dry_run=False):
+    import feasibility_preflight
+    feasibility_preflight.enforce(repo, service)
+    return _materialize_checked(repo, service, dry_run)
+
+
+def _materialize_checked(repo, service, dry_run=False):
     import full_materializer as fm
     repo = Path(repo).resolve()
     ws = fm.wsm.Workspace(repo, service)

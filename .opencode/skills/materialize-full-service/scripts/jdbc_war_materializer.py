@@ -888,6 +888,12 @@ def _register(plan, ws, fm):
 
 
 def materialize(repo: Path, service: str, dry_run: bool = False) -> dict:
+    import feasibility_preflight
+    feasibility_preflight.enforce(repo, service)
+    return _materialize_checked(repo, service, dry_run)
+
+
+def _materialize_checked(repo: Path, service: str, dry_run: bool = False) -> dict:
     import full_materializer as fm
     fp, gate, wsm = fm.fp, fm.gate, fm.wsm
     repo = Path(repo).resolve()

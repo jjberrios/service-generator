@@ -11,6 +11,7 @@
   workspace_cli.py gate-authorize <service> --by NAME --statement "user words"
   workspace_cli.py gate-check <service>                       (exit 3 unless CLEARED)
   workspace_cli.py resume <service>                           (re-evaluates; a blocked service stays blocked)
+  workspace_cli.py preflight <service>                        (read-only YAML feasibility; exit 4 unless all mandatory requirements supported)
   workspace_cli.py materialize <service> [--supported-only] [--dry-run] [--no-assemble]   (deterministic FULL materializer; gate and file protection enforced inside)
   workspace_cli.py protect-check <service> --plan <implementation-plan.yml>   (exit 3 when manual content would be overwritten)
   workspace_cli.py protect-authorize <service> <relative-path> --by NAME --reason TEXT
@@ -32,7 +33,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('list')
-    for name in ('init', 'status', 'gate-evaluate', 'gate-check', 'resume'):
+    for name in ('init', 'status', 'gate-evaluate', 'gate-check', 'resume', 'preflight'):
         sub.add_parser(name).add_argument('service')
     m = sub.add_parser('migrate-archive')
     m.add_argument('service')
@@ -117,6 +118,14 @@ def main(argv=None) -> int:
             result = ws.resume()
             print(json.dumps({'resumable': result['resumable'], 'status': result['gate']['status']}))
             return 0 if result['resumable'] else 3
+        elif args.command == 'preflight':
+            scripts = Path(__file__).resolve().parents[2] / 'materialize-full-service' / 'scripts'
+            sys.path.insert(0, str(scripts))
+            import full_materializer  # initializes shared backend imports
+            import feasibility_preflight
+            report = feasibility_preflight.evaluate(repo, args.service)
+            print(yaml.safe_dump(report, allow_unicode=True, sort_keys=False))
+            return 0 if report['feasible'] else 4
         elif args.command == 'materialize':
             script = Path(__file__).resolve().parents[2] / 'materialize-full-service' / 'scripts' / 'full_materializer.py'
             import subprocess

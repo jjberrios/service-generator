@@ -142,14 +142,12 @@ class UnsupportedPatternTests(Base):
         self.assertFalse(self.out('inventory-service').exists())
         self.assertEqual(self.java(), [])
 
-    def test_supported_only_writes_just_the_supported_files_and_marks_the_manifest_incomplete(self):
+    def test_supported_only_cannot_bypass_full_feasibility(self):
         fx.ready_service(self.repo, 'inventory-service', with_unsupported=True)
-        report = mz.materialize(self.repo, 'inventory-service', supported_only=True)
-        self.assertEqual(report['status'], 'partial-supported-only')
-        self.assertFalse(any('PersistenceTest' in p for p in report['written']))
-        manifest = yaml.safe_load((self.out('inventory-service') / '.generation-manifest.yml').read_bytes())
-        self.assertFalse(manifest['complete'])
-        self.assertEqual(manifest['unsupportedComponents'][0]['componentType'], 'repository-persistence-test')
+        with self.assertRaises(mz.MaterializationError) as caught:
+            mz.materialize(self.repo, 'inventory-service', supported_only=True)
+        self.assertFalse(caught.exception.details['preflight']['feasible'])
+        self.assertFalse(self.out('inventory-service').exists())
 
     def test_unsupported_attributes_and_actions_are_refused_not_approximated(self):
         cases = {

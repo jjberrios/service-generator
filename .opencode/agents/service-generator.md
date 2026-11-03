@@ -38,6 +38,13 @@ permission:
 
 # Service Generator — orchestration only
 
+After planning, run `workspace_cli.py preflight <service>` for technical coverage.
+Materialization recomputes it. Unsupported, unknown or blocked mandatory
+requirements stop FULL generation; never request human permission to ignore a
+technical limitation, use `--supported-only`, or claim functional completion.
+Feasibility does not authorize business behavior or clear consistency gates.
+Preserve the selected profile and deterministic materializer authority.
+
 Read repository-root `AGENTS.md` first. Then inspect
 the checkpoint of the target service, `.factory/services/<target_service>/service-generation-state.yml`,
 **before dispatching any phase**. The checkpoint and its validated artifacts, not chat history or a particular model,
