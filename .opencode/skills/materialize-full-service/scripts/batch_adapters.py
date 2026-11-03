@@ -50,9 +50,9 @@ def rest_cliente_source(plan):
         'import org.springframework.beans.factory.annotation.Autowired;', 'import org.springframework.stereotype.Component;', '',
         '@Component', 'public class RestClienteHttp {', '',
         '  @Autowired', '  private PropertiesExterno externalProperties;', '',
-        '  private HttpRequestBase crear(String metodo, String url, String cuerpoJson) throws Exception {',
-        '    int tiempo = externalProperties.restTimeoutMs == null || externalProperties.restTimeoutMs.trim().isEmpty()',
-        '        ? 0 : Integer.parseInt(externalProperties.restTimeoutMs.trim());',
+        '  private HttpRequestBase crear(String metodo, String url, String cuerpoJson, String tiempoMs) throws Exception {',
+        '    int tiempo = tiempoMs == null || tiempoMs.trim().isEmpty()',
+        '        ? 0 : Integer.parseInt(tiempoMs.trim());',
         '    RequestConfig configuracion = RequestConfig.custom().setConnectTimeout(tiempo).setSocketTimeout(tiempo).build();',
         '    HttpRequestBase peticion;',
         '    if ("POST".equals(metodo)) {', '      peticion = new HttpPost(url);',
@@ -63,12 +63,12 @@ def rest_cliente_source(plan):
         '      ((HttpEntityEnclosingRequestBase) peticion).setEntity(new StringEntity(cuerpoJson, ContentType.APPLICATION_JSON));',
         '    }',
         '    return peticion;', '  }', '',
-        '  public int ejecutarEstado(String metodo, String url, String cuerpoJson) throws Exception {',
-        '    HttpRequestBase peticion = crear(metodo, url, cuerpoJson);',
+        '  public int ejecutarEstado(String metodo, String url, String cuerpoJson, String tiempoMs) throws Exception {',
+        '    HttpRequestBase peticion = crear(metodo, url, cuerpoJson, tiempoMs);',
         '    try (CloseableHttpClient cliente = HttpClients.createDefault(); CloseableHttpResponse respuesta = cliente.execute(peticion)) {',
         '      return respuesta.getStatusLine().getStatusCode();', '    }', '  }', '',
-        '  public String ejecutar(String metodo, String url, String cuerpoJson) throws Exception {',
-        '    HttpRequestBase peticion = crear(metodo, url, cuerpoJson);',
+        '  public String ejecutar(String metodo, String url, String cuerpoJson, String tiempoMs) throws Exception {',
+        '    HttpRequestBase peticion = crear(metodo, url, cuerpoJson, tiempoMs);',
         '    try (CloseableHttpClient cliente = HttpClients.createDefault(); CloseableHttpResponse respuesta = cliente.execute(peticion)) {',
         '      int estado = respuesta.getStatusLine().getStatusCode();',
         '      if (estado == 404) {', '        return null;', '      }',
@@ -185,9 +185,9 @@ def _rest_method(port, pm, am, dtos):
         lines.append('      java.util.Map<String, Object> cuerpo = new java.util.LinkedHashMap<>();')
         lines += [f'      cuerpo.put({pf.literal(b["json"])}, {pf.literal(b["value"]) if "value" in b else _ref(b["from"])});' for b in am['body']]
         lines.append('      String cuerpoJson = MAPPER.writeValueAsString(cuerpo);')
-        call = f'restCliente.ejecutar({pf.literal(am["httpMethod"])}, {url}, cuerpoJson)'
+        call = f'restCliente.ejecutar({pf.literal(am["httpMethod"])}, {url}, cuerpoJson, externalProperties.rest{port["id"]}TimeoutMs)'
     else:
-        call = f'restCliente.ejecutar({pf.literal(am["httpMethod"])}, {url}, null)'
+        call = f'restCliente.ejecutar({pf.literal(am["httpMethod"])}, {url}, null, externalProperties.rest{port["id"]}TimeoutMs)'
     ret = pm['returns']
     if ret == 'Boolean':
         ok = ' || '.join(f'estado == {s}' for s in am.get('okStatus', []))
@@ -399,7 +399,7 @@ def adapter_test_source(plan, batch, port):
             body = 'anyString()' if am['body'] else 'any()'
             if ret == 'Boolean':
                 ok = am.get('okStatus', [])
-                est = f'eq({verb}), contains({pf.literal(am["path"])}), {body}'
+                est = f'eq({verb}), contains({pf.literal(am["path"])}), {body}, org.mockito.ArgumentMatchers.<String>any()'
                 lines += ['', '  @Test', f'  public void {mn}_exitoConEstado2xx() throws Exception {{',
                           f'    when(restCliente.ejecutarEstado({est})).thenReturn(200);', f'    assertEquals(Boolean.TRUE, {call});', '  }',
                           '', '  @Test', f'  public void {mn}_falloConEstado500() throws Exception {{',
@@ -413,20 +413,20 @@ def adapter_test_source(plan, batch, port):
                 continue
             if ret == 'void':
                 lines += ['', '  @Test', f'  public void {mn}_invocaElServicio() throws Exception {{', f'    {call};',
-                          f'    verify(restCliente).ejecutar(eq({verb}), contains({pf.literal(am["path"])}), {body});', '  }']
+                          f'    verify(restCliente).ejecutar(eq({verb}), contains({pf.literal(am["path"])}), {body}, org.mockito.ArgumentMatchers.<String>any());', '  }']
             else:
                 dto = _elem(ret)
                 payload = '"[{}]"' if ret.startswith('List<') else '"{}"'
                 lines += ['', '  @Test', f'  public void {mn}_interpretaLaRespuesta() throws Exception {{',
-                          f'    when(restCliente.ejecutar(eq({verb}), contains({pf.literal(am["path"])}), {body})).thenReturn({payload});',
+                          f'    when(restCliente.ejecutar(eq({verb}), contains({pf.literal(am["path"])}), {body}, org.mockito.ArgumentMatchers.<String>any())).thenReturn({payload});',
                           f'    assertNotNull({call});']
                 if ret.startswith('List<'):
                     lines.append(f'    assertEquals(1, {call}.size());')
                 lines += ['  }', '', '  @Test', f'  public void {mn}_respuestaVaciaDevuelveNull() throws Exception {{',
-                          f'    when(restCliente.ejecutar(eq({verb}), contains({pf.literal(am["path"])}), {body})).thenReturn(null);',
+                          f'    when(restCliente.ejecutar(eq({verb}), contains({pf.literal(am["path"])}), {body}, org.mockito.ArgumentMatchers.<String>any())).thenReturn(null);',
                           f'    assertNull({call});', '  }']
             lines += ['', '  @Test(expected = IllegalStateException.class)',
                       f'  public void {mn}_traduceLosErrores() throws Exception {{',
-                      f'    when(restCliente.ejecutar(eq({verb}), contains({pf.literal(am["path"])}), {body})).thenThrow(new Exception("fallo"));',
+                      f'    when(restCliente.ejecutar(eq({verb}), contains({pf.literal(am["path"])}), {body}, org.mockito.ArgumentMatchers.<String>any())).thenThrow(new Exception("fallo"));',
                       f'    {call};', '  }']
     return '\n'.join(lines + ['}', ''])

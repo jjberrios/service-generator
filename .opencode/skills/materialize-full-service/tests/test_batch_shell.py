@@ -586,7 +586,7 @@ class BatchPortsFlowTests(BatchShellTests):
             self.assertIn(path, rendered)
         self.assertNotIn('src/test/java/pe/com/claro/shell/example/port/MailerImplTest.java', rendered)
         props = rendered[base + 'util/PropertiesExterno.java'][1]
-        for key in ('bd.url', 'bd.password', 'rest.remote.url', 'rest.timeout.ms', 'mail.smtp.host', 'mail.from'):
+        for key in ('bd.url', 'bd.password', 'rest.remote.url', 'rest.remote.timeout.ms', 'mail.smtp.host', 'mail.from'):
             self.assertIn('${' + key + '}', props)
         pom = rendered['pom.xml'][1]
         for artifact in ('jackson-databind', 'httpclient', 'javax.mail'):

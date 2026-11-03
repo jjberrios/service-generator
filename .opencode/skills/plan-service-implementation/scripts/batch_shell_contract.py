@@ -339,8 +339,8 @@ def adapter_properties(batch):
         for adapter in batch['adapters']:
             if ports[adapter['port']] == 'rest':
                 pid = adapter['port']
-                out.append((f'rest.{pid.lower()}.url', f'rest{pid}Url', False))
-        out.append(('rest.timeout.ms', 'restTimeoutMs', False))
+                out += [(f'rest.{pid.lower()}.url', f'rest{pid}Url', False),
+                        (f'rest.{pid.lower()}.timeout.ms', f'rest{pid}TimeoutMs', False)]
     if 'mail' in kinds:
         out += [('mail.smtp.host', 'mailSmtpHost', False), ('mail.smtp.port', 'mailSmtpPort', False),
                 ('mail.smtp.user', 'mailSmtpUser', False), ('mail.smtp.password', 'mailSmtpPassword', True),
