@@ -23,7 +23,7 @@ SCAFFOLD_ARTIFACTS = {
     "template/Dockerfile", "template/config/ExternalSecret.yml.j2", "template/config/configmap.yml.j2",
     "template/config/deployment.yml.j2", "template/mvnw", "template/mvnw.cmd", "template/pom.xml",
     "template/settings.xml", "template/src/main/java/__BASE_PACKAGE_PATH__/__APPLICATION_CLASS__.java",
-    "template/src/main/java/__BASE_PACKAGE_PATH__/configuration/openapi/OpenApiConfig.java",
+    "template/src/main/java/__BASE_PACKAGE_PATH__/configuration/swagger/SwaggerConfig.java",
     "template/src/main/java/__BASE_PACKAGE_PATH__/configuration/security/SecurityConfig.java",
     "template/src/main/java/__BASE_PACKAGE_PATH__/security/filter/JwtRequestFilter.java",
     "template/src/main/java/__BASE_PACKAGE_PATH__/security/service/JwtValidatorService.java",

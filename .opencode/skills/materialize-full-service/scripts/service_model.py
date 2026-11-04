@@ -177,6 +177,7 @@ def build_operation(raw, logging_ops, models, entity_fields, by_column, roles, c
             schema = p['schema']
             need(p['name'] and p.get('in') == where, f'{op_id}: malformed parameter')
             params[where].append({'name': p['name'], 'java': ident(camel(p['name']), 'parameter name'), 'type': java_type(schema), 'required': bool(p.get('required')),
+                                  'description': p.get('description') if isinstance(p.get('description'), str) else None,
                                   'annotations': param_annotations(schema)})
     java_names = [p['java'] for w in ('path', 'query', 'header') for p in params[w]]
     need(len(java_names) == len(set(java_names)), f'{op_id}: parameter names collide after normalization')
@@ -241,6 +242,15 @@ def select_details(op, raw, models, entity_fields, by_column):
         need(param['type'] == 'String' and (entity_type == 'String' or entity_type in CONVERTIBLE), f'{op["id"]}: filter {param["name"]} needs an unsupported conversion')
         filters.append({'param': param['java'], 'prop': f['modelProperty'], 'type': entity_type, 'match': f['effectiveMatch'], 'sql': f.get('column', {}).get('dataType') or entity_fields[f['modelProperty']].get('sqlType')})
     need(filters, f'{op["id"]}: no filters')
+    fixed = []
+    for f in query.get('fixedPredicates') or []:
+        prop = f['modelProperty']
+        need(prop in entity_fields and f.get('operator') == '=', f'{op["id"]}: fixed predicate on {prop} is not supported')
+        entity_type = entity_fields[prop]['javaType']
+        value = f['value']
+        need((entity_type in ('Integer', 'Long', 'String')) and isinstance(value, str if entity_type == 'String' else int) and not isinstance(value, bool), f'{op["id"]}: fixed predicate literal does not match {entity_type}')
+        fixed.append({'prop': prop, 'type': entity_type, 'value': value})
+    need(not fixed or policy['combinator'] == 'AND', f'{op["id"]}: fixed predicates require the AND combinator')
     pagination = query.get('pagination') or {}
     page_params = []
     if pagination:
@@ -253,10 +263,14 @@ def select_details(op, raw, models, entity_fields, by_column):
     response = models[op['successModel']]
     fields = {f['name']: f for f in response['fields']}
     need({'code', 'message', 'data'} <= set(fields) and fields['code']['javaType'] == 'Integer' and fields['message']['javaType'] == 'String', f'{op["id"]}: unsupported response envelope')
-    data = models[fields['data']['javaType']]
-    lists = [f for f in data['fields'] if f['javaType'].startswith('List<')]
-    need(len(data['fields']) == 1 and len(lists) == 1, f'{op["id"]}: the data model must hold exactly one list')
-    item_name = lists[0]['javaType'][5:-1]
+    data_type = fields['data']['javaType']
+    if data_type.startswith('List<'):
+        data, lists, item_name = None, [{'name': None}], data_type[5:-1]
+    else:
+        data = models[data_type]
+        lists = [f for f in data['fields'] if f['javaType'].startswith('List<')]
+        need(len(data['fields']) == 1 and len(lists) == 1, f'{op["id"]}: the data model must hold exactly one list')
+        item_name = lists[0]['javaType'][5:-1]
     need(item_name in models, f'{op["id"]}: list item model missing')
     items = {f['name']: f for f in models[item_name]['fields']}
     columns = []
@@ -267,8 +281,8 @@ def select_details(op, raw, models, entity_fields, by_column):
         need(item_type == entity_type or (item_type == 'String' and entity_type in CONVERTIBLE), f'{op["id"]}: output {target} needs an unsupported conversion')
         columns.append({'field': target, 'prop': c['modelProperty'], 'entityType': entity_type, 'itemType': item_type, 'enum': (items[target].get('declaredConstraints') or {}).get('enum')})
     need(columns, f'{op["id"]}: no selected columns')
-    op.update({'filters': filters, 'policy': {'min': policy['minimumActiveFilters'], 'combinator': policy['combinator']}, 'page': page_params, 'orderProp': order['property'],
-               'dataModel': data['name'], 'listProp': lists[0]['name'], 'itemModel': item_name, 'columns': columns, 'criteriaType': None})
+    op.update({'filters': filters, 'fixed': fixed, 'policy': {'min': policy['minimumActiveFilters'], 'combinator': policy['combinator']}, 'page': page_params, 'orderProp': order['property'],
+               'dataModel': data['name'] if data else None, 'listProp': lists[0]['name'], 'itemModel': item_name, 'columns': columns, 'criteriaType': None})
 
 
 def write_details(op, raw, models, entity_fields, by_column, params, components):

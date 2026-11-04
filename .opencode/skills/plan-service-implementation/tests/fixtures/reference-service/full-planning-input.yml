@@ -11,7 +11,7 @@ target:
   group_id: com.claro.document.mailing.info.support
   project_version: 1.0.0-SNAPSHOT
   output_directory: output/dom-document-mailing-info
-  archetype: archetypes/claro-spring-ms/v1.0.0
+  archetype: archetypes/claro-spring-ms/v1.0.1
 naming:
   domain_prefix: MailingInformation
   table_models:

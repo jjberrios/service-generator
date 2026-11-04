@@ -15,6 +15,15 @@
   workspace_cli.py materialize <service> [--supported-only] [--dry-run] [--no-assemble]   (deterministic FULL materializer; gate and file protection enforced inside)
   workspace_cli.py protect-check <service> --plan <implementation-plan.yml>   (exit 3 when manual content would be overwritten)
   workspace_cli.py protect-authorize <service> <relative-path> --by NAME --reason TEXT
+  workspace_cli.py decision-request-create <service> --proposal <workspace-relative.yml>
+  workspace_cli.py decision-request-list <service>
+  workspace_cli.py decision-request-show <service> <request-id>
+  workspace_cli.py decision-request-context <service> [--purpose PURPOSE | --request REQUEST_ID]
+  workspace_cli.py decision-request-status <service> <request-id>
+  workspace_cli.py decision-request-stale <service>
+
+Decision requests are proposals only. Legacy gate-resolve/gate-authorize remain
+unchanged and do NOT authenticate humans (H-02 remains open pending stage 2B).
 """
 from pathlib import Path
 import argparse
@@ -70,6 +79,19 @@ def main(argv=None) -> int:
     pa.add_argument('path')
     pa.add_argument('--by', required=True)
     pa.add_argument('--reason', required=True)
+    import decision_context as dc
+    for name in ('decision-request-create', 'decision-request-list', 'decision-request-show',
+                 'decision-request-context', 'decision-request-status', 'decision-request-stale'):
+        cmd = sub.add_parser(name)
+        cmd.add_argument('service')
+        if name == 'decision-request-create':
+            cmd.add_argument('--proposal', required=True)
+        if name in ('decision-request-show', 'decision-request-status'):
+            cmd.add_argument('request_id')
+        if name == 'decision-request-context':
+            choice = cmd.add_mutually_exclusive_group(required=True)
+            choice.add_argument('--purpose', choices=dc.PURPOSES)
+            choice.add_argument('--request')
     args = parser.parse_args(argv)
     repo = Path.cwd().resolve()
     try:
@@ -80,6 +102,8 @@ def main(argv=None) -> int:
             print(yaml.safe_dump(mig.migrate_root_active(repo), allow_unicode=True))
             return 0
         ws = wsm.Workspace(repo, args.service)
+        if args.command.startswith('decision-request-'):
+            return decision_command(args, ws)
         if args.command == 'init':
             ws.ensure()
             ws.set_state(schemaVersion=1, status=ws.state().get('status', 'idle'))
@@ -144,6 +168,38 @@ def main(argv=None) -> int:
         return 0
     except (gate.GateError, wsm.WorkspaceError, mig.MigrationError, fp.ProtectedFileError) as error:
         print(f'workspace_cli: {type(error).__name__}: {error}', file=sys.stderr)
+        return 3
+
+
+def decision_command(args, ws):
+    """Proposal-only CLI branch; intentionally never refreshes gate/checkpoint."""
+    import decision_context as dc
+    import decision_requests as dr
+    from artifact_integrity import safe_path, protected
+    from generation_context import load_mapping
+    try:
+        command = args.command.removeprefix('decision-request-')
+        code = 0
+        if command == 'create':
+            if protected(args.proposal):
+                raise dc.DecisionError('protected-proposal-path')
+            proposal = load_mapping(safe_path(ws.dir, args.proposal))
+            out = dr.create(ws.repo, ws.service, proposal)
+        elif command in ('list', 'stale'):
+            out = dr.list_requests(ws.repo, ws.service, stale_only=command == 'stale')
+        elif command == 'show':
+            out = dr.read(ws.repo, ws.service, args.request_id)
+        elif command == 'status':
+            out = dr.status(ws.repo, ws.service, args.request_id)
+            code = 0 if out['validity'] == 'current' else 4
+        elif args.request:
+            out = dr.read(ws.repo, ws.service, args.request)['context']
+        else:
+            out = dc.build(ws.repo, ws.service, args.purpose)
+        print(yaml.safe_dump(out, sort_keys=True, allow_unicode=True, width=100))
+        return code
+    except (ValueError, OSError, TypeError, KeyError, AttributeError, RecursionError, yaml.YAMLError) as error:
+        print(f'decision-request: {type(error).__name__}: {error}', file=sys.stderr)
         return 3
 
 

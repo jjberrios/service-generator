@@ -154,6 +154,33 @@ def signature_params(op, constants=None):
     return out
 
 
+def _doc_text(text) -> str:
+    return ' '.join(str(text).split()).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('*/', '*&#47;').replace('@', '&#64;')
+
+
+def _doc_lines(prefix: str, text, indent: str = '     * ') -> list:
+    words = [prefix + _doc_text(text)] if prefix else [_doc_text(text)]
+    parts = chunks(words[0], 110)
+    first = indent[:-2] if False else indent
+    return [first + parts[0].strip()] + [indent + ('  ' if prefix else '') + p.strip() for p in parts[1:]]
+
+
+def api_javadoc(op, params):
+    summary = op['summary'] or f'Expone la operación {op["id"]} del contrato.'
+    lines = ['    /**'] + _doc_lines('', summary)
+    if op['description'] and op['description'].strip() != summary.strip():
+        lines += ['     * <p>'] + _doc_lines('', op['description']) + ['     * </p>']
+    lines.append('     *')
+    for p in params:
+        text = p.get('description') or f'Valor de {p["name"]} definido en el contrato.'
+        lines += _doc_lines(f'@param {p["java"]} ', text)
+    if op['requestModel']:
+        lines += _doc_lines('@param request ', 'cuerpo de la solicitud definido en el contrato')
+    lines += _doc_lines('@return ', f'respuesta HTTP con el modelo {op["successModel"]} definido en el contrato')
+    lines.append('     */')
+    return lines
+
+
 def api_interface(M, path):
     name = class_of(path)
     imports = {'org.springframework.http.ResponseEntity', 'io.swagger.v3.oas.annotations.Operation', 'io.swagger.v3.oas.annotations.media.Content', 'io.swagger.v3.oas.annotations.media.Schema',
@@ -164,7 +191,8 @@ def api_interface(M, path):
     for op in M['ops']:
         imports.add(f'org.springframework.web.bind.annotation.{HTTP_VERBS[op["method"]]}')
         mapping = f'@{HTTP_VERBS[op["method"]]}(path = {java_string(op["path"])}' + (', consumes = {"application/json"}' if op['requestModel'] else '') + ', produces = {"application/json"})'
-        lines = ['    ' + mapping]
+        flat_params = [p for w in ('path', 'query', 'header') for p in op['params'][w]]
+        lines = api_javadoc(op, flat_params) + ['    ' + mapping]
         if op['summary'] or op['description']:
             parts = []
             if op['summary']:
@@ -203,7 +231,9 @@ def api_interface(M, path):
     if validated:
         imports.add('org.springframework.validation.annotation.Validated')
     constant_block = ''.join(f'    public static final {api_constants[k]}\n' for k in sorted(api_constants)) + ('\n' if api_constants else '')
-    text = header(path, imports) + top + f'public interface {name} {{\n' + constant_block + '\n\n'.join(methods) + '\n}\n'
+    doc = ['/**', ' * Define el contrato de los endpoints REST expuestos por el microservicio.', ' * <p>', ' * Agrupa las operaciones disponibles para los consumidores externos, con los parámetros,',
+           ' * encabezados y modelos de respuesta definidos en el contrato OpenAPI.', ' * </p>', ' */']
+    text = header(path, imports) + '\n'.join(doc) + '\n' + top + f'public interface {name} {{\n' + constant_block + '\n\n'.join(methods) + '\n}\n'
     return check_lines(text, name)
 
 
@@ -273,6 +303,9 @@ def specification(M, path):
     imports = {M['entity']['fqn'], f'{package_of(M["paths"]["internal-query-model"])}.{crit}', 'jakarta.persistence.criteria.CriteriaBuilder', 'jakarta.persistence.criteria.Expression',
                'jakarta.persistence.criteria.Predicate', 'jakarta.persistence.criteria.Root', 'java.util.ArrayList', 'java.util.List', 'java.util.Locale', 'org.springframework.data.jpa.domain.Specification'}
     body = []
+    for fx in op['fixed']:
+        lit = java_string(fx['value']) if fx['type'] == 'String' else (f'{fx["value"]}L' if fx['type'] == 'Long' else str(fx['value']))
+        body.append(f'            predicates.add(builder.equal(root.get({java_string(fx["prop"])}), {lit}));')
     for f in op['filters']:
         if f['match'] == 'exact':
             body.append(f'            if (criteria.{f["prop"]}() != null) {{\n                predicates.add(builder.equal(root.get({java_string(f["prop"])}), criteria.{f["prop"]}()));\n            }}')
@@ -280,13 +313,17 @@ def specification(M, path):
             body.append(f'            contains(predicates, builder, root, {java_string(f["prop"])}, criteria.{f["prop"]}());')
     combine = 'builder.or' if op['policy']['combinator'] == 'OR' else 'builder.and'
     empty = 'builder.disjunction()' if op['policy']['combinator'] == 'OR' else 'builder.conjunction()'
-    return (header(path, imports) + f'/** Dynamic search specification: supplied filters are combined with {op["policy"]["combinator"]}; text filters are case-insensitive literal substring matches. */\n'
-            f'public final class {name} {{\n    private static final char ESCAPE = \'\\\\\';\n\n    private {name}() {{\n    }}\n\n'
+    has_contains = any(f['match'] == 'contains' for f in op['filters'])
+    kinds = 'equality for exact filters' + ('; text filters are case-insensitive literal substring matches' if has_contains else '')
+    escape_const = "    private static final char ESCAPE = '\\\\';\n\n" if has_contains else ''
+    contains_helpers = (f'\n\n    private static void contains(List<Predicate> predicates, CriteriaBuilder builder, Root<{entity}> root, String attribute, String value) {{\n        if (value != null) {{\n'
+                        '            Expression<String> path = root.get(attribute);\n            predicates.add(builder.like(builder.lower(path), "%" + escape(value.toLowerCase(Locale.ROOT)) + "%", ESCAPE));\n        }\n    }\n\n'
+                        '    static String escape(String value) {\n        return value.replace("\\\\", "\\\\\\\\").replace("%", "\\\\%").replace("_", "\\\\_");\n    }') if has_contains else ''
+    return (header(path, imports) + f'/** Dynamic search specification: fixed and supplied filters are combined with {op["policy"]["combinator"]}; {kinds}. */\n'
+            f'public final class {name} {{\n{escape_const}    private {name}() {{\n    }}\n\n'
             f'    public static Specification<{entity}> matching({crit} criteria) {{\n        return (root, query, builder) -> {{\n            List<Predicate> predicates = new ArrayList<>();\n'
-            + '\n'.join(body) + f'\n            return predicates.isEmpty() ? {empty} : {combine}(predicates.toArray(new Predicate[0]));\n        }};\n    }}\n\n'
-            f'    private static void contains(List<Predicate> predicates, CriteriaBuilder builder, Root<{entity}> root, String attribute, String value) {{\n        if (value != null) {{\n'
-            '            Expression<String> path = root.get(attribute);\n            predicates.add(builder.like(builder.lower(path), "%" + escape(value.toLowerCase(Locale.ROOT)) + "%", ESCAPE));\n        }\n    }\n\n'
-            '    static String escape(String value) {\n        return value.replace("\\\\", "\\\\\\\\").replace("%", "\\\\%").replace("_", "\\\\_");\n    }\n}\n')
+            + '\n'.join(body) + f'\n            return predicates.isEmpty() ? {empty} : {combine}(predicates.toArray(new Predicate[0]));\n        }};\n    }}'
+            + contains_helpers + '\n}\n')
 
 
 def translator(M, path):

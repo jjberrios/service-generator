@@ -24,7 +24,8 @@ def validator(M, path):
             imports.add(f'{package_of(M["paths"]["internal-query-model"])}.{crit}')
             params = [p for p in op['params']['query']]
             filter_params = [f['param'] for f in op['filters']]
-            constants.append(f'    private static final int {snake(op["id"])}_MINIMUM_FILTERS = {op["policy"]["min"]};')
+            if op['policy']['min'] > 0:
+                constants.append(f'    private static final int {snake(op["id"])}_MINIMUM_FILTERS = {op["policy"]["min"]};')
             args = []
             for f in op['filters']:
                 p = next(q for q in params if q['java'] == f['param'])
@@ -32,7 +33,8 @@ def validator(M, path):
             if op['page']:
                 args += op['page']
             decl = ', '.join(f'{p["type"]} {p["java"]}' for p in params)
-            body = [f'        if (supplied({", ".join(filter_params)}) < {snake(op["id"])}_MINIMUM_FILTERS) {{\n            throw {exc}.badRequest("not enough search filters were supplied");\n        }}']
+            body = ([f'        if (supplied({", ".join(filter_params)}) < {snake(op["id"])}_MINIMUM_FILTERS) {{\n            throw {exc}.badRequest("not enough search filters were supplied");\n        }}']
+                    if op['policy']['min'] > 0 else [])
             for rule in op['rules']:
                 if rule['kind'] == 'pagination-pairing':
                     lim, off = op['page']
@@ -182,7 +184,8 @@ def mapper(M, path):
         cmd = f'{val}.{op["commandName"]}' if op['kind'] != 'select' else None
         if op['kind'] == 'select':
             for t in (op['successModel'], op['dataModel'], op['itemModel']):
-                imports.add(dto_fqn(M, t))
+                if t:
+                    imports.add(dto_fqn(M, t))
             constants.append(f'    private static final String {snake(op["id"])}_SUCCESS_MESSAGE = {java_string(op["successMessage"])};')
             sets = []
             for c in op['columns']:
@@ -196,8 +199,12 @@ def mapper(M, path):
                     constants.append(f'    private static final Set<String> {const} = Set.of(' + ', '.join(java_string(str(v)) for v in c['enum']) + ');')
                     value = f'checked({value}, {const})'
                 sets.append(f'        result.set{cap(c["field"])}({value});')
-            methods.append(f'    public {op["successModel"]} {op["id"]}Response(List<{entity}> rows) {{\n        {op["dataModel"]} data = new {op["dataModel"]}();\n'
-                           f'        data.set{cap(op["listProp"])}(rows.stream().map(this::{op["id"]}Item).toList());\n        {op["successModel"]} response = new {op["successModel"]}();\n'
+            if op['dataModel']:
+                data_build = (f'{op["dataModel"]} data = new {op["dataModel"]}();\n'
+                              f'        data.set{cap(op["listProp"])}(rows.stream().map(this::{op["id"]}Item).toList());')
+            else:
+                data_build = f'List<{op["itemModel"]}> data = rows.stream().map(this::{op["id"]}Item).toList();'
+            methods.append(f'    public {op["successModel"]} {op["id"]}Response(List<{entity}> rows) {{\n        {data_build}\n        {op["successModel"]} response = new {op["successModel"]}();\n'
                            f'        response.setCode(HttpStatus.OK.value());\n        response.setMessage({snake(op["id"])}_SUCCESS_MESSAGE);\n        response.setData(data);\n        return response;\n    }}')
             methods.append(f'    private {op["itemModel"]} {op["id"]}Item({entity} row) {{\n        {op["itemModel"]} result = new {op["itemModel"]}();\n' + '\n'.join(sets) + '\n        return result;\n    }')
         elif op['kind'] == 'insert':

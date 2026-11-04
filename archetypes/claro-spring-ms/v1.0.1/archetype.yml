@@ -2,20 +2,20 @@ schema_version: "1.0"
 
 archetype:
   id: claro-spring-ms
-  version: "1.0.0"
+  version: "1.0.1"
   status: reconciled-ready-to-freeze
   description: Evidence-backed Java and Spring Boot microservice baseline.
 
 governance:
   repository_policy: AGENTS.md
-  approved_decisions: archetypes/claro-spring-ms/v1.0.0/decisions.md
+  approved_decisions: archetypes/claro-spring-ms/v1.0.1/decisions.md
   decision_precedence:
     - explicit current user instruction
     - approved decision in decisions.md
     - AGENTS.md
     - reference-project evidence
     - agent inference
-  approved_decision_ids: [D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-011, D-012, D-013, D-014]
+  approved_decision_ids: [D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-011, D-012, D-013, D-014, D-015, D-016, D-017]
   specifications_inspected: false
   generation_ownership:
     openapi:
@@ -354,7 +354,7 @@ testing:
 package_structure:
   root: __BASE_PACKAGE__
   reusable_static:
-    - configuration.openapi
+    - configuration.swagger
     - configuration.security
     - security.filter
     - security.service
@@ -461,7 +461,6 @@ runtime:
   application_properties:
     static:
       spring.threads.virtual.enabled: true
-      server.port: 8085
       logging.level.root: INFO
       logging.level.org.apache.hc.client5.http: DEBUG
       management.health.db.enabled: true
@@ -560,7 +559,7 @@ parameters:
   - {name: artifact_id, token: __ARTIFACT_ID__, source: service-generation input, valid_form: lowercase kebab-case, affected_paths: [template/pom.xml], replacement_scope: exact-token}
   - {name: project_version, token: __PROJECT_VERSION__, source: approved initial project version D-010, default_value: 1.0.0-SNAPSHOT, target_override_allowed: true, valid_form: Maven version, affected_paths: [template/pom.xml], replacement_scope: exact-token}
   - {name: service_name, token: __SERVICE_NAME__, source: service-generation input, valid_form: lowercase kebab-case, affected_paths: [template/Jenkinsfile, template/src/main/resources/application.properties, template/src/main/resources/logback.xml, template/config/deployment.yml.j2, template/config/ExternalSecret.yml.j2, template/config/configmap.yml.j2], replacement_scope: exact-token}
-  - {name: base_package, token: __BASE_PACKAGE__, source: derived from approved service identity using package_naming unless an explicit target-specific package instruction applies, valid_form: lowercase dot-separated Java package, affected_paths: [template/src/main/java/__BASE_PACKAGE_PATH__/__APPLICATION_CLASS__.java, template/src/main/java/__BASE_PACKAGE_PATH__/configuration/openapi/OpenApiConfig.java, template/src/main/java/__BASE_PACKAGE_PATH__/configuration/security/SecurityConfig.java, template/src/main/java/__BASE_PACKAGE_PATH__/security/filter/JwtRequestFilter.java, template/src/main/java/__BASE_PACKAGE_PATH__/security/service/JwtValidatorService.java, template/src/main/java/__BASE_PACKAGE_PATH__/security/service/impl/JwtValidatorServiceImpl.java, template/src/main/resources/application.properties, template/src/main/resources/logback.xml, template/Dockerfile, template/config/configmap.yml.j2, template/src/main/java/__BASE_PACKAGE_PATH__/utils/ActivityLogger.java, template/src/main/java/__BASE_PACKAGE_PATH__/utils/ConstanApi.java, template/src/test/java/__BASE_PACKAGE_PATH__/utils/ActivityLoggerTest.java], replacement_scope: exact-token}
+  - {name: base_package, token: __BASE_PACKAGE__, source: derived from approved service identity using package_naming unless an explicit target-specific package instruction applies, valid_form: lowercase dot-separated Java package, affected_paths: [template/src/main/java/__BASE_PACKAGE_PATH__/__APPLICATION_CLASS__.java, template/src/main/java/__BASE_PACKAGE_PATH__/configuration/swagger/SwaggerConfig.java, template/src/main/java/__BASE_PACKAGE_PATH__/configuration/security/SecurityConfig.java, template/src/main/java/__BASE_PACKAGE_PATH__/security/filter/JwtRequestFilter.java, template/src/main/java/__BASE_PACKAGE_PATH__/security/service/JwtValidatorService.java, template/src/main/java/__BASE_PACKAGE_PATH__/security/service/impl/JwtValidatorServiceImpl.java, template/src/main/resources/application.properties, template/src/main/resources/logback.xml, template/Dockerfile, template/config/configmap.yml.j2, template/src/main/java/__BASE_PACKAGE_PATH__/utils/ActivityLogger.java, template/src/main/java/__BASE_PACKAGE_PATH__/utils/ConstanApi.java, template/src/test/java/__BASE_PACKAGE_PATH__/utils/ActivityLoggerTest.java], replacement_scope: exact-token}
   - {name: base_package_path, token: __BASE_PACKAGE_PATH__, source: derived from base_package, valid_form: slash-separated Java path, affected_paths: [template/pom.xml, template/src/main/java/__BASE_PACKAGE_PATH__, template/src/test/java/__BASE_PACKAGE_PATH__], replacement_scope: exact-path-segment-or-token}
   - {name: application_class, token: __APPLICATION_CLASS__, source: service-generation input, valid_form: UpperCamelCase ending in Application, affected_paths: [template/pom.xml, template/Dockerfile, template/src/main/java/__BASE_PACKAGE_PATH__/__APPLICATION_CLASS__.java], replacement_scope: exact-path-segment-or-token}
   - {name: vault_name, token: __VAULT_NAME__, source: approved CI configuration, valid_form: organization-approved identifier, affected_paths: [template/Jenkinsfile], replacement_scope: exact-token}
@@ -644,7 +643,7 @@ template_inventory:
   - {path: template/src/test/java/__BASE_PACKAGE_PATH__/utils/ActivityLoggerTest.java, classification: parameterized, approved_decision: D-013, evidence: E-025}
   - {path: template/settings.xml, classification: reusable/static, approved_decision: D-009, evidence: E-003}
   - {path: template/src/main/java/__BASE_PACKAGE_PATH__/__APPLICATION_CLASS__.java, classification: parameterized, evidence: E-017}
-  - {path: template/src/main/java/__BASE_PACKAGE_PATH__/configuration/openapi/OpenApiConfig.java, classification: reusable/static, approved_decision: D-007, evidence: E-012}
+  - {path: template/src/main/java/__BASE_PACKAGE_PATH__/configuration/swagger/SwaggerConfig.java, classification: reusable/static, approved_decision: D-007, evidence: E-012}
   - {path: template/src/main/java/__BASE_PACKAGE_PATH__/configuration/security/SecurityConfig.java, classification: parameterized, approved_decision: D-002, evidence: E-006}
   - {path: template/src/main/java/__BASE_PACKAGE_PATH__/security/filter/JwtRequestFilter.java, classification: parameterized, approved_decision: D-002, evidence: E-006}
   - {path: template/src/main/java/__BASE_PACKAGE_PATH__/security/service/JwtValidatorService.java, classification: parameterized, approved_decision: D-002, evidence: E-006}

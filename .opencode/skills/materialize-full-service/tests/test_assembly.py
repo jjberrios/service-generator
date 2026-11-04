@@ -24,7 +24,7 @@ import test_support as ts  # noqa: E402
 from test_generated_tests import Base  # noqa: E402
 
 TEMPLATE = fx.REPO_ROOT / fx.ARCHETYPE / 'template'
-BUILD_FILES = {'pom.xml', 'settings.xml', '.gitignore', '.gitattributes', '.mvn/wrapper/maven-wrapper.properties', 'mvnw', 'mvnw.cmd', 'src/main/resources/checkstyle.xml', 'src/main/resources/logback.xml', 'src/main/resources/application.properties.example'}
+BUILD_FILES = {'pom.xml', 'settings.xml', '.gitignore', '.gitattributes', '.mvn/wrapper/maven-wrapper.properties', 'mvnw', 'mvnw.cmd', 'src/main/resources/checkstyle.xml', 'src/main/resources/logback.xml'}
 DEPLOY_FILES = {'Dockerfile', 'Jenkinsfile', 'config/ExternalSecret.yml.j2', 'config/configmap.yml.j2', 'config/deployment.yml.j2'}
 
 
@@ -42,7 +42,7 @@ class AssemblyTests(Base):
         for name in fx.SERVICES:
             out, files = self.assembled(name)
             package_path = fx.SERVICES[name]['package'].replace('.', '/')
-            java = {f'src/main/java/{package_path}/{fx.APPLICATION[name]}.java', f'src/main/java/{package_path}/configuration/openapi/OpenApiConfig.java',
+            java = {f'src/main/java/{package_path}/{fx.APPLICATION[name]}.java', f'src/main/java/{package_path}/configuration/swagger/SwaggerConfig.java',
                     f'src/main/java/{package_path}/configuration/security/SecurityConfig.java', f'src/main/java/{package_path}/security/filter/JwtRequestFilter.java',
                     f'src/main/java/{package_path}/security/service/JwtValidatorService.java', f'src/main/java/{package_path}/security/service/impl/JwtValidatorServiceImpl.java'}
             self.assertEqual(files, BUILD_FILES | DEPLOY_FILES | java)
@@ -122,12 +122,14 @@ class AssemblyTests(Base):
         manifest = yaml.safe_load((out / '.generation-manifest.yml').read_bytes())
         self.assertNotIn('src/main/resources/application.properties', [r['path'] for r in manifest['fileInventory']])
         report = yaml.safe_load((self.ws('billing-service') / 'materialization-report.yml').read_bytes())
-        self.assertEqual(report['assembly']['applicationProperties']['status'], 'excluded-by-policy')
+        self.assertEqual(report['assembly']['applicationProperties']['status'], 'create-only-when-absent')
         self.assertIn('environment-only', report['assembly']['applicationProperties']['note'])
 
-    def test_a_new_project_gets_no_application_properties(self):
+    def test_a_new_project_gets_an_untracked_application_properties_without_server_port(self):
         out, files = self.assembled('billing-service')
-        self.assertFalse((out / 'src/main/resources/application.properties').exists())
+        text = (out / 'src/main/resources/application.properties').read_text(encoding='utf-8')
+        self.assertNotIn('server.port', text)
+        self.assertNotIn('src/main/resources/application.properties', files)
 
 
 class ParameterStopTests(Base):

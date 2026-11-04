@@ -42,7 +42,7 @@ def normalize(source):
     else:
         identity = source.get('archetype') or {}
         name, version = identity.get('id'), identity.get('version')
-        if str(source.get('schema_version')) != '1.0' or (name, str(version)) != ('claro-spring-ms', '1.0.0'):
+        if str(source.get('schema_version')) != '1.0' or name != 'claro-spring-ms' or str(version) not in ('1.0.0', '1.0.1'):
             raise ContractError('unsupported-archetype-schema: no compatibility adapter')
         adapter = 'claro-spring-ms-1.0.0-compat-v1'
         # Legacy manifest lacks flags; preserve unknown rather than inventing approval.

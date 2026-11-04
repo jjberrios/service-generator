@@ -17,7 +17,7 @@ class ContractTests(unittest.TestCase):
                  ('claro-java-8-shell', BATCH_SHELL, 'not-applicable')]
         for name, profile, quality in cases:
             with self.subTest(name=name):
-                path = ROOT / f'archetypes/{name}/v1.0.0/archetype.yml'
+                path = ROOT / f'archetypes/{name}/{"v1.0.1" if name == "claro-spring-ms" else "v1.0.0"}/archetype.yml'
                 before = path.read_bytes()
                 value = yaml.safe_load(before)
                 original = copy.deepcopy(value)

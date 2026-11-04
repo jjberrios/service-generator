@@ -287,10 +287,7 @@ def classify(plan: dict, repo: Path) -> dict:
             unsupported.append({'path': path, 'componentType': kind, 'reason': f'unsupported component or action: {kind} / {action}'})
             continue
         if kind in ap.PLANNED_BASELINES:
-            if entry.get('mavenAdditions'):
-                unsupported.append({'path': path, 'componentType': kind, 'reason': 'service-specific Maven additions need separate assembler support; baseline will not be pruned or approximated'})
-            else:
-                baselines.append(entry)
+            baselines.append(entry)
             continue
         if path == MANIFEST or action == 'retain':
             kept.append(path)
@@ -436,6 +433,10 @@ def _materialize_unlocked(repo: Path, service: str, supported_only: bool = False
     if dry_run:
         return report
     publish(out_dir, ws.dir, payload, manifest_bytes)
+    for rel, data in ((assembly or {}).get('createOnly') or {}).items():
+        target = out_dir / rel
+        if not target.exists():
+            write_atomic(target, data)
     write_atomic(ws.dir / 'assumptions-register.yml', yaml.safe_dump(register, sort_keys=False, allow_unicode=True, width=200).encode('utf-8'))
     if work['cov'] or any(v['componentType'] in ts.TEST_TYPES for v in work['rendered'].values()):
         model = plan.get('_serviceModel') or sm.build(plan)

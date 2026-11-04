@@ -383,12 +383,16 @@ def operation_plan(operation: dict, index: int, table: dict, names: dict, pk: st
         query = persistence['query']
         filters = [column_mapping(f, columns, properties, pk) for f in query['businessFilters']]
         selected = [column_mapping(s, columns, properties, pk) for s in query['selectedColumns']]
-        result['query'] = {'filterPolicy': copy.deepcopy(query['filterPolicy']), 'filters': filters, 'selectedColumns': selected,
+        fixed = [column_mapping(f, columns, properties, pk) for f in query.get('fixedPredicates', [])]
+        for f in fixed:
+            check(f.get('operator') == '=' and isinstance(f.get('value'), (int, str)) and not isinstance(f.get('value'), bool),
+                  'Fixed predicates support only column = integer/text literal.')
+        result['query'] = {'filterPolicy': copy.deepcopy(query['filterPolicy']), 'filters': filters, 'fixedPredicates': fixed, 'selectedColumns': selected,
                            'pagination': copy.deepcopy(query['pagination']), 'orderBy': copy.deepcopy(query['orderBy']),
                            'mechanism': 'Spring Data JPA: repository extends JpaRepository plus JpaSpecificationExecutor; Specification built with the Criteria API',
                            'algorithm': ['Validate supplied business filters and the limit/offset pairing before any repository call.',
                                          'Add one Criteria predicate per supplied filter from the whitelist of mapped entity properties; values are bound by the JPA provider.',
-                                         'Combine the active predicates with the approved combinator (OR) in one Specification; absent filters add no predicate.',
+                                         f'Combine the active predicates with the approved combinator ({query["filterPolicy"]["combinator"]}) in one Specification; absent filters add no predicate; fixed predicates (Sparx literal conditions such as active records) are always added.',
                                          'Text filters: LOWER(attribute) LIKE lowered pattern with escaped wildcards (literal contains). Numeric filters: equality on the typed attribute.',
                                          'Always sort ascending by the entity key; with both pagination inputs use an offset-based Pageable (absolute offset, limit as page size), otherwise sort only.',
                                          'Map entities to the declared response fields only; apply the specified empty-result outcome.'],
@@ -428,14 +432,26 @@ def cases(operation: dict) -> list[dict]:
         rows.append({'case': name, 'given': given, 'expect': expect, 'sourceRefs': operation['sourceRefs']})
     action = operation['actionKind']
     if action == 'select':
+        policy = operation['query']['filterPolicy']
+        combinator = policy['combinator']
         add('single-filter', 'One supplied business filter', 'Only that predicate participates; nonempty result returns 200')
-        add('multiple-or-filters', 'Two supplied filters matching different rows', 'OR composition of the supplied predicates, not AND; omitted filters add no predicate')
-        add('textual-contains', 'Text containing literal %, _ or quote characters', 'Case-insensitive literal contains through the Specification; wildcard characters are escaped; values are bound')
-        add('exact-nontext-filters', 'Each numeric filter separately supplied', 'Exact typed equality; no substring comparison; canonical numeric output without invented zero-padding')
-        add('pagination', 'Both limit and offset supplied with a business filter', 'Offset-based Pageable with the absolute offset and limit, sorted by the key; never converted to a page index')
-        add('limit-without-offset', 'Only pagination limit supplied', '400 and repository not invoked')
-        add('offset-without-limit', 'Only pagination offset supplied', '400 and repository not invoked')
-        add('no-filter', 'Headers and pagination controls only', '400; headers, limit and offset do not count as business filters')
+        add('multiple-or-filters' if combinator == 'OR' else 'multiple-and-filters', 'Two supplied filters matching different rows',
+            f'{combinator} composition of the supplied predicates; omitted filters add no predicate')
+        for f in operation['query']['fixedPredicates']:
+            add('fixed-predicate-' + f['modelProperty'], 'Rows both matching and not matching the fixed literal condition',
+                f"The fixed predicate {f['physicalColumn']} = {f['value']} is always applied together with the supplied filters")
+        if any(f['effectiveMatch'] == 'contains' for f in operation['query']['filters']):
+            add('textual-contains', 'Text containing literal %, _ or quote characters', 'Case-insensitive literal contains through the Specification; wildcard characters are escaped; values are bound')
+        if any(f['effectiveMatch'] == 'exact' for f in operation['query']['filters']):
+            add('exact-filters', 'Each filter separately supplied', 'Exact typed equality; no substring comparison; canonical output without invented padding')
+        if operation['query'].get('pagination'):
+            add('pagination', 'Both limit and offset supplied with a business filter', 'Offset-based Pageable with the absolute offset and limit, sorted by the key; never converted to a page index')
+            add('limit-without-offset', 'Only pagination limit supplied', '400 and repository not invoked')
+            add('offset-without-limit', 'Only pagination offset supplied', '400 and repository not invoked')
+        if policy['minimumActiveFilters'] > 0:
+            add('no-filter', 'Headers and pagination controls only', '400; headers, limit and offset do not count as business filters')
+        else:
+            add('no-filter', 'Headers only', 'No business predicate beyond the fixed ones; query sorted by the key')
         add('invalid-filter-value', 'Invalid numeric identifier, undeclared flag value or invalid pagination value', '400; do not invoke the repository or silently coerce the input')
         add('empty-result', 'Query returns no entities', '404')
         add('response-exposure', 'Stored entity also has audit properties', 'Only declared response fields are serialized; reviewed output mapping is applied')
@@ -634,8 +650,9 @@ def build_full(root: Path, yaml: Any, input_path: Path) -> tuple[dict, dict]:
     add(spec_file, 'jpa-specification', ['Criteria-API Specification that ORs the supplied predicates: equality for typed numeric attributes, LOWER/LIKE contains with escaped wildcards for text attributes.'],
         op_ids=ids_by_action['select'], phase=2, deps=[entity_file, query_file], mapping_refs=mapping_pointers,
         persistence=['Whitelist of mapped entity attributes; values bound by the provider; empty predicate list never queries everything.'])
-    add(offset_file, 'offset-based-pageable', ['Pageable implementation carrying an arbitrary absolute offset, page size = limit and the key sort, so limit/offset need not be page aligned.'],
-        op_ids=ids_by_action['select'], phase=2, persistence=['Used only when both pagination inputs are supplied.'])
+    if any(o['actionKind'] == 'select' and o['query'].get('pagination') for o in operations):
+        add(offset_file, 'offset-based-pageable', ['Pageable implementation carrying an arbitrary absolute offset, page size = limit and the key sort, so limit/offset need not be page aligned.'],
+            op_ids=ids_by_action['select'], phase=2, persistence=['Used only when both pagination inputs are supplied.'])
     add(translator_file, 'data-access-error-translator', ['Classify data-access/persistence cause chains into evidence-backed statuses (409, 503, 504, 500).'], phase=2, deps=[exception_file],
         persistence_dependent=True, errors=['Unique vendor error 1 -> 409; SQL/query timeout -> 504; connection/transaction-creation failure -> 503; other errors -> 500.'])
     logger_file = main + 'utils/ActivityLogger.java'
@@ -654,7 +671,7 @@ def build_full(root: Path, yaml: Any, input_path: Path) -> tuple[dict, dict]:
     files[headers_file]['roleMapping'] = logging_plan['requestHeaders']['roles']
     add(service_file, 'application-service-contract', ['Use the archetype service/service-impl seam with one method per active operation; every method receives RequestHeaders first (D-013).'], phase=3, deps=[entity_file, query_file, headers_file], logging_dependent=True)
     add(service_impl, 'application-service-implementation', ['Validate, persist through the JPA repository with data-access translation, map outcomes; reference-style audit timestamps; no @Transactional.'],
-        phase=4, deps=[service_file, repo_file, spec_file, offset_file, mapper_file, validator_file, exception_file, translator_file], mapping_refs=mapping_pointers,
+        phase=4, deps=[service_file, repo_file, spec_file, mapper_file, validator_file, exception_file, translator_file] + ([offset_file] if offset_file in files else []), mapping_refs=mapping_pointers,
         persistence_dependent=True, logging_dependent=True, validation=['One validation owner for business rules; POST conditional rule preserved.'],
         errors=['Apply the source-defined empty-query and not-found outcomes; wrap repository calls and translate DataAccessException.',
                 'Log business errors inside the activity (ERROR [activity] code= detail=) and QueryTimeoutException/DataAccessException with the LOG_* constants, then translate unchanged.'],
@@ -756,7 +773,8 @@ def build_full(root: Path, yaml: Any, input_path: Path) -> tuple[dict, dict]:
         {'actionKind': 'update', 'method': f'Optional<{entity_class}> findById(Long); {entity_class} save({entity_class})  [JpaRepository]'}] if ids_by_action[m['actionKind']]]
     files[query_file]['fields'] = [{'parameter': f['parameter'], 'javaType': f['javaType'], 'physicalColumn': f['physicalColumn']}
                                   for op in operations if op['actionKind'] == 'select' for f in op['query']['filters']]
-    files[query_file]['fields'] += [{'parameter': key, 'javaType': 'Integer', 'physicalColumn': None} for key in ('limit', 'offset')]
+    if offset_file in files:
+        files[query_file]['fields'] += [{'parameter': key, 'javaType': 'Integer', 'physicalColumn': None} for key in ('limit', 'offset')]
     files[mapper_file]['methodPolicy'] = 'One explicit conversion per operation matrix; validated numeric values come from the validator and are not parsed twice. POST supplied fields are nonnull DTO values after Nulls.FAIL binding; PATCH supplied fields come from internal presence tracking and are applied to the loaded entity.'
     files[controller_file]['headerPolicy'] = 'Delegate all header arguments required by API binding; build RequestHeaders only from the mapped technical roles (transactionId, userId, applicationName). The user header drives audit through RequestHeaders.userId(); other technical headers (including the request-id header) stay technical and never become a business identifier.'
     pending = set(files); order = []
@@ -774,7 +792,7 @@ def build_full(root: Path, yaml: Any, input_path: Path) -> tuple[dict, dict]:
                      'primaryKey': c['column'] == pk_column, 'nullability': 'not declared; no additional inferred NOT NULL', 'default': 'not declared; no invented default'}
                     for i, c in enumerate(table['columns'])]
     risks = [{'id': 'database-key-generation', 'classification': 'technical-runtime-prerequisite', 'description': technical_choices['generated-id']['assumption'], 'blocksSourceGeneration': False},
-             {'id': 'hibernate-schema-validation', 'classification': 'technical-runtime-verification', 'description': 'spring.jpa.hibernate.ddl-auto=validate (reference baseline) must pass against the real MAILINGINFORMATION table: names, CLOB (@Lob), NUMBER and DATE column types, default schema of the connection user (no schema attribute is declared).', 'blocksSourceGeneration': False},
+             {'id': 'hibernate-schema-validation', 'classification': 'technical-runtime-verification', 'description': 'spring.jpa.hibernate.ddl-auto=validate (reference baseline) must pass against the real ' + table_name + ' table: names, CLOB (@Lob), NUMBER and DATE column types, default schema of the connection user (no schema attribute is declared).', 'blocksSourceGeneration': False},
              {'id': 'oracle-clob-lower-like', 'classification': 'technical-runtime-verification', 'description': 'LOWER/LIKE on CLOB columns generated by Hibernate must be verified on the target Oracle version; no connection performed here.', 'blocksSourceGeneration': False},
              {'id': 'reference-hibernate-jdbc-timeout', 'classification': 'technical-runtime-risk', 'description': 'The reference baseline sets spring.jpa.properties.hibernate.jdbc.timeout=1 (second) and Hikari connection-timeout=1000 ms; contains searches over CLOB columns may exceed it and surface as 504.', 'blocksSourceGeneration': False},
              {'id': 'jwt-secret-reference-fallback', 'classification': 'archetype-decision-conflict', 'description': 'The reference JWT property has a development-only default; archetype D-002 (no fallback) is retained and recorded in D-011.', 'blocksSourceGeneration': False},

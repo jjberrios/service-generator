@@ -160,8 +160,12 @@ def validator_test(M, path, cov):
                         over = (f'        assertThrows({exc}.class, () -> validator.{oid}({select_args(op, values={param: java_string(overflow_value(num))})}));\n'
                                 f'        assertEquals(new BigDecimal({java_string(boundary_value(num))}), validator.{oid}({select_args(op, values={param: java_string(boundary_value(num))})}).{f["prop"]}());')
                         add(f'{oid}:range:{param}', mname(oid, 'enforces', param, 'column', 'precision'), over)
-            add(f'{oid}:filter-policy:min', mname(oid, 'rejects', 'search', 'without', 'filters'),
-                f'        ServiceOperationException error = assertThrows(ServiceOperationException.class, () -> validator.{oid}({select_args(op)}));\n        assertEquals(HttpStatus.BAD_REQUEST, error.getStatus());'.replace('ServiceOperationException', exc))
+            if op['policy']['min'] == 0:
+                add(f'{oid}:filter-policy:min', mname(oid, 'accepts', 'search', 'without', 'filters'),
+                    f'        {crit} criteria = validator.{oid}({select_args(op)});\n        assertNull(criteria.{op["filters"][0]["prop"]}());')
+            else:
+                add(f'{oid}:filter-policy:min', mname(oid, 'rejects', 'search', 'without', 'filters'),
+                    f'        ServiceOperationException error = assertThrows(ServiceOperationException.class, () -> validator.{oid}({select_args(op)}));\n        assertEquals(HttpStatus.BAD_REQUEST, error.getStatus());'.replace('ServiceOperationException', exc))
             first = op['filters'][0]
             raw, _ = filter_sample(first)
             for rule in op['rules']:

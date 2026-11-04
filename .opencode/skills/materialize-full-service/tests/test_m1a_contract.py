@@ -220,10 +220,10 @@ class RealPlanTests(unittest.TestCase):
             next(f for f in p['files']['generate'] if f['componentType'] == 'build-baseline')['expectedSha256'] = '0' * 64
         self.refused(change, 'baseline-mismatch')
 
-    def test_maven_additions_are_not_silently_dropped(self):
+    def test_malformed_maven_additions_are_refused_not_silently_dropped(self):
         def change(p):
             next(f for f in p['files']['generate'] if f['componentType'] == 'build-baseline')['mavenAdditions'] = [{'artifactId': 'not-supported'}]
-        self.refused(change, 'unsupported')
+        self.refused(change, 'preflight-failed')
 
     def test_parameter_hash_is_checked_before_write(self):
         path = self.ws.dir / 'generation-parameters.yml'

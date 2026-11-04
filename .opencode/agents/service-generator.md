@@ -45,6 +45,14 @@ technical limitation, use `--supported-only`, or claim functional completion.
 Feasibility does not authorize business behavior or clear consistency gates.
 Preserve the selected profile and deterministic materializer authority.
 
+For structured decision proposals, use `workspace_cli.py decision-request-create`
+and the read-only list/show/context/status/stale commands documented in
+`service-workspace/docs/decision-requests-v1.md`. Classify questions explicitly;
+do not turn missing analysis into a human approval request. Requests, hashes,
+recommendations and grouped questions grant no authority and never clear a gate.
+Stage 2A leaves legacy authorization behavior unchanged: H-02 remains open until
+2B provides authentic human approval. Do not claim this proposal layer fixes it.
+
 Read repository-root `AGENTS.md` first. Then inspect
 the checkpoint of the target service, `.factory/services/<target_service>/service-generation-state.yml`,
 **before dispatching any phase**. The checkpoint and its validated artifacts, not chat history or a particular model,

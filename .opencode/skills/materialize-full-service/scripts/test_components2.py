@@ -51,7 +51,8 @@ def mapper_test(M, path, cov):
         oid = op['id']
         if op['kind'] == 'select':
             for t in (op['successModel'], op['dataModel'], op['itemModel']):
-                imports.add(dto_fqn(M, t))
+                if t:
+                    imports.add(dto_fqn(M, t))
             enums = {c['prop']: c['enum'] for c in op['columns'] if c['enum']}
             row = entity_setup(M, 'row', enums=enums).replace('        ' + entity + ' row', '        ' + entity + ' row', 1)
             checks = []
@@ -63,13 +64,14 @@ def mapper_test(M, path, cov):
                     checks.append(f'        assertEquals(row.{getter(c["prop"])}().toPlainString(), item.{getter(c["field"])}());')
                 else:
                     checks.append(f'        assertEquals(String.valueOf(row.{getter(c["prop"])}()), item.{getter(c["field"])}());')
-            lp = cap(op['listProp'])
+            lp = '' if op['listProp'] is None else cap(op['listProp'])
+            dget = f'.get{lp}()' if lp else ''
             body = (row + f'\n        row.{setter(M["entity"]["pk"])}(Long.valueOf(1));\n        {op["successModel"]} response = mapper.{oid}Response(List.of(row));\n'
                     f'        assertEquals(HttpStatus.OK.value(), response.getCode());\n        assertEquals({java_string(op["successMessage"])}, response.getMessage());\n'
-                    f'        assertEquals(1, response.getData().get{lp}().size());\n        {op["itemModel"]} item = response.getData().get{lp}().get(0);\n' + '\n'.join(checks))
+                    f'        assertEquals(1, response.getData(){dget}.size());\n        {op["itemModel"]} item = response.getData(){dget}.get(0);\n' + '\n'.join(checks))
             add(f'{oid}:mapping:response', mname(oid, 'maps', 'rows', 'to', 'the', 'declared', 'response'), body)
             add(f'{oid}:outcome:200', mname(oid, 'reports', 'the', 'success', 'code', 'and', 'message'),
-                f'        {op["successModel"]} response = mapper.{oid}Response(List.of());\n        assertEquals(HttpStatus.OK.value(), response.getCode());\n        assertEquals({java_string(op["successMessage"])}, response.getMessage());\n        assertEquals(0, response.getData().get{lp}().size());')
+                f'        {op["successModel"]} response = mapper.{oid}Response(List.of());\n        assertEquals(HttpStatus.OK.value(), response.getCode());\n        assertEquals({java_string(op["successMessage"])}, response.getMessage());\n        assertEquals(0, response.getData(){dget}.size());')
             for c in op['columns']:
                 if c['enum'] and c['entityType'] == 'Integer':
                     bad = row.replace(f'row.{setter(c["prop"])}({typed_value("Integer", c["prop"], c["enum"])});', f'row.{setter(c["prop"])}(Integer.MAX_VALUE);')
@@ -136,12 +138,17 @@ def specification_test(M, path, cov):
             add(f'{oid}:match:{f["param"]}:spec', mname(oid, 'uses', 'equality', 'for', f['prop']), body)
         else:
             body = (setup + f'        {spec}.matching({criteria({f["prop"]: java_string("A%B_")})}).toPredicate(root, query, builder);\n'
-                    f'        verify(builder).like(eq(lowered), eq("%a\\\\%b\\\\_%"), eq(\'\\\\\'));\n        verify(builder, never()).equal(any(Expression.class), any(Object.class));')
+                    f'        verify(builder).like(eq(lowered), eq("%a\\\\%b\\\\_%"), eq(\'\\\\\'));\n        ' + ('' if op['fixed'] else 'verify(builder, never()).equal(any(Expression.class), any(Object.class));'))
             add(f'{oid}:match:{f["param"]}:spec', mname(oid, 'uses', 'a', 'lowered', 'escaped', 'literal', 'substring', 'for', f['prop']), body)
     first = op['filters'][0]
     _, ex = filter_sample(first)
     add(f'{oid}:filter-policy:combinator', mname(oid, 'combines', 'supplied', 'filters', 'with', combinator), setup + f'        {spec}.matching({criteria({first["prop"]: ex})}).toPredicate(root, query, builder);\n        verify(builder).{combine}(any(Predicate[].class));')
-    add(f'{oid}:filter-policy:empty', mname(oid, 'handles', 'empty', 'criteria', 'with', empty),
+    for n, fx in enumerate(op['fixed']):
+        lit = java_string(fx['value']) if fx['type'] == 'String' else (f'{fx["value"]}L' if fx['type'] == 'Long' else str(fx['value']))
+        add(f'{oid}:fixed-predicate:{fx["prop"]}', mname(oid, 'always', 'applies', 'fixed', 'predicate', 'on', fx['prop']),
+            setup + f'        {spec}.matching({criteria({})}).toPredicate(root, query, builder);\n        verify(builder).equal(path, {lit});\n        verify(builder, never()).{empty}();')
+    if not op['fixed']:
+        add(f'{oid}:filter-policy:empty', mname(oid, 'handles', 'empty', 'criteria', 'with', empty),
         setup + f'        when(builder.{empty}()).thenReturn(combined);\n        {spec}.matching({criteria({})}).toPredicate(root, query, builder);\n        verify(builder).{empty}();\n        verify(builder, never()).{combine}(any(Predicate[].class));')
     text = header(path, imports) + f'@SuppressWarnings("unchecked")\nclass {test} {{\n' + fields + '\n\n'.join(methods) + '\n}\n'
     return check_lines(text, test)
@@ -197,14 +204,19 @@ def service_test(M, path, cov):
             args = select_args(op, values={first['param']: java_string(raw)})
             call = f'service.{oid}(HEADERS, {args})'
             row = entity_setup(M, 'found', enums={c['prop']: c['enum'] for c in op['columns'] if c['enum']})
-            lp = cap(op['listProp'])
+            lp = '' if op['listProp'] is None else cap(op['listProp'])
+            dget = f'.get{lp}()' if lp else ''
             add(f'{oid}:outcome:200', mname(oid, 'returns', 'the', 'mapped', 'rows'),
                 row + f'\n        when(repository.findAll(any(Specification.class), any(Sort.class))).thenReturn(List.of(found));\n        {op["successModel"]} response = {call};\n'
-                f'        assertEquals(HttpStatus.OK.value(), response.getCode());\n        assertEquals(1, response.getData().get{lp}().size());')
+                f'        assertEquals(HttpStatus.OK.value(), response.getCode());\n        assertEquals(1, response.getData(){dget}.size());')
             add(f'{oid}:outcome:404', mname(oid, 'reports', 'not', 'found', 'when', 'no', 'row', 'matches'),
                 f'        when(repository.findAll(any(Specification.class), any(Sort.class))).thenReturn(List.of());\n        ServiceOperationException error = assertThrows(ServiceOperationException.class, () -> {call});\n        assertEquals(HttpStatus.NOT_FOUND, error.getStatus());'.replace('ServiceOperationException', exc))
-            add(f'{oid}:filter-policy:min', mname(oid, 'stops', 'before', 'the', 'repository', 'when', 'no', 'filter', 'is', 'supplied'),
-                f'        assertThrows({exc}.class, () -> service.{oid}(HEADERS, {select_args(op)}));\n        verifyNoInteractions(repository);')
+            if op['policy']['min'] == 0:
+                add(f'{oid}:filter-policy:min', mname(oid, 'queries', 'without', 'filters', 'when', 'none', 'is', 'required'),
+                    row + f'\n        when(repository.findAll(any(Specification.class), any(Sort.class))).thenReturn(List.of(found));\n        assertNotNull(service.{oid}(HEADERS, {select_args(op)}));')
+            else:
+                add(f'{oid}:filter-policy:min', mname(oid, 'stops', 'before', 'the', 'repository', 'when', 'no', 'filter', 'is', 'supplied'),
+                    f'        assertThrows({exc}.class, () -> service.{oid}(HEADERS, {select_args(op)}));\n        verifyNoInteractions(repository);')
             add(f'{oid}:logging:null-headers', mname(oid, 'works', 'without', 'request', 'headers'),
                 row + f'\n        when(repository.findAll(any(Specification.class), any(Sort.class))).thenReturn(List.of(found));\n        assertNotNull(service.{oid}(null, {args}));')
             if op['page']:

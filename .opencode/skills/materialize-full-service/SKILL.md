@@ -100,7 +100,7 @@ Honest limits: tests were executed only with `javac` + a JUnit Platform launcher
 
 ## Maven project assembly (`full-materializer-5`, `assemble_project.py`)
 `materialize` now also assembles the technical files of the archetype (token substitution only; POM, Checkstyle and JaCoCo rules are never edited) behind the same gate, `guard_write` and manifest:
-build (`pom.xml`, `settings.xml`, `.gitignore`, `.gitattributes`, `.mvn/wrapper/maven-wrapper.properties`, `mvnw`, `mvnw.cmd`, `checkstyle.xml`, `logback.xml`), Java (application class, `OpenApiConfig`, `SecurityConfig`, `JwtRequestFilter`, `JwtValidatorService(+Impl)`)
+build (`pom.xml`, `settings.xml`, `.gitignore`, `.gitattributes`, `.mvn/wrapper/maven-wrapper.properties`, `mvnw`, `mvnw.cmd`, `checkstyle.xml`, `logback.xml`), Java (application class, `SwaggerConfig`, `SecurityConfig`, `JwtRequestFilter`, `JwtValidatorService(+Impl)`)
 and, only when the plan says `deploymentGenerationAuthorized: true`, `Dockerfile`, `Jenkinsfile` and `config/*.j2`. `--no-assemble` keeps the Java-only behavior.
 - Parameters: `plan.service` (name, package, packagePath, groupId, projectVersion, applicationClass) + `values` of the workspace `generation-parameters.yml`. Only approved derivations: group id = base package and version `1.0.0-SNAPSHOT` (D-010), artifact id = service name.
   A missing parameter (`missing-parameter`), an invalid form (`invalid-parameter`), a plan/parameter disagreement (`parameter-conflict`) or any unresolved `__TOKEN__` (except the 3 official Maven Wrapper identifiers) stops everything before a write (exit 3).
@@ -113,8 +113,8 @@ and, only when the plan says `deploymentGenerationAuthorized: true`, `Dockerfile
 (`validation-evidence.yml`): Maven exit/BUILD result, compilation, surefire counts, Checkstyle violations (`checkstyle-result.xml`), JaCoCo per-package ratios (`jacoco.csv`) against the threshold read from the project POM. `ingest` records an existing build only when its files match the manifest hashes.
 Evidence is bound to the SHA-256 of the exact project; a different tree makes every tool `stale`. `coverage-scope.yml` and the generic validator follow the evidence (`verified-by-maven-evidence` only with a fresh JaCoCo `passed`); no evidence means `not-executed`/`unverified`/`not-verified`.
 
-## application.properties.example and header constraints (`assemble-project-2`)
-- `src/main/resources/application.properties.example` is assembled from `archetype.yml#/runtime/application_properties` only (static values, parameterized `service_name`/`base_package`/`jwt_roles_claim`, environment-only secrets as `${JWT_SECRET_KEY}`, `${DB_URL}`, `${DB_USERNAME}`, `${DB_PASSWORD}`),
+## application.properties (create-only, D-015) and header constraints (`assemble-project-2`)
+- `src/main/resources/application.properties` is created only when absent (never tracked, read or overwritten afterwards) from `archetype.yml#/runtime/application_properties` only (static values, parameterized `service_name`/`base_package`/`jwt_roles_claim`, environment-only secrets as `${JWT_SECRET_KEY}`, `${DB_URL}`, `${DB_USERNAME}`, `${DB_PASSWORD}`),
   grouped in the baseline blocks (APPLICATION, LOGGING, SWAGGER, ACTUATOR, DATA SOURCE, HIKARI, JPA / HIBERNATE, JWT TOKEN, SPRING CLOUD). It goes through `guard_write` and the manifest; a missing parameter stops with `missing-parameter`. The real `application.properties` is still never read, created or touched.
   Real configuration: copy the example to `src/main/resources/application.properties` outside version control, review values per environment and export the four environment variables.
 - Header constraints declared in the contract (`@Size/@Pattern/@Min/@Max`) are now emitted on the API interface parameters (required-ness was already enforced). Tests: method validation on the interface plus MockMvc with the controller behind `MethodValidationInterceptor`

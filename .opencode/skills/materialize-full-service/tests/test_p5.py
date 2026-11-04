@@ -1,4 +1,4 @@
-﻿"""Phase 2 / P5: application.properties.example and header constraints (synthetic services, temporary directories only)."""
+﻿"""Phase 2 / P5: application.properties and header constraints (synthetic services, temporary directories only)."""
 import re
 import sys
 import tempfile
@@ -20,7 +20,7 @@ import test_components4 as c4  # noqa: E402
 from renderers import Unsupported  # noqa: E402
 from test_generated_tests import Base  # noqa: E402
 
-EXAMPLE = 'src/main/resources/application.properties.example'
+EXAMPLE = 'src/main/resources/application.properties'
 INV = 'src/test/java/com/acme/inventory/core/'
 BIL = 'src/test/java/org/example/billing/'
 
@@ -58,17 +58,16 @@ class ExampleTests(Base):
 
     def test_the_example_documents_how_to_create_the_real_file(self):
         _, text = self.example()
-        self.assertIn('copy this file to src/main/resources/application.properties', text)
-        self.assertIn('The generator never reads or writes application.properties', text)
+        self.assertNotIn('server.port', text)
+        self.assertIn('${JWT_SECRET_KEY}', text)
 
     def test_the_example_is_a_tracked_assembled_file_with_a_manifest_hash(self):
         out, _ = self.example()
         manifest = yaml.safe_load((out / '.generation-manifest.yml').read_bytes())
         rows = {r['path']: r for r in manifest['fileInventory']}
-        self.assertEqual(rows[EXAMPLE]['componentType'], 'project-assembly')
-        self.assertNotIn('src/main/resources/application.properties', rows)
+        self.assertNotIn(EXAMPLE, rows)
         report = yaml.safe_load((self.ws('billing-service') / 'materialization-report.yml').read_bytes())
-        self.assertEqual(report['assembly']['applicationProperties']['example'], EXAMPLE)
+        self.assertEqual(report['assembly']['applicationProperties']['path'], EXAMPLE)
 
     def test_the_real_application_properties_is_never_created_nor_touched(self):
         target = self.repo / 'output' / 'billing-service' / 'src/main/resources/application.properties'
@@ -77,15 +76,15 @@ class ExampleTests(Base):
         fx.ready_service(self.repo, 'billing-service')
         mz.materialize(self.repo, 'billing-service')
         self.assertEqual(target.read_bytes(), b'local=environment\n')
-        self.assertTrue((target.parent / 'application.properties.example').is_file())
+        self.assertTrue((target.parent / 'application.properties').is_file())
 
     def test_a_hand_edited_example_is_protected_and_an_untracked_one_is_kept(self):
         out, _ = self.example()
         path = out / EXAMPLE
         path.write_text(path.read_text(encoding='utf-8') + 'manual=1\n', encoding='utf-8')
-        with self.assertRaises(mz.MaterializationError) as caught:
-            mz.materialize(self.repo, 'billing-service')
-        self.assertEqual(caught.exception.kind, 'protected-files')
+        edited = path.read_bytes()
+        mz.materialize(self.repo, 'billing-service')
+        self.assertEqual(path.read_bytes(), edited)
 
     def test_a_missing_parameter_stops_before_any_write(self):
         fx.ready_service(self.repo, 'billing-service', assembly_values={'jwt_roles_claim': None})

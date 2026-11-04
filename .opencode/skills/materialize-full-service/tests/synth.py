@@ -20,7 +20,7 @@ import build_implementation_plan as planner_base  # noqa: E402
 import plan_builder as pb  # noqa: E402
 
 APPROVER = 'Test User (fixture)'
-ARCHETYPE = 'archetypes/claro-spring-ms/v1.0.0'
+ARCHETYPE = 'archetypes/claro-spring-ms/v1.0.1'
 ERRORS_A = {400: {'status': 'BAD_REQUEST', 'type': 'MissingParameters', 'sub': 'E1', 'detail': 'Missing or invalid parameters.'},
             404: {'status': 'NOT_FOUND', 'type': 'NotFound', 'sub': 'E2', 'detail': 'Nothing found.'},
             500: {'status': 'INTERNAL_SERVER_ERROR', 'type': 'InternalError', 'sub': 'T3', 'detail': 'Internal failure [ERROR_DETAIL]'},

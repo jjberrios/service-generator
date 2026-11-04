@@ -43,7 +43,7 @@ sources:
     file: .factory/sparx-decision-reassessment.yml
     sha256: 8146da8ea73b98791c4198d5311008ad45227e277291f695cb71b751a299e6e9
   archetype:
-    file: archetypes/claro-spring-ms/v1.0.0/archetype.yml
+    file: archetypes/claro-spring-ms/v1.0.1/archetype.yml
     sha256: adf1fe14b2a72f7aa57b98865aad474b4a30d0f5508424a43f0d489be41bc949
 operations:
 - operationId: getMailingInfo

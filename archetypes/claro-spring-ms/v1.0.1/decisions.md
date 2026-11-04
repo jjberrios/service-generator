@@ -1,4 +1,4 @@
-# Approved Decisions — claro-spring-ms 1.0.0
+# Approved Decisions — claro-spring-ms 1.0.1
 
 ## Metadata maintenance — package 4 (2026-10-30)
 
@@ -134,3 +134,27 @@ The reference `application.properties` is the approved technical baseline for th
 **Style patterns known to violate the baseline (generation must avoid them, derived from the reference configuration):** annotation-array children (for example `@ApiResponses({ ... })`) indented at 8 where the rule requires 6 (basic offset 4 + `arrayInitIndent` 2) or 12; `switch` expressions directly after `(` (`WhitespaceAround`; assign to a local variable first); local variables declared more than 3 statements before first use (`VariableDeclarationUsageDistance`); numeric literals in code other than -1, 0, 1, 2, 4, 200, 201, 400, 401, 403, 404, 418, 500 and 1000 (`MagicNumber`; use constants named by their meaning, including in tests), plus line length 250, star/unused/redundant imports, braces, operator wrap on a new line, comma wrap at end of line, one statement per line, modifier order and name formats.
 
 **Evidence:** E-009 (reference `checkstyle.xml` and `pom.xml` Checkstyle plugin configuration); E-026 (offline execution of the gate against the first generated service).
+
+## D-015 - Version 1.0.1: runtime properties without `server.port` and named `application.properties`
+
+**Status:** approved (explicit user instructions: "Se quita el server.port.", "Si, debe llamarse application.properties." and "Prefiero Eliminar la 1.0.0 y crear una nueva con todas las correcciones.")
+
+**Decision:** Version 1.0.1 replaces 1.0.0, which is removed at the user's request. The generated runtime properties file carries no `server.port` (neither in `template/src/main/resources/application.properties` nor in `runtime.application_properties.static`). The generated project file is named `application.properties`, never `application.properties.example`. It contains only parameterized values and `${ENV}` placeholders (no secrets). The generator never reads, analyzes, compares or overwrites an existing `src/main/resources/application*.properties`: it writes `application.properties` only when the file does not exist.
+
+**Evidence:** review observations on the generated project (OSB_AGENTE_JAVA21.docx).
+
+## D-016 - Version 1.0.1: reference package and class names for the Swagger configuration
+
+**Status:** approved (explicit user instruction: "Prefiero Eliminar la 1.0.0 y crear una nueva con todas las correcciones." after the observations that the generated `configuration.openapi` package and `OpenApiConfig` class do not exist in the reference)
+
+**Decision:** The Swagger configuration class keeps the reference location and name: package `__BASE_PACKAGE__.configuration.swagger`, class `SwaggerConfig`. It supersedes the renaming recorded in D-007 only in name and package; the contract-neutral content of D-007 is preserved (no `@Server`, base URL, API metadata, operations or schemas).
+
+**Evidence:** E-012 (reference `SwaggerConfig.java`).
+
+## D-017 - Version 1.0.1: Javadoc on the generated API interface
+
+**Status:** approved (explicit user instruction: "Prefiero Eliminar la 1.0.0 y crear una nueva con todas las correcciones." after the observation "Falta java doc, revisar ejemplo de individual")
+
+**Decision:** Like the reference controller interface, the generated API interface carries Javadoc for the interface and for every operation, with `@param` for each parameter and `@return`. The texts come only from the OpenAPI contract (summary, description, parameter descriptions) and never from invented behavior.
+
+**Evidence:** reference `IndividualController` Javadoc.

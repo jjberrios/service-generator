@@ -19,6 +19,13 @@ Provenance paths inside artifacts keep their `.factory/...` form; `workspace_cli
 
 ## Consistency gate (mandatory, blocking)
 
+Stage 2A adds proposal-only decision requests and deterministic contexts via
+`workspace_cli.py decision-request-{create,list,show,context,status,stale}`;
+see `docs/decision-requests-v1.md`. These commands never authorize, resolve a
+finding, refresh a checkpoint or clear a gate. Legacy approval commands retain
+their behavior: **H-02 remains open**, pending an authentic approval boundary in
+2B. Hashes and approver-name strings do not prove human identity.
+
 For an explicitly selected non-HTTP batch archetype, `batch_gate.py` reports
 `comparison: not-applicable-non-http-batch` (not a successful Swagger audit). It verifies
 the selected archetype, workspace identity, resolved Sparx authority, live source hashes,

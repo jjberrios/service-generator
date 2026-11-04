@@ -6,11 +6,11 @@ behind the consistency gate and file protection; every file it renders is writte
 
 Assembled (archetype template, token substitution only; the POM and the Checkstyle/JaCoCo rules are never edited):
   build   pom.xml, settings.xml, .gitignore, .gitattributes, .mvn/wrapper/maven-wrapper.properties, mvnw, mvnw.cmd, src/main/resources/checkstyle.xml, src/main/resources/logback.xml
-  java    <application class>, configuration/openapi/OpenApiConfig, configuration/security/SecurityConfig, security/filter/JwtRequestFilter, security/service/JwtValidatorService(+Impl)
+  java    <application class>, configuration/swagger/SwaggerConfig, configuration/security/SecurityConfig, security/filter/JwtRequestFilter, security/service/JwtValidatorService(+Impl)
   deploy  Dockerfile, Jenkinsfile, config/*.j2  -- only when the plan says deploymentGenerationAuthorized is true
 
-Also assembled: src/main/resources/application.properties.example (a distinct file built only from archetype.yml#/runtime/application_properties; secrets are ${ENV} placeholders).
-Never assembled: src/main/resources/application*.properties (local environment configuration: not read, not copied, not compared, not overwritten),
+Also created when absent (D-015, never tracked, never read or overwritten once it exists): src/main/resources/application.properties built only from archetype.yml#/runtime/application_properties; secrets are ${ENV} placeholders.
+Never assembled into the payload: src/main/resources/application*.properties (local environment configuration: not read, not compared, not overwritten),
 and the template files that the materializer already generates from the plan (ActivityLogger, ConstanApi, ActivityLoggerTest).
 
 Parameters: plan.service (name, package, packagePath, groupId, projectVersion, applicationClass) and `values` of the workspace `generation-parameters.yml`.
@@ -28,10 +28,12 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 SKILLS = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(SKILLS / 'service-workspace' / 'scripts'))
+sys.path.insert(0, str(SKILLS / 'plan-service-implementation' / 'scripts'))
 import file_protection as fp  # noqa: E402
+import pom_baseline  # noqa: E402
 
 VERSION = 'assemble-project-2'
-EXAMPLE = 'src/main/resources/application.properties.example'
+EXAMPLE = 'src/main/resources/application.properties'
 BLOCKS = (('APPLICATION', ('server.', 'spring.threads.', 'spring.application.')), ('LOGGING', ('logging.',)), ('SWAGGER', ('springdoc.',)),
           ('ACTUATOR', ('management.',)), ('DATA SOURCE', ('spring.datasource.url', 'spring.datasource.username', 'spring.datasource.password', 'spring.datasource.driver')),
           ('HIKARI', ('spring.datasource.hikari.',)), ('JPA / HIBERNATE', ('spring.jpa.',)), ('JWT TOKEN', ('security.jwt.',)), ('SPRING CLOUD', ('spring.cloud.',)))
@@ -117,7 +119,7 @@ def check_forms(values: dict, used: set):
 
 
 def properties_example(archetype_dir: Path, values: dict) -> bytes:
-    """application.properties.example from archetype.yml#/runtime/application_properties only (the real application.properties is never read). Secrets are ${ENV} placeholders."""
+    """application.properties from archetype.yml#/runtime/application_properties only (the real application.properties is never read). Secrets are ${ENV} placeholders."""
     data = yaml.safe_load((archetype_dir / 'archetype.yml').read_bytes())
     config = (data.get('runtime') or {}).get('application_properties')
     if not config:
@@ -144,9 +146,8 @@ def properties_example(archetype_dir: Path, values: dict) -> bytes:
         rows[key] = '${' + env + '}'
     if missing:
         raise AssemblyError('missing-parameter', 'required parameters are not defined; nothing was written. Provide them (approved values) and run again', {'missing': missing})
-    lines = ['# Example application configuration generated from archetype.yml#/runtime/application_properties (no real values, no secrets).',
-             '# Create the real file outside version control: copy this file to src/main/resources/application.properties, review each value for the target environment',
-             '# and export the environment variables referenced as ${NAME} (secrets must never be written in the file). The generator never reads or writes application.properties.', '']
+    lines = ['# Application configuration generated from archetype.yml#/runtime/application_properties (no real values, no secrets).',
+             '# Review each value for the target environment and export the environment variables referenced as ${NAME} (secrets must never be written in the file).', '']
     placed = set()
     for block, prefixes in BLOCKS:
         keys = sorted(k for k in rows if k.startswith(prefixes) and k not in placed)
@@ -249,6 +250,8 @@ def render(plan: dict, repo: Path, ws_dir: Path, out_dir: Path) -> dict:
             continue
         raw = raw_by_rel[rel]
         data = substitute(raw, mapping, markers)
+        if planned and planned.get('mavenAdditions'):
+            data = pom_baseline.insert_additions(data.decode('utf-8'), planned['mavenAdditions']).encode('utf-8')
         if target.endswith('.java'):
             data = data.decode('utf-8').replace('\r\n', '\n').encode('utf-8')
         left = unresolved(data.decode('utf-8'))
@@ -264,19 +267,19 @@ def render(plan: dict, repo: Path, ws_dir: Path, out_dir: Path) -> dict:
         group = 'deployment' if is_deployment(rel) else 'java' if target.endswith('.java') else 'build'
         files[target] = {'bytes': data, 'source': f'{arch["path"]}/template/{rel}', 'group': group, 'sha256': sha(data)}
     example_target = fp.norm(EXAMPLE)
-    if (Path(out_dir) / example_target).is_file() and example_target not in recorded:
-        retained.append({'path': example_target, 'reason': 'exists in the output and is not tracked by the generation manifest: kept as is (never overwritten)'})
+    create_only = {}
+    if (Path(out_dir) / example_target).exists():
+        retained.append({'path': example_target, 'reason': 'exists in the output: never read, compared or overwritten (D-015)'})
     else:
-        data = properties_example(Path(repo) / arch['path'], values)
-        files[example_target] = {'bytes': data, 'source': f'{arch["path"]}/archetype.yml#/runtime/application_properties', 'group': 'configuration-example', 'sha256': sha(data)}
+        create_only[example_target] = properties_example(Path(repo) / arch['path'], values)
     report = {'assembler': VERSION, 'archetype': arch['path'], 'parameters': {k: values[k] for k in sorted(needed) if k not in MARKER_TOKENS},
               'parameterSources': {k: provenance.get(k, 'unknown') for k in sorted(needed)}, 'markerParameters': sorted(tokens[t] for t in markers),
               'files': [{'path': p, 'group': files[p]['group'], 'source': files[p]['source']} for p in sorted(files)], 'retainedExisting': retained, 'notAssembled': skipped,
               'deploymentArtifacts': 'assembled' if deploy_authorized else 'not-authorized-by-plan',
-              'applicationProperties': {'status': 'excluded-by-policy', 'example': EXAMPLE, 'note': 'src/main/resources/application.properties is never read, copied or written by the factory. '
-                                        'A new project copies application.properties.example to application.properties outside version control and exports JWT_SECRET_KEY, DB_URL, DB_USERNAME and DB_PASSWORD (environment-only).'}}
+              'applicationProperties': {'status': 'create-only-when-absent', 'path': EXAMPLE, 'note': 'src/main/resources/application.properties is created only when it does not exist and is never read, compared, tracked or overwritten afterwards (D-015). '
+                                        'Export JWT_SECRET_KEY, DB_URL, DB_USERNAME and DB_PASSWORD (environment-only).'}}
     report['parametersSha256'] = sha(yaml.safe_dump({k: str(values[k]) for k in sorted(needed)}, sort_keys=True).encode('utf-8'))
-    return {'files': files, 'retainedExisting': retained, 'report': report}
+    return {'files': files, 'createOnly': create_only, 'retainedExisting': retained, 'report': report}
 
 
 def main(argv=None) -> int:

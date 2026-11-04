@@ -119,11 +119,8 @@ def _addition_xml(addition: dict, eol: str) -> str:
     return eol.join(lines)
 
 
-def render_pom(template_text: str, config: dict, params: dict[str, Any], additions: list[dict] | None = None) -> str:
-    """Template + target values + justified additions. Baseline content is never removed or reordered."""
-    text = _replace_tokens(template_text, values_for(config, params))
-    if re.search(r'__[A-Z0-9_]+__', text):
-        raise BaselineError('Rendered POM still contains an unresolved placeholder.')
+def insert_additions(text: str, additions: list[dict] | None) -> str:
+    """Justified target-specific dependencies appended inside <dependencies>; baseline content is never removed or reordered."""
     additions = additions or []
     if additions:
         eol = '\r\n' if '\r\n' in text else '\n'
@@ -143,6 +140,14 @@ def render_pom(template_text: str, config: dict, params: dict[str, Any], additio
             raise BaselineError('Template has no dependencies section.')
         text = text[:match.start()] + block + text[match.start():]
     return text
+
+
+def render_pom(template_text: str, config: dict, params: dict[str, Any], additions: list[dict] | None = None) -> str:
+    """Template + target values + justified additions. Baseline content is never removed or reordered."""
+    text = _replace_tokens(template_text, values_for(config, params))
+    if re.search(r'__[A-Z0-9_]+__', text):
+        raise BaselineError('Rendered POM still contains an unresolved placeholder.')
+    return insert_additions(text, additions)
 
 
 def compare(reference_model: dict, template_rendered_model: dict, generated_model: dict, additions: list[dict] | None = None,

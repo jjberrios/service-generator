@@ -272,7 +272,7 @@ def build_payloads(root: Path, yaml: Any) -> tuple[dict[str, bytes], dict[str, A
         {"path": "settings.xml", "source": f"{ARCHETYPE_ROOT.as_posix()}/template/settings.xml",
          "reason": "Copied approved static non-secret D-009 Maven settings baseline; contains no server credentials.",
          "traceability": ["archetype.yml#/template_inventory/11", "archetype.yml#/maven/approved_corporate_baseline",
-                          "archetypes/claro-spring-ms/v1.0.0/decisions.md#D-009"]},
+                          "archetypes/claro-spring-ms/v1.0.1/decisions.md#D-009"]},
     ])
     manifest["generatedFiles"] = sorted(generated, key=lambda item: item["path"])
     manifest["omittedFiles"] = sorted([item for item in manifest.get("omittedFiles") or []

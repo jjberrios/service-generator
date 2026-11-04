@@ -11,7 +11,7 @@ import profiles
 ROOT = Path(__file__).resolve().parents[4]
 PLAN = ROOT / '.opencode/skills/plan-service-implementation/scripts'
 MAT = ROOT / '.opencode/skills/materialize-full-service/scripts'
-SELECTED = {'claro-spring-ms/v1.0.0': ac.LEGACY_JPA,
+SELECTED = {'claro-spring-ms/v1.0.1': ac.LEGACY_JPA,
             'claro-spring-java-8/v1.0.0': ac.JDBC_WAR,
             'claro-java-8-shell/v1.0.0': ac.BATCH_SHELL}
 FOREIGN = {ac.JDBC_WAR: ('claro-spring-ms', 'activity_logging_plan', 'spring-data-jpa', 'SFTP'),

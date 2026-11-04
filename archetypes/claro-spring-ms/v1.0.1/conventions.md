@@ -1,4 +1,4 @@
-# Claro Spring Microservice Conventions 1.0.0
+# Claro Spring Microservice Conventions 1.0.1
 
 These conventions are supported by reference evidence and reconciled with the approved decisions in `decisions.md`. The approved decisions take precedence when the reference contains conflicting alternatives.
 
@@ -44,7 +44,7 @@ The reference `src/main/resources/checkstyle.xml` (executed in `validate` with `
 ## Web, validation, and OpenAPI tooling
 
 - Use Spring MVC, Jakarta Validation tooling, and Springdoc WebMVC UI 2.7.0. Scan the generated base package, publish the UI at `/swagger-ui.html`, and disable the default Swagger URL. [`pom.xml:60-84`; `application.properties:14-18`]
-- Keep `OpenApiConfig` contract-neutral. It must not contain `@Server`, a base URL, API metadata, operations, schemas, or other contract values. [D-007; `SwaggerConfig.java:13-24`]
+- Keep `SwaggerConfig` contract-neutral. It must not contain `@Server`, a base URL, API metadata, operations, schemas, or other contract values. [D-007; `SwaggerConfig.java:13-24`]
 
 ## Logging
 

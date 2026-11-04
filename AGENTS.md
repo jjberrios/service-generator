@@ -41,7 +41,7 @@ It must not be re-analyzed for every generated service.
 
 The initial archetype is:
 
-`archetypes/claro-spring-ms/v1.0.0`
+`archetypes/claro-spring-ms/v1.0.1`
 
 It is extracted from:
 
@@ -318,7 +318,7 @@ and approved decisions, subject to the Reference-Based Extraction Policy above.
 ### Existing claro-spring-ms / 1.0.0 Decisions
 
 The following approved baselines apply specifically to
-`archetypes/claro-spring-ms/v1.0.0`, extracted from `input/reference/ms-individual`.
+`archetypes/claro-spring-ms/v1.0.1`, extracted from `input/reference/ms-individual`.
 They are not requirements for other archetypes. Preserve them for this existing
 version unless its revision is explicitly authorized:
 
@@ -351,7 +351,7 @@ maintaining the archetype.
 
 The existing approved reusable generation baseline is:
 
-`claro-spring-ms` version `1.0.0`
+`claro-spring-ms` version `1.0.1`
 
 Its extraction source is:
 
@@ -398,10 +398,10 @@ Java for a service is written only by the deterministic FULL materializer (skill
 The following materializer capabilities describe its currently supported technical profile, not requirements to transplant into every extracted archetype. Before using a different archetype, establish backend support for its Java version, templates, persistence and test framework; stop on unsupported profiles instead of rewriting the archetype to match the backend.
 For the supported pattern the materializer generates JUnit 5/Mockito tests with a rule traceability register and a static JaCoCo scope report (`tests-traceability.yml`, `coverage-scope.yml`, always `not-verified`); persistence tests need an explicitly authorized test-database dependency.
 Declared parameter/DTO constraints are exercised through Bean Validation, audit dates use an injectable `Clock` (system default zone, never SYSDATE), and `coverage-scope.yml` reports tool states honestly (Maven/Checkstyle/JaCoCo never claimed).
-The materializer also assembles the archetype technical files into a complete Maven project (`assemble_project.py`; `application*.properties` stays excluded) and `validation_evidence.py` records real offline Maven/Checkstyle/JaCoCo results bound to the exact project hash (stale when it changes; Maven runs only with explicit authorization).
+The materializer also assembles the archetype technical files into a complete Maven project (`assemble_project.py`; `application.properties` is only created when absent, D-015) and `validation_evidence.py` records real offline Maven/Checkstyle/JaCoCo results bound to the exact project hash (stale when it changes; Maven runs only with explicit authorization).
 
 Existing output files modified by hand (or listed as user-owned) are preserved; replacing them needs an authorization bound to their exact content.
-`src/main/resources/application*.properties` is local environment configuration: never read, analyzed, reported, compared or overwritten by the generator.
+`src/main/resources/application*.properties` is local environment configuration: never read, analyzed, reported, compared or overwritten by the generator; the only exception (claro-spring-ms 1.0.1, D-015) is creating `application.properties` when it does not exist, with `${ENV}` placeholders and no secrets.
 
 ## Archetype Selection, Contract and Lifecycle
 

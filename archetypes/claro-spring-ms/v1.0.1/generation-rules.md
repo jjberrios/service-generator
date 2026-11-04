@@ -8,7 +8,7 @@ Generation uses this frozen archetype plus approved OpenAPI and Sparx inputs. It
 2. Retain **every** dependency of the reference POM (21 dependencies, reference scopes and versions). Never prune a baseline dependency because the target does not appear to use it. [`pom.xml:60-174`; D-001; D-002; D-011; D-012]
 3. Retain Checkstyle enforcement and JaCoCo report/check execution with `minimumCoverage: 80`. [D-004; `pom.xml:207-276`; `checkstyle.xml:1-76`]
 4. Retain `logback.xml` with JSON console and corporate appenders. Never generate `logback-spring.xml`. [D-001; `logback.xml:1-54`]
-5. Retain Springdoc tooling but keep `OpenApiConfig` free of `@Server`, base URLs, and all API contract metadata. [D-007; `SwaggerConfig.java:13-24`]
+5. Retain Springdoc tooling but keep `SwaggerConfig` free of `@Server`, base URLs, and all API contract metadata. [D-007; `SwaggerConfig.java:13-24`]
 6. Retain the temporary permissive security chain and unregistered JWT filter exactly as documented for 1.0.0. Do not claim that this baseline enforces authentication and do not redesign it during generation. [D-002; `SecurityConfig.java:13-27`; `JwtRequestFilter.java:47-101`]
 7. Retain the Docker multi-stage/separated-classpath strategy and Kubernetes rolling-update, ConfigMap, ExternalSecret, and restricted-security-context structures. [D-005; D-006; `Dockerfile:1-44`; `config/deployment.yml.j2:1-70`; `config/ExternalSecret.yml.j2:1-29`]
 8. Retain repository hygiene, wrapper line endings, and the Jenkins shared-library invocation. [`.gitignore:1-33`; `.gitattributes:1-2`; `Jenkinsfile:1-5`]
