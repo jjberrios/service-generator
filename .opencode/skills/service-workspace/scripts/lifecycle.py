@@ -114,12 +114,16 @@ def decide(kind):
     return {'kind': kind, 'action': action, 'askUser': ask, 'reason': why}
 
 
-def find_decision(decisions, scope):
+def find_decision(decisions, scope, ws_dir=None):
     """Approved human decision for exactly this scope (target-local), or None. Never matches machine approvals."""
+    import decision_reviews
     for item in decisions or []:
-        if (item.get('humanReviewed') is True and str(item.get('approvedBy', 'human')).lower() not in {'agent', 'model', 'machine'}
-                and item.get('scope') == scope):
-            return item
+        if item.get('scope') == scope and ws_dir is not None:
+            try:
+                decision_reviews.require_records(ws_dir, [item])
+                return item
+            except (ValueError, OSError, KeyError, TypeError):
+                pass
     return None
 
 

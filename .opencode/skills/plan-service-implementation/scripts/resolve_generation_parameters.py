@@ -682,6 +682,9 @@ def main() -> int:
             if profile == profiles.JDBC_WAR:
                 from jdbc_war_plan import write_plan
                 return write_plan(ROOT, yaml, args.planning_input)
+            if profile == profiles.BFF:
+                from bff_plan import write_plan
+                return write_plan(ROOT, yaml, args.planning_input)
             from full_implementation_plan import write_full_plan
             return write_full_plan(ROOT, yaml, args.planning_input)
         generation_parameters, plan = resolve(ROOT, yaml)

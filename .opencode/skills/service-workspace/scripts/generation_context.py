@@ -72,7 +72,7 @@ def dig(value, *keys):
 
 def resolve_context(root, *, workspace=None, service=None, explicit=None, environ=None):
     root = Path(root).resolve()
-    if service and not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', service):
+    if service and not re.fullmatch(r'[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*', service):
         raise SelectionError('invalid-target-service')
     ws = Path(workspace) if workspace else root / '.factory' / 'services' / service if service else root / '.factory'
     if not ws.is_absolute():
@@ -92,7 +92,7 @@ def resolve_context(root, *, workspace=None, service=None, explicit=None, enviro
     if len(set(targets)) > 1:
         raise SelectionError(f"target-selection-conflict: {targets}")
     target = targets[0] if targets else None
-    if target and not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', target):
+    if target and not re.fullmatch(r'[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*', target):
         raise SelectionError('invalid-target-service')
     if ws.parent == root / '.factory/services' and target and ws.name != target:
         raise SelectionError('workspace-target-conflict')

@@ -532,6 +532,10 @@ def main() -> int:
 
         ambiguous.difference_update(expanded)
         decisions_by_evidence: dict[str, dict[str, Any]] = {}
+        import sys as _sys
+        _sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'service-workspace/scripts'))
+        import decision_reviews
+        decision_reviews.require_records(factory, decisions.get('decisions', []))
         reviewed = []
         for decision in decisions.get("decisions", []):
             target = decision.get("target") or {}

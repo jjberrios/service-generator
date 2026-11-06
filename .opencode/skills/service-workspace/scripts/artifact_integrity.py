@@ -96,7 +96,7 @@ def write_atomic(target, data):
 
 @contextmanager
 def service_lock(repo, service):
-    if not service or any(c not in 'abcdefghijklmnopqrstuvwxyz0123456789-' for c in service):
+    if not service or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-' for c in service):
         raise IntegrityError('invalid-lock-service')
     target = safe_path(Path(repo), '.factory/.locks/' + service + '.lock')
     target.parent.mkdir(parents=True, exist_ok=True)

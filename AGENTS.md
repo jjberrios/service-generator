@@ -391,7 +391,10 @@ Before any consolidation, planning, scaffold or Java generation, and on every re
 `@sparx-swagger-validator` comparison. Verified contradictions, documental differences and indispensable unverified behavior block with status
 `BLOCKED_BY_INCONSISTENCIES`; the agent never chooses between Sparx and Swagger and never invents rules. Release needs explicit approved human resolutions
 (bound to the exact finding), the semantic review of the prose, and the user's explicit authorization to resume. A generated audit report authorizes nothing.
-Existing approved human decisions are respected and referenced, not reopened unless the sources change or a new conflict appears. The consolidation, parameter,
+Existing approved human decisions are respected and referenced, not reopened unless the sources change or a new conflict appears.
+Delegation: only when the user explicitly states in the conversation that the agent may take the decisions, `@service-generator` may record
+`resolve-finding`/`resume` reviews through `delegated_review.py record` with the verbatim user statement stored in the event (`delegation`);
+overwrite and historical reattestation stay manual, business behavior is never invented (conservative option, reported as an assumption). The consolidation, parameter,
 planning and materialization scripts enforce the gate themselves.
 
 Java for a service is written only by the deterministic FULL materializer (skill `materialize-full-service`, `workspace_cli.py materialize <service>`), which recomputes the consistency gate, protects manual files, writes through `guard_write` and stops on unsupported components; `@service-generator` has no direct edit permission on `output/**`. A generic validator and a preventive style lint exist, but only the actual Checkstyle execution can pass a Checkstyle gate required by the selected archetype (D-014 for claro-spring-ms/1.0.0). An archetype whose reference has no Checkstyle has no such mandatory gate; absence is not a pass.
@@ -405,6 +408,10 @@ Existing output files modified by hand (or listed as user-owned) are preserved; 
 
 ## Archetype Selection, Contract and Lifecycle
 
+- Service names may be mixed case or lowercase; Maven `artifact_id`/`service_name`
+  derive as lowercase kebab-case (`dom-cpeRequest` -> `dom-cpe-request`). The Sparx
+  export root may be `input/sparx/` or a subfolder such as `input/sparx/PROYECT/`;
+  `workspace_cli.py resolve-sparx <path>` resolves it.
 - The archetype is never defaulted: it comes from an explicit instruction or the
   service checkpoint (`generation_context.py`); conflicting sources stop with a
   technical error.

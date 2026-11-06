@@ -14,6 +14,8 @@ ROOT, F = core.ROOT, core.F
 
 
 def _decisions_applied(ctx: core.Context) -> list[dict[str, Any]]:
+    import decision_reviews
+    decision_reviews.require_records(F, ctx.decisions)
     rows = []
     for decision in ctx.decisions:
         effects = decision.get("machineEffects")

@@ -1,30 +1,33 @@
 ---
 description: Read-only audit that compares Sparx Enterprise Architect documentation with a microservice's OpenAPI/Swagger and delivers a Word report of verified inconsistencies. Independent of @service-generator.
 mode: all
-permission:
-  read:
-    "*": allow
-    "input/reference/**": deny
-    "**/application*.properties": deny
-  edit:
-    "*": deny
-    "reports/inconsistencias/**": allow
-  task:
-    "*": deny
-    "openapi-analyzer": allow
-    "sparx-analyzer": allow
-  bash:
-    "*": ask
-    "python .opencode/skills/parse-openapi/scripts/*": allow
-    "python .opencode/skills/parse-sparx/scripts/*": allow
-    "python .opencode/skills/interpret-sparx/scripts/*": allow
-    "python .opencode/skills/audit-sparx-swagger/scripts/*": allow
-    "python -m unittest discover -s .opencode/skills/audit-sparx-swagger/tests": allow
-    "*mvnw*": deny
-    "mvn *": deny
-    "*kubectl*": deny
-    "*terraform*": deny
-    "*sqlplus*": deny
+permissions:
+  - {action: read, resource: "input/reference/**", effect: deny}
+  - {action: read, resource: "**/application*.properties", effect: deny}
+  - {action: edit, resource: "*", effect: deny}
+  - {action: edit, resource: "reports/inconsistencias/**", effect: allow}
+  - {action: subagent, resource: "*", effect: deny}
+  - {action: subagent, resource: "openapi-analyzer", effect: allow}
+  - {action: subagent, resource: "sparx-analyzer", effect: allow}
+  - {action: execute, resource: "*", effect: deny}
+  - {action: shell, resource: "*", effect: ask}
+  - {action: shell, resource: "python .opencode/skills/parse-openapi/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/parse-sparx/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/interpret-sparx/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/audit-sparx-swagger/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python -m unittest discover -s .opencode/skills/audit-sparx-swagger/tests", effect: allow}
+  - {action: shell, resource: "*review_cli*", effect: deny}
+  - {action: shell, resource: "*decision_reviews*", effect: deny}
+  - {action: shell, resource: "*gate-resolve*", effect: deny}
+  - {action: shell, resource: "*gate-authorize*", effect: deny}
+  - {action: shell, resource: "*protect-authorize*", effect: deny}
+  - {action: shell, resource: "*record_resolution*", effect: deny}
+  - {action: shell, resource: "*authorize_overwrite*", effect: deny}
+  - {action: shell, resource: "*mvnw*", effect: deny}
+  - {action: shell, resource: "mvn *", effect: deny}
+  - {action: shell, resource: "*kubectl*", effect: deny}
+  - {action: shell, resource: "*terraform*", effect: deny}
+  - {action: shell, resource: "*sqlplus*", effect: deny}
 ---
 
 # Sparx vs Swagger Validator

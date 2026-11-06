@@ -266,6 +266,8 @@ class AssumptionTests(Base):
         fx.ready_service(self.repo, 'inventory-service', mutate=cite)
         ws = self.repo / '.factory/services/inventory-service'
         fx.wfx.dump(ws / 'sparx-reviewed-decisions.yml', {'version': 2, 'decisions': [{'decisionId': 'human-reviewed-x', 'humanReviewed': True}]})
+        fx.wfx.simulate_manual(self.repo, 'inventory-service', kind='historical', decision_id='human-reviewed-x')
+        fx.wfx.simulate_manual(self.repo, 'inventory-service')
         mz.materialize(self.repo, 'inventory-service')
         register = yaml.safe_load((ws / 'assumptions-register.yml').read_bytes())
         sources = {e['source'] for e in register['entries']}
@@ -426,8 +428,10 @@ class SecurityAndDeterminismTests(Base):
 
     def test_only_the_materializer_can_write_functional_java(self):
         agent = yaml.safe_load((fx.REPO_ROOT / '.opencode/agents/service-generator.md').read_text(encoding='utf-8').split('---')[1])
-        self.assertEqual(agent['permission']['edit'].get('output/**'), 'deny')
-        self.assertEqual(agent['permission']['edit'].get('*'), 'deny')
+        import fnmatch
+        for path in ('output/example/X.java', 'other.txt'):
+            matches = [r['effect'] for r in agent['permissions'] if r['action'] == 'edit' and fnmatch.fnmatchcase(path, r['resource'])]
+            self.assertEqual(matches[-1], 'deny')
         source = (SCRIPTS / 'full_materializer.py').read_text(encoding='utf-8')
         self.assertLess(source.index('gate.check_cleared'), source.index('assumption_register(plan, ws)'))
         self.assertLess(source.index('assumption_register(plan, ws)'), source.index('publish(out_dir, ws.dir, payload, manifest_bytes)'))

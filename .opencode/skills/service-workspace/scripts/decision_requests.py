@@ -31,7 +31,7 @@ def text(value):
 def validate(proposal, context, repo, *, check_files=True):
     dc.canonical(proposal)  # reject dates, cycles, NaN and non-JSON data
     fields(proposal, ('schemaVersion', 'purpose', 'decisions'))
-    if type(proposal['schemaVersion']) is not int or proposal['schemaVersion'] != 1 or proposal['purpose'] != context['purpose']:
+    if type(proposal['schemaVersion']) is not int or proposal['schemaVersion'] not in (1, 2) or proposal['purpose'] != context['purpose']:
         raise DecisionError('invalid-decision-version-or-purpose')
     decisions = proposal['decisions']
     if not isinstance(decisions, list) or not decisions or len(decisions) > 100:
@@ -50,7 +50,10 @@ def validate(proposal, context, repo, *, check_files=True):
         fps = item['findingFingerprints']
         if not isinstance(fps, list) or any(not isinstance(f, str) or f not in known for f in fps) or len(fps) != len(set(fps)):
             raise DecisionError('unknown-or-duplicate-finding')
-        if item['classification'] == 'human-functional' and not fps:
+        historical = proposal['schemaVersion'] == 2 and any(
+            isinstance(a, dict) and isinstance(a.get('binding'), dict) and a['binding'].get('kind') == 'historical-decision'
+            for a in item.get('alternatives', []))
+        if item['classification'] == 'human-functional' and not fps and not historical:
             raise DecisionError('functional-decision-needs-finding')
         evidence = item['evidence']
         if not isinstance(evidence, list) or not evidence:
@@ -75,7 +78,10 @@ def validate(proposal, context, repo, *, check_files=True):
             raise DecisionError('decision-alternatives-required')
         alt_ids = set()
         for alt in alternatives:
-            fields(alt, ('id', 'description', 'effects'))
+            fields(alt, ('id', 'description', 'effects'), ('binding',) if proposal['schemaVersion'] == 2 else ())
+            if 'binding' in alt:
+                import decision_reviews
+                decision_reviews.validate_binding(alt['binding'], item, context)
             if not isinstance(alt['id'], str) or not ID.fullmatch(alt['id']) or alt['id'] in alt_ids:
                 raise DecisionError('duplicate-or-invalid-alternative')
             alt_ids.add(alt['id'])
@@ -105,7 +111,7 @@ def assemble(repo, service, proposal):
         item['findingFingerprints'] = sorted(item['findingFingerprints'])
         item['decisionId'] = 'decision-' + dc.digest({'contextId': context['contextId'], 'decision': item})
         items.append(item)
-    result = {'schemaVersion': 1, 'kind': 'decision-request', 'authority': 'none',
+    result = {'schemaVersion': proposal['schemaVersion'], 'kind': 'decision-request', 'authority': 'none',
               'service': service, 'purpose': proposal['purpose'], 'context': context, 'decisions': items}
     result['requestId'] = 'request-' + dc.digest(result)
     return result
@@ -157,14 +163,14 @@ def read(repo, service, request_id):
     fields(request, ('schemaVersion', 'kind', 'authority', 'service', 'purpose', 'context', 'decisions', 'requestId'))
     content = {k: v for k, v in request.items() if k != 'requestId'}
     if (request['service'] != service or request['kind'] != 'decision-request' or request['authority'] != 'none'
-            or type(request['schemaVersion']) is not int or request['schemaVersion'] != 1
+            or type(request['schemaVersion']) is not int or request['schemaVersion'] not in (1, 2)
             or request_id != request['requestId'] or request_id != 'request-' + dc.digest(content)):
         raise DecisionError('invalid-stored-request')
     context = request['context']
     if not isinstance(context, dict) or context.get('contextId') != dc.digest({k: v for k, v in context.items() if k != 'contextId'}):
         raise DecisionError('invalid-stored-context')
     # No stored flags are used as authority, including a self-consistent forged hash.
-    proposal = {'schemaVersion': 1, 'purpose': request['purpose'],
+    proposal = {'schemaVersion': request['schemaVersion'], 'purpose': request['purpose'],
                 'decisions': [{k: v for k, v in d.items() if k != 'decisionId'} for d in request['decisions']]}
     if context.get('service') != service or context.get('purpose') != request['purpose']:
         raise DecisionError('invalid-stored-context-identity')

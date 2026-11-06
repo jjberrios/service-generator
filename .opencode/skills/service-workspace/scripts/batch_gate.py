@@ -63,11 +63,9 @@ def evaluate(ws, repo, service, gate):
             result['status'] = gate.BLOCKED
             result['problems'] = ['batch review has unresolved findings or lacks explicit findings: []']
         else:
-            auth = gate.load(ws / 'consistency/authorization.yml') or {}
-            by = str(auth.get('authorizedBy', '')).strip()
-            result['status'] = gate.CLEARED if (auth.get('evaluationHash') == result['evaluationHash']
-                and auth.get('service') == service and by and by.lower() not in gate.FORBIDDEN_APPROVERS
-                and str(auth.get('statement', '')).strip()) else gate.AWAITING_AUTHORIZATION
+            # Historical authorization.yml is evidence only. The shared gate
+            # applies current scoped operational reviews after factual checks.
+            result['status'] = gate.AWAITING_AUTHORIZATION
     except (ValueError, TypeError, KeyError, OSError) as error:
         result['status'] = gate.BLOCKED
         result['problems'] = [str(error)]

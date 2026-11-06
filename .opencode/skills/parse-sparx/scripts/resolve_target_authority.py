@@ -1,4 +1,4 @@
-"""Generic source-authority resolution for a target service in a Sparx HTML export.
+﻿"""Generic source-authority resolution for a target service in a Sparx HTML export.
 
 Sparx exports can contain parallel representations of the same service (current, backup, historical
 copies). Names and routes match across them, so they MUST NOT be merged. This resolver reads only
@@ -245,7 +245,7 @@ def main() -> int:
         lane_rows = [e for e in branch_elements if role_of(e) == "lane"]
         for op in operations:
             literal = f"{op['method']}-{op['path']}"
-            hits = [m for m in method_rows if m["name"] == literal]
+            hits = [m for m in method_rows if m["name"] in (literal, f"{op['method']} {op['path']}")]
             segment = op["path"].rstrip("/").rsplit("/", 1)[-1]
             matched_by = "literal-method-path"
             if not hits and authority_decision and not is_complement:

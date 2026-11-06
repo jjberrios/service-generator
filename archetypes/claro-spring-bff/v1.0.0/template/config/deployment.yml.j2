@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ nombreServicio }}
+  namespace: {{ nombreVault }}-{{ ambiente }}
+  labels:
+    app: {{ nombreServicio }}
+    app.kubernetes.io/name: {{ nombreServicio }}
+    app.kubernetes.io/instance: {{ nombreServicio }}
+    app.kubernetes.io/part-of: @@PART_OF_LABEL@@
+    app.kubernetes.io/component: microservice
+    app.kubernetes.io/managed-by: argocd
+    claro.pe/environment: "{{ ambiente }}"
+    claro.pe/owner: @@OWNER_LABEL@@
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  progressDeadlineSeconds: 600
+  selector:
+    matchLabels:
+      app: {{ nombreServicio }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: {{ nombreServicio }}
+        app.kubernetes.io/name: {{ nombreServicio }}
+        app.kubernetes.io/instance: {{ nombreServicio }}
+        app.kubernetes.io/part-of: @@PART_OF_LABEL@@
+        app.kubernetes.io/component: microservice
+        claro.pe/environment: "{{ ambiente }}"
+        claro.pe/owner: @@OWNER_LABEL@@
+        claro.pe/tier: "S"
+      annotations:
+        claro.pe/source-repository: "{{ sourceRepositoryUrl }}"
+        claro.pe/version: "{{ imageTag }}"
+    spec:
+      serviceAccountName: {{ nombreServicio }}
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ nombreServicio }}-config
+      containers:
+        - name: {{ nombreServicio }}
+          image: registry-quay-quay.apps.ocpa.claro.pe/claro/{{ nombreServicio }}:{{ imageTag }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault

@@ -1,5 +1,5 @@
 """Generation profile resolution: each archetype owns its generation rules."""
-from archetype_contract import LEGACY_JPA, JDBC_WAR, BATCH_SHELL, CAPABILITIES, normalize, require_backend
+from archetype_contract import LEGACY_JPA, JDBC_WAR, BATCH_SHELL, BFF, CAPABILITIES, normalize, require_backend
 SUPPORTED = tuple(CAPABILITIES)
 
 

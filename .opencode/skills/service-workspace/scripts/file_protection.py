@@ -74,7 +74,8 @@ def classify(output_dir: Path, rel: str, recorded: dict, user_owned: list, autho
         state = MODIFIED
     else:
         state = GENERATED
-    authorized = any(norm(a.get('path', '')) == rel and a.get('currentSha256') == current for a in authorizations)
+    # Raw YAML authorizations are never accepted by this public classifier.
+    authorized = False
     return {'path': rel, 'state': state, 'currentSha256': current, 'overwriteAuthorized': authorized}
 
 
@@ -97,17 +98,33 @@ def decide(action: str, info: dict) -> dict:
 def evaluate(output_dir: Path, planned: list[dict], ws_dir: Path) -> list[dict]:
     recorded = generated_hashes(output_dir)
     owned = load_list(Path(ws_dir) / 'user-owned-files.yml', 'patterns')
-    authorizations = load_list(Path(ws_dir) / 'overwrite-authorizations.yml', 'authorizations')
+    authorizations = []  # retained historical file is deliberately not consumed
+    import decision_reviews as reviews
+    grants = None
+    def reviewed(info):
+        nonlocal grants
+        if info['state'] in (MODIFIED, UNTRACKED, USER_OWNED):
+            try:
+                repo, service = reviews.consumer_workspace(ws_dir)
+                if grants is None:
+                    grants = reviews.current(repo, service)
+                binding = {'kind': 'overwrite', 'outputDirectory': Path(output_dir).resolve().relative_to(repo).as_posix(),
+                           'path': info['path'], 'currentSha256': info['currentSha256'],
+                           'planSha256': sha(Path(ws_dir) / 'implementation-plan.yml')}
+                info['overwriteAuthorized'] = any(g['binding'] == binding for g in grants)
+            except (ValueError, OSError, KeyError, TypeError, yaml.YAMLError):
+                info['overwriteAuthorized'] = False
+        return info
     out = []
     for entry in planned:
         rel = norm(entry['path'])
         if rel == MANIFEST:
             if any(fnmatch(rel, norm(p)) for p in owned):
-                out.append(decide(entry['action'], classify(output_dir, rel, recorded, owned, authorizations)))
+                out.append(decide(entry['action'], reviewed(classify(output_dir, rel, recorded, owned, authorizations))))
                 continue
             out.append({'path': rel, 'state': GENERATED, 'action': entry['action'], 'decision': 'write' if entry['action'] in WRITE_ACTIONS else 'keep'})
             continue
-        out.append(decide(entry['action'], classify(output_dir, rel, recorded, owned, authorizations)))
+        out.append(decide(entry['action'], reviewed(classify(output_dir, rel, recorded, owned, authorizations))))
     return out
 
 
@@ -126,18 +143,4 @@ def guard_write(output_dir: Path, rel: str, ws_dir: Path) -> bool:
 
 
 def authorize_overwrite(output_dir: Path, rel: str, ws_dir: Path, authorized_by: str, reason: str) -> dict:
-    rel = norm(rel)
-    if is_excluded(rel):
-        raise ProtectedFileError(f'{rel} is local environment configuration and cannot be authorized for generation')
-    target = Path(output_dir) / rel
-    if not target.is_file():
-        raise ProtectedFileError(f'{rel} does not exist; nothing to authorize')
-    if not str(authorized_by).strip() or str(authorized_by).strip().lower() in ('agent', 'auto', 'automatic', 'system', 'service-generator') or not str(reason).strip():
-        raise ProtectedFileError('an overwrite must be authorized by the user with a reason')
-    path = Path(ws_dir) / 'overwrite-authorizations.yml'
-    data = yaml.safe_load(path.read_bytes()) if path.is_file() else {'schemaVersion': 1, 'authorizations': []}
-    entry = {'path': rel, 'currentSha256': sha(target), 'authorizedBy': authorized_by, 'reason': reason,
-             'authorizedAt': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}
-    data['authorizations'] = [a for a in data['authorizations'] if not (norm(a['path']) == rel and a['currentSha256'] == entry['currentSha256'])] + [entry]
-    path.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding='utf-8')
-    return entry
+    raise ProtectedFileError('legacy approval command replaced; use review_cli.py review (Model B, H-02 open)')

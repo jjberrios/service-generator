@@ -144,3 +144,15 @@ use `scripts/consolidate_authoritative_specs.py`:
 - Prose Activity text is interpreted only through `.factory/sparx-authoritative-prose-interpretation.yml`, whose rules cite
   literal source lines and are verified at build time. Process sequencing comes from
   `parse-sparx/scripts/extract_process_sequence.py` (explicit SequenceFlow connectors, never numeric labels).
+
+
+## BFF contract consolidation (no Sparx, no own Swagger)
+
+`scripts/consolidate_bff_spec.py` (run with `workspace_cli.py run <service> consolidate_bff_spec.py`, BFF gate CLEARED) derives `service-spec.yml` (kind `bff-contract-v1`) from
+`.factory/bff-contract-definition.yml` and the normalized backend contracts through `bff_source.py`: a bound operation copies the backend parameters, request body and its single 2xx
+response and carries an explicit `bffBinding` v1 (`forwardParameters`, `backendPath`); an operation without a backend operation is an explicit omission (`omittedBehavior`) with the minimal
+path-parameter shape declared in the definition. Nothing else is invented; strict readiness stays false while omissions exist, scaffold readiness is true.
+
+## REST orchestration consolidation
+
+`scripts/consolidate_rest_integration.py` (run via `workspace_cli.py run <service> ...`, gate enforced) writes `sparx-spec.yml` and service-spec.yml (kind `rest-orchestration-v1`) from `openapi-spec.yml` + the authoritative endpoint detail using closed literal patterns; uncovered statements become blocking ambiguities, unspecified mappings are listed under `unspecifiedMappings`. Error shapes come only from OpenAPI examples.

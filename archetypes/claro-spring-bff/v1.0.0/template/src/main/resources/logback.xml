@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration scan="true">
+
+    <springProperty name="serviceName"
+                    source="spring.application.name" defaultValue="myLogFile"
+                    scope="context"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <context>
+                    ${serviceName}
+                </context>
+                <timestamp>
+                    <fieldName>timestamp</fieldName>
+                    <timeZone>GMT-3</timeZone>
+                </timestamp>
+                <logLevel>
+                    <fieldName>level</fieldName>
+                </logLevel>
+                <threadName>
+                    <fieldName>thread</fieldName>
+                </threadName>
+                <mdc/>
+                <arguments>
+                    <includeNonStructuredArguments>false</includeNonStructuredArguments>
+                </arguments>
+                <message>
+                    <fieldName>context</fieldName>
+                </message>
+            </providers>
+        </encoder>
+    </appender>
+
+    <appender name="commonAppender" class="com.claro.common.commonlogger.client.appender.CommonAppender">
+        <layout>
+            <Pattern>%m</Pattern>
+        </layout>
+    </appender>
+
+    <logger name="logAppender" level="debug">
+        <appender-ref ref="commonAppender"/>
+    </logger>
+
+    <logger name="org.springframework.web.filter.CommonsRequestLoggingFilter">
+        <level value="DEBUG"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <root level="debug">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+</Configuration>

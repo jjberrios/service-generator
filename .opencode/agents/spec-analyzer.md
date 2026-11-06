@@ -1,12 +1,21 @@
 ---
 description: Deterministically reconciles the normalized OpenAPI contract with target-only Sparx semantics while preserving source ownership, evidence, inactive behavior, and unresolved gaps.
 mode: subagent
-permission:
-  edit:
-    "*": deny
-    ".factory/service-spec.yml": allow
-    ".factory/services/*/service-spec.yml": allow
-  bash: ask
+permissions:
+  - {action: edit, resource: "*", effect: deny}
+  - {action: edit, resource: ".factory/service-spec.yml", effect: allow}
+  - {action: edit, resource: ".factory/services/*/service-spec.yml", effect: allow}
+  - {action: shell, resource: "*", effect: ask}
+  - {action: shell, resource: "*review_cli*", effect: deny}
+  - {action: shell, resource: "*decision_reviews*", effect: deny}
+  - {action: shell, resource: "*gate-resolve*", effect: deny}
+  - {action: shell, resource: "*gate-authorize*", effect: deny}
+  - {action: shell, resource: "*protect-authorize*", effect: deny}
+  - {action: shell, resource: "*record_resolution*", effect: deny}
+  - {action: shell, resource: "*authorize_overwrite*", effect: deny}
+  - {action: subagent, resource: "*", effect: deny}
+  - {action: execute, resource: "*", effect: deny}
+  - {action: read, resource: "**/application*.properties", effect: deny}
 ---
 
 # Specification Analyzer

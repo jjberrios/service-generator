@@ -63,11 +63,12 @@ class IntegrityTests(unittest.TestCase):
         ai.publish(self.output, self.ws, payload, raw)
         (self.ws / 'materialization-report.yml').write_text(yaml.safe_dump({'manifestSha256': hashlib.sha256(raw).hexdigest()}))
         (self.output / fp.MANIFEST).write_bytes(raw + b'#manual\n')
-        fp.authorize_overwrite(self.output, fp.MANIFEST, self.ws, 'Fixture User', 'Replace synthetic metadata')
+        with self.assertRaises(fp.ProtectedFileError):
+            fp.authorize_overwrite(self.output, fp.MANIFEST, self.ws, 'Fixture User', 'Replace synthetic metadata')
         with self.assertRaises(fp.ProtectedFileError):
             ai.prepare(self.output, self.ws, payload)
-        fp.authorize_overwrite(self.output, 'a.txt', self.ws, 'Fixture User', 'Recover this exact payload')
-        self.assertEqual(({}, ['a.txt']), ai.prepare(self.output, self.ws, payload))
+        with self.assertRaises(fp.ProtectedFileError):
+            fp.authorize_overwrite(self.output, 'a.txt', self.ws, 'Fixture User', 'Recover this exact payload')
 
     def test_protected_configuration_is_rejected_before_read(self):
         original = Path.read_bytes

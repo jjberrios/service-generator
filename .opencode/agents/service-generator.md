@@ -1,42 +1,81 @@
 ---
 description: Orchestrates resumable full microservice generation using existing specialized agents, skills and persisted artifacts; stops at business decisions or after static validation.
 mode: all
-permission:
-  read:
-    "*": allow
-    "input/reference/**": deny
-    "**/application*.properties": deny
-  edit:
-    "*": deny
-    ".factory/**": allow
-    "output/**": deny
-    "input/**": deny
-    "archetypes/**": deny
-  task:
-    "*": deny
-    "openapi-analyzer": allow
-    "sparx-analyzer": allow
-    "spec-analyzer": allow
-    "implementation-planner": allow
-  bash:
-    "*": ask
-    "python .opencode/skills/parse-openapi/scripts/*": allow
-    "python .opencode/skills/parse-sparx/scripts/*": allow
-    "python .opencode/skills/interpret-sparx/scripts/*": allow
-    "python .opencode/skills/reconcile-service-spec/scripts/*": allow
-    "python .opencode/skills/plan-service-implementation/scripts/*": allow
-    "python .opencode/skills/service-workspace/scripts/*": allow
-    "python .opencode/skills/materialize-full-service/scripts/*": allow
-    "python .opencode/skills/audit-sparx-swagger/scripts/*": allow
-    "python .opencode/skills/materialize-service-scaffold/scripts/*": allow
-    "*mvnw*": deny
-    "mvn *": deny
-    "*kubectl*": deny
-    "*terraform*": deny
-    "*sqlplus*": deny
+permissions:
+  - {action: read, resource: "input/reference/**", effect: deny}
+  - {action: read, resource: "**/application*.properties", effect: deny}
+  - {action: edit, resource: "*", effect: deny}
+  - {action: edit, resource: ".factory/**", effect: allow}
+  - {action: edit, resource: "**/decision-reviews/*", effect: deny}
+  - {action: edit, resource: "**/authorization.yml", effect: deny}
+  - {action: edit, resource: "**/resolutions.yml", effect: deny}
+  - {action: edit, resource: "**/sparx-reviewed-decisions.yml", effect: deny}
+  - {action: edit, resource: "**/decision-coverage.yml", effect: deny}
+  - {action: edit, resource: "**/overwrite-authorizations.yml", effect: deny}
+  - {action: subagent, resource: "*", effect: deny}
+  - {action: subagent, resource: "openapi-analyzer", effect: allow}
+  - {action: subagent, resource: "sparx-analyzer", effect: allow}
+  - {action: subagent, resource: "spec-analyzer", effect: allow}
+  - {action: subagent, resource: "implementation-planner", effect: allow}
+  - {action: execute, resource: "*", effect: deny}
+  - {action: shell, resource: "*", effect: ask}
+  - {action: shell, resource: "python .opencode/skills/parse-openapi/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/parse-sparx/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/interpret-sparx/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/reconcile-service-spec/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/plan-service-implementation/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/audit-sparx-swagger/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/materialize-service-scaffold/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py *", effect: ask}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py decision-request-*", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py gate-evaluate *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py gate-check *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py resume *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py init *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py status *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py resolve-sparx *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py lifecycle *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py preflight *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py materialize *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py protect-check *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/materialize-full-service/scripts/full_materializer.py *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/materialize-full-service/scripts/validate_generated_service.py *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/materialize-full-service/scripts/style_lint.py *", effect: allow}
+  - {action: shell, resource: "*review_cli*", effect: deny}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/delegated_review.py record *", effect: allow}
+  - {action: shell, resource: "*decision_reviews*", effect: deny}
+  - {action: shell, resource: "*gate-resolve*", effect: deny}
+  - {action: shell, resource: "*gate-authorize*", effect: deny}
+  - {action: shell, resource: "*protect-authorize*", effect: deny}
+  - {action: shell, resource: "*record_resolution*", effect: deny}
+  - {action: shell, resource: "*authorize_overwrite*", effect: deny}
+  - {action: shell, resource: "*validation_evidence.py*", effect: ask}
+  - {action: shell, resource: "*mvnw*", effect: deny}
+  - {action: shell, resource: "mvn *", effect: deny}
+  - {action: shell, resource: "*kubectl*", effect: deny}
+  - {action: shell, resource: "*terraform*", effect: deny}
+  - {action: shell, resource: "*sqlplus*", effect: deny}
 ---
 
 # Service Generator — orchestration only
+
+Model B: use `workspace_cli.py decision-request-prepare <service>` (or a typed
+v2 proposal) for actual blockers. Never execute review_cli, legacy approvals,
+or edit review/history records. Ask the user to run the manual review command
+outside the agent; reuse current reviews. Analysis-required needs more analysis,
+not an automatic user question. This section supersedes legacy approval examples
+below. H-02 remains open: tool restrictions are not same-user OS isolation.
+
+Delegated decisions: ONLY when the user explicitly states in the current
+conversation that the agent may take the decisions, the agent may record them with
+`python .opencode/skills/service-workspace/scripts/delegated_review.py record <service> <requestId> --choices <file.yml> --user-authorization "<verbatim user statement>" --rationale "<why>"`.
+The verbatim statement is mandatory and is stored in the review event (`delegation`).
+Never record a delegated decision without that explicit statement, never for
+overwrite/historical reattestation, and never invent business behavior: where
+neither source defines a behavior, choose the most conservative option and list it
+in the final report as an agent-delegated assumption. Without the statement, keep
+asking the user to run the manual review.
 
 After planning, run `workspace_cli.py preflight <service>` for technical coverage.
 Materialization recomputes it. Unsupported, unknown or blocked mandatory
@@ -137,7 +176,13 @@ with disjoint outputs; serialize canonical `.factory/` artifact writers.
 
 Validate the target and resolve local paths safely: OpenAPI under
 `input/contracts/`, Sparx under `input/sparx/`, archetype under `archetypes/`,
-output under `output/`. Reject missing/unsafe paths or symlink escapes.
+output under `output/`. Service names may be mixed case (`dom-cpeRequest`) or
+lowercase; the workspace/output directory keeps the exact name, while Maven
+`artifact_id`/`service_name` use the lowercase-kebab technical identifier
+(`dom-cpe-request`). Resolve the Sparx path with
+`workspace_cli.py resolve-sparx <path>`: `input/sparx/PROYECT/`, `input/sparx/`
+and `/sparx` are all accepted and resolve to the actual export root (ambiguity
+fails, never guessed); use the printed path for every later phase. Reject missing/unsafe paths or symlink escapes.
 Fingerprint OpenAPI bytes, archetype version/tree, and relevant export hierarchy
 metadata. After bounded discovery, fingerprint the selected source dependency
 closure, including embedded documents. Use sorted relative-path/SHA-256 records,
@@ -220,10 +265,8 @@ which reuses `sparx-swagger-validator`/`audit-sparx-swagger`; do not duplicate i
 4. If blocked: STOP. Do not plan, scaffold, generate or modify Java, do not choose between Sparx and Swagger, do not invent rules. The checkpoint status is
    `BLOCKED_BY_INCONSISTENCIES` (with blockers and a pendingQuestion). Present each item (id, operation, element, what Sparx says, what Swagger says, the
    difference) in one concise question and ask for an explicit decision or a corrected source. Generating the audit Word report is allowed but authorizes nothing.
-5. Record only what the user answers: `workspace_cli.py gate-resolve <service> <item> --disposition ... --justification ... --approved-by <user> [--scope ...] [--decision <existing human decision id>]`
-   (approvals by an agent are rejected). Existing approved human decisions are respected and referenced, not reopened, unless sources changed or a new conflict appears.
-6. When nothing blocking remains the state becomes `AWAITING_RESUME_AUTHORIZATION`; only after the user explicitly authorizes resuming run
-   `workspace_cli.py gate-authorize <service> --by <user> --statement "<their words>"`, then `workspace_cli.py resume <service>`.
+5. Create a typed proposal with `workspace_cli.py decision-request-prepare <service>`. Present its requestId and the manual `review_cli.py review <service> <requestId>` command to the user. Never invoke the manual interface or write approval files. Legacy `gate-resolve` is retired. Current operational reviews are reused; legacy records require explicit reattestation.
+6. When nothing blocking remains the state becomes `AWAITING_RESUME_AUTHORIZATION`; prepare its explicit continuation request the same way. After the user completes manual review, run `workspace_cli.py resume <service>`. Legacy `gate-authorize` is retired. A chat answer alone is not a consumable approval.
 7. EVERY invocation, including resuming any checkpoint (also `legacy-migrated` ones), starts by `workspace_cli.py resume <service>` (recomputes the gate; a stored
    status or checkpoint is never trusted). Consolidation, planning, parameter resolution, materialization and the file-protection check refuse to run unless the
    gate is `CLEARED`; changed sources, a new finding or a changed finding invalidate the authorization.
@@ -271,10 +314,10 @@ and the effects on behavior/contract. Do not manufacture choices or add technica
 preferences as business blockers. Missing required source behavior is also a
 blocker; ask only for the minimum authoritative clarification.
 
-Persist answers in `.factory/sparx-reviewed-decisions.yml`, upserting a stable
-target/conflict-scoped decision ID. Include operations, approval, resolved
-conflict, resolution, provenance, affected blockers and any contract amendment.
-Never duplicate an entry on retry or inherit another target's decisions. Retain
+Persist proposals through the versioned decision-request contract, never by editing
+historical `sparx-reviewed-decisions.yml` or approval files. Bound alternatives
+must describe their exact scope and effects. Source corrections remain source-owner
+work; do not silently rewrite them after a finding resolution. Retain
 superseded evidence/history. Checkpoint `awaiting-human-decision` with the exact
 pending question and continuation point. After the answer, invalidate/reassess
 only decision-dependent phases; unchanged parsing and finalized meanings stay
@@ -338,7 +381,7 @@ their sources. Do not attach raw evidence to this delegation.
 Before writing anything run `workspace_cli.py gate-check <service>` (must print CLEARED) and
 `workspace_cli.py protect-check <service> --plan .factory/implementation-plan.yml` (view of the workspace plan). Files the user
 modified or created by hand, and files listed in `user-owned-files.yml`, are preserved: if protect-check exits 3 ask the user and only
-after an explicit answer run `protect-authorize` (bound to that exact content). `src/main/resources/application*.properties` is local
+prepare `decision-request-prepare <service> --kind overwrite --path <relative-path>` for manual review (bound to content and plan); never run retired `protect-authorize`. `src/main/resources/application*.properties` is local
 environment configuration: never read, analyzed, reported, compared with the archetype or written; it never blocks the pipeline.
 The coder verifies the complete expected pre-generation inventory/hashes before
 writing `output/<target_service>/`. Respect retain/update/create/remove, preserving

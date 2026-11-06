@@ -5,6 +5,16 @@ description: Use for per-service workspaces under .factory/services/<service>, m
 
 # Service workspace, consistency gate and file protection
 
+## Current authority flow (Iteration 2B, Model B)
+
+Read `docs/operational-reviews-v1.md`. Agents prepare typed requests with
+`workspace_cli.py decision-request-prepare`; only the user's separate interactive
+`review_cli.py` flow records local operational reviews. Legacy gate-resolve,
+gate-authorize and protect-authorize are retired, including direct writer APIs.
+Historical approval YAML remains evidence, not current authority. The older
+command descriptions below are historical where they conflict with this rule.
+H-02 remains open: same-user arbitrary execution is not prevented or authenticated.
+
 Scripts (`.opencode/skills/service-workspace/scripts/`): `workspace.py` (workspaces, checkpoints, sandbox runner), `consistency_gate.py` (blocking gate; reuses
 `audit-sparx-swagger`), `gate_guard.py` (guard called by every post-gate script), `migrate_legacy.py`, `file_protection.py`, `workspace_cli.py`.
 
@@ -34,6 +44,14 @@ with no pending findings, and the existing explicit human resume authorization.
 An OpenAPI artifact in that workspace blocks; relabeling an HTTP service cannot clear
 the gate. The batch contract is documented in
 `../materialize-full-service/docs/batch-shell-contract.md`.
+
+For an explicitly selected BFF archetype (`jar-springboot3-webmvc-webclient-bff`) that has no Sparx export and no OpenAPI of its own, `bff_gate.py` reports
+`comparison: not-applicable-bff-no-sparx` (never a fabricated audit). The sources are the consumed backend contracts (normalized by `parse-openapi` into
+`backend-contracts/*.openapi-spec.yml`) and the user-authored `bff-contract-definition.yml` (literal endpoint list + backend mapping + explicit omissions).
+The gate verifies the archetype profile, that the normalized contracts are current with their live `input/contracts` sources, that every mapping is found in its
+backend contract (`reconcile-service-spec/scripts/bff_source.py`), that an existing `service-spec.yml` equals the deterministic derivation, that no Sparx/OpenAPI
+artifact would be silently ignored, a bound semantic review (`consistency/supplemental.yml`, `reviewedAgainst` = definition/backend/archetype hashes, `findings: []`) and the
+existing explicit resume authorization. The BFF is detected from the checkpoint archetype, not from a label inside an artifact.
 
 Statuses: `NO_AUDIT`, `SEMANTIC_REVIEW_PENDING`, `BLOCKED_BY_INCONSISTENCIES`, `AWAITING_AUTHORIZATION`, `CLEARED`. Checkpoint statuses mirror them
 (`BLOCKED_BY_INCONSISTENCIES`, `CONSISTENCY_REVIEW_PENDING`, `AWAITING_RESUME_AUTHORIZATION`). Blocks: every verified contradiction, every documental

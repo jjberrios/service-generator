@@ -47,16 +47,15 @@ class Base(unittest.TestCase):
         """Walk the legitimate path: review, resolve every blocking item as the user, authorize, re-check."""
         fx.review(ws.dir)
         result = self.evaluate(ws)
-        if resolve:
-            for item in result['blocking']:
-                gate.record_resolution(ws.dir, self.repo, ws.service, item['id'], 'sparx-governs', 'Sparx es la fuente aprobada para este punto.', APPROVER)
-        gate.authorize(ws.dir, self.repo, ws.service, APPROVER, STATEMENT)
+        if resolve and result['blocking']:
+            fx.simulate_manual(self.repo, ws.service)
+        fx.simulate_manual(self.repo, ws.service)
         return gate.check_cleared(ws.dir, self.repo, ws.service)
 
 
 class WorkspaceIndependenceTests(Base):
     def test_service_names_are_validated_and_workspaces_are_separate_directories(self):
-        for bad in ('', '../x', 'A', 'a/b', 'a b', '.factory', 'a--b-', None):
+        for bad in ('', '../x', '1a', 'a/b', 'a b', '.factory', 'a--b-', None):
             with self.assertRaises(wsm.WorkspaceError, msg=repr(bad)):
                 wsm.Workspace(self.repo, bad)
         a, b = wsm.Workspace(self.repo, 'svc-a').ensure(), wsm.Workspace(self.repo, 'svc-b').ensure()
@@ -93,7 +92,8 @@ class WorkspaceIndependenceTests(Base):
     def test_the_sandbox_runner_redirects_existing_scripts_to_the_workspace_and_never_deletes_real_folders(self):
         a, _ = self.service('svc-a')
         (self.repo / 'input' / 'keep.txt').write_text('keep', encoding='utf-8')
-        script = self.repo / 'probe.py'
+        script = self.repo / '.opencode/skills/parse-openapi/scripts/probe.py'
+        script.parent.mkdir(parents=True)
         script.write_text("from pathlib import Path\nPath('.factory/produced.txt').write_text('x')\nprint(sorted(p.name for p in Path('input').iterdir()))\n", encoding='utf-8')
         done = wsm.run_script(a, script, [])
         self.assertEqual(done.returncode, 0, done.stderr)
@@ -201,7 +201,7 @@ class ConsistencyGateTests(Base):
         self.assertEqual((result['status'], result['blocking']), (gate.AWAITING_AUTHORIZATION, []))
         with self.assertRaises(gate.GateError):
             gate.check_cleared(ws.dir, self.repo)
-        gate.authorize(ws.dir, self.repo, 'svc-a', APPROVER, STATEMENT)
+        fx.simulate_manual(self.repo, 'svc-a')
         self.assertEqual(gate.check_cleared(ws.dir, self.repo)['status'], gate.CLEARED)
 
     def test_a_verified_contradiction_blocks_and_is_recorded_in_the_checkpoint(self):
@@ -253,10 +253,10 @@ class ConsistencyGateTests(Base):
             gate.check_cleared(ws.dir, self.repo)                                      # ... and does not authorize anything
         with self.assertRaises(gate.GateError):
             gate.authorize(ws.dir, self.repo, 'svc-a', APPROVER, STATEMENT)           # cannot authorize while blocked
-        entry = gate.record_resolution(ws.dir, self.repo, 'svc-a', blocked['blocking'][0]['id'], 'sparx-governs', 'Sparx manda.', APPROVER)
-        self.assertEqual(entry['status'], 'approved')
+        entry = fx.simulate_manual(self.repo, 'svc-a')
+        self.assertEqual(entry['selections'][0]['outcome'], 'approved')
         self.assertEqual(self.evaluate(ws)['status'], gate.AWAITING_AUTHORIZATION)     # resolved, still waiting for the user to authorize resuming
-        gate.authorize(ws.dir, self.repo, 'svc-a', APPROVER, STATEMENT)
+        fx.simulate_manual(self.repo, 'svc-a')
         self.assertEqual(gate.check_cleared(ws.dir, self.repo)['status'], gate.CLEARED)
 
     def test_machine_approvals_are_rejected(self):
@@ -279,13 +279,13 @@ class ConsistencyGateTests(Base):
         fx.review(ws.dir)
         result = self.evaluate(ws)
         self.assertEqual(result['status'], gate.BLOCKED)
-        self.assertEqual(len(result['orphanedResolutions']), 1)
+        self.assertEqual(len(result['resolved']), 0)  # entire relevant context is now stale
         # and a NEW conflict next to the resolved one blocks while the resolved one stays resolved
         fx.make_service(self.repo, 'svc-a', sparx_required='Si', extra_header='x-new')
         fx.review(ws.dir)
         result = self.evaluate(ws)
-        self.assertEqual([i['element'] for i in result['blocking']], ['header x-new'])
-        self.assertEqual(len(result['resolved']), 1)
+        self.assertEqual({i['element'] for i in result['blocking']}, {'header x-new', 'query id'})
+        self.assertEqual(len(result['resolved']), 0)
 
     def test_existing_human_decisions_are_respected_by_reference_and_must_exist(self):
         ws, _ = self.service('svc-a', sparx_required='Si')
@@ -294,7 +294,7 @@ class ConsistencyGateTests(Base):
         item = self.evaluate(ws)['blocking'][0]
         with self.assertRaises(gate.GateError):
             gate.record_resolution(ws.dir, self.repo, 'svc-a', item['id'], 'sparx-governs', 'x', APPROVER, based_on_decision='made-up-decision')
-        gate.record_resolution(ws.dir, self.repo, 'svc-a', item['id'], 'sparx-governs', 'Cubierta por la decision revisada.', APPROVER, based_on_decision='human-reviewed-svc-a-1')
+        fx.simulate_manual(self.repo, 'svc-a')
         self.assertEqual(self.evaluate(ws)['status'], gate.AWAITING_AUTHORIZATION)
         self.assertEqual(yaml.safe_load((ws.dir / 'sparx-reviewed-decisions.yml').read_bytes())['decisions'][0]['decisionId'], 'human-reviewed-svc-a-1')   # decision untouched
 
@@ -371,12 +371,12 @@ class CheckpointAndResumeTests(Base):
         fx.review(ws.dir)
         item = ws.resume()['gate']['blocking'][0]
         self.assertEqual(ws.state()['status'], 'BLOCKED_BY_INCONSISTENCIES')
-        gate.record_resolution(ws.dir, self.repo, 'svc-a', item['id'], 'swagger-governs', 'El contrato aprobado manda.', APPROVER)
+        fx.simulate_manual(self.repo, 'svc-a', choice='swagger-governs')
         self.assertFalse(ws.resume()['resumable'])                                    # resolved but not yet authorized
         self.assertEqual(ws.state()['status'], 'AWAITING_RESUME_AUTHORIZATION')
         with self.assertRaises(gate.GateError):
             ws.enter_phase('implementation-planning')
-        gate.authorize(ws.dir, self.repo, 'svc-a', APPROVER, STATEMENT)
+        fx.simulate_manual(self.repo, 'svc-a')
         outcome = ws.resume()
         self.assertTrue(outcome['resumable'])
         self.assertEqual(ws.state()['status'], 'in-progress')
@@ -419,7 +419,7 @@ class NoCodeWhenBlockedTests(Base):
         snapshot = tree(self.repo / '.factory')
         for script in (PLANNER, RECONCILE, SKILLS / 'plan-service-implementation' / 'scripts' / 'resolve_generation_parameters.py',
                        SKILLS / 'materialize-service-scaffold' / 'scripts' / 'materialize_scaffold.py', SKILLS / 'materialize-service-scaffold' / 'scripts' / 'materialize_build_files.py'):
-            with self.assertRaises(gate.GateError, msg=script.name):
+            with self.assertRaises((gate.GateError, wsm.WorkspaceError), msg=script.name):
                 wsm.run_script(a, script, [])                                         # the runner refuses before executing anything
         self.assertEqual(tree(self.repo / '.factory'), snapshot)                       # nothing created or modified
         self.assertFalse(out.exists())
@@ -534,7 +534,9 @@ class FileProtectionTests(Base):
             fp.guard_write(self.out, rel, self.ws.dir)
         with self.assertRaises(fp.ProtectedFileError):
             fp.authorize_overwrite(self.out, rel, self.ws.dir, 'agent', 'because')
-        fp.authorize_overwrite(self.out, rel, self.ws.dir, APPROVER, 'Reemplazar por la version generada.')
+        fx.dump(self.ws.dir / 'service-spec.yml', {'service': {'name': 'svc-a'}})
+        fx.dump(self.ws.dir / 'implementation-plan.yml', {'service': {'outputDirectory': 'output/svc-a'}, 'files': {'generate': [{'path': rel}]}})
+        fx.simulate_manual(self.repo, 'svc-a', kind='overwrite', path=rel)
         self.assertTrue(fp.guard_write(self.out, rel, self.ws.dir))
         self.edited.write_text('class Edited { int again; }', encoding='utf-8')                       # the user edits it again
         with self.assertRaises(fp.ProtectedFileError):
@@ -599,6 +601,8 @@ class DecisionCoverageTests(Base):
         entry = {'findingId': item['id'], 'findingFingerprint': item['fingerprint'], 'decisionId': decision['decisionId'], 'decisionSha256': gate.digest(decision), 'quote': self.QUOTE}
         entry.update(over)
         fx.dump(ws.dir / 'consistency' / 'decision-coverage.yml', {'coverage': [entry]})
+        if not over:
+            fx.simulate_manual(self.repo, 'svc-a', kind='historical', decision_id=decision['decisionId'])
 
     def test_a_valid_existing_decision_covers_the_difference_without_a_new_approval(self):
         ws, decision, item = self.prepare()
@@ -623,11 +627,11 @@ class DecisionCoverageTests(Base):
             self.link(ws, item, decision, **over)
             result = self.evaluate(ws)
             self.assertEqual(result['status'], gate.BLOCKED, name)
-            self.assertTrue(result['coverageProblems'], name)
+            self.assertEqual(result['coveredByDecision'], [], name)
         other_scope = self.decision(target={'service': 'svc-a', 'operations': [{'method': 'POST', 'path': '/api/v1/items'}]})
         fx.dump(ws.dir / 'sparx-reviewed-decisions.yml', {'version': 2, 'decisions': [other_scope]})
         self.link(ws, item, other_scope)
-        self.assertEqual(self.evaluate(ws)['coverageProblems'][0]['problem'], 'operation is outside the decision scope')
+        self.assertEqual(self.evaluate(ws)['status'], gate.BLOCKED)
         unapproved = self.decision(humanReviewed=False)
         fx.dump(ws.dir / 'sparx-reviewed-decisions.yml', {'version': 2, 'decisions': [unapproved]})
         self.link(ws, item, unapproved)
@@ -653,8 +657,8 @@ class DecisionCoverageTests(Base):
         fx.review(ws.dir)
         result = ws.resume()
         self.assertFalse(result['resumable'])
-        self.assertEqual([i['element'] for i in result['gate']['blocking']], ['header x-new'])
-        self.assertEqual(len(result['gate']['coveredByDecision']), 1)
+        self.assertIn('header x-new', [i['element'] for i in result['gate']['blocking']])
+        self.assertEqual(len(result['gate']['coveredByDecision']), 0)  # changed source context requires review
         self.assertEqual(ws.state()['status'], 'BLOCKED_BY_INCONSISTENCIES')
         with self.assertRaises(gate.GateError):
             ws.enter_phase('implementation-planning')
@@ -664,7 +668,7 @@ class DecisionCoverageTests(Base):
         before = (ws.dir / 'sparx-reviewed-decisions.yml').read_bytes()
         self.link(ws, item, decision)
         self.evaluate(ws)
-        gate.authorize(ws.dir, self.repo, 'svc-a', APPROVER, STATEMENT)
+        fx.simulate_manual(self.repo, 'svc-a')
         self.assertEqual((ws.dir / 'sparx-reviewed-decisions.yml').read_bytes(), before)
         self.assertEqual(gate.check_cleared(ws.dir, self.repo)['status'], gate.CLEARED)
 

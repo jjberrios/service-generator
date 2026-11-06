@@ -153,3 +153,12 @@ service spec, and archetype metadata/template files; it writes
 `.factory/generation-parameters.yml` and updates file-level parameter readiness
 in `.factory/implementation-plan.yml`. It does not generate source or deployment
 resources and does not modify the service spec or archetype.
+
+## BFF profile
+
+`ARTIFACT_ID` is the lowercase kebab-case technical identifier of the service name (`bff-customerBillApp` -> `bff-customer-bill-app`). Binding v1 accepts the optional `integration.forwardParameters` / `integration.backendPath` (see materialize-full-service). `bff_plan.py` plans profile `jar-springboot3-webmvc-webclient-bff` (structure + contract; see BFF-D-011). Operations without an explicit `bffBinding` v1 go to `omittedBehavior` instead of `incompleteOperations`; nothing is invented.
+
+
+## REST orchestration variant
+
+`rest_client_plan.py` is selected by `variant: rest-client-v1` in `full-planning-input.yml` and reads a `rest-orchestration-v1` service-spec (no persistence planned). Dispatch is a small hook in `build_implementation_plan.py`; other profiles/variants are untouched.

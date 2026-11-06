@@ -74,14 +74,22 @@ def parameter_table(archetype_dir: Path) -> dict:
     return {p['token']: p['name'] for p in data.get('parameters', []) if p.get('token')}
 
 
+def technical_identifier(name):
+    """Lowercase kebab-case technical identifier (dom-cpeRequest -> dom-cpe-request); None and lowercase names pass through."""
+    if not isinstance(name, str):
+        return name
+    text = re.sub(r'(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])', '-', name)
+    return re.sub(r'-{2,}', '-', text).lower()
+
+
 def resolve_parameters(plan: dict, ws_dir: Path) -> tuple[dict, dict]:
     """(values, provenance). Plan/derived values first; the workspace generation-parameters `values` fill the rest; a disagreement is a conflict, never a silent choice."""
     svc = plan['service']
     path = Path(ws_dir) / 'generation-parameters.yml'
     supplied = ((yaml.safe_load(path.read_bytes()) or {}).get('values') or {}) if path.is_file() else {}
-    derived = {'service_name': (svc.get('name'), 'plan.service.name'), 'base_package': (svc.get('package'), 'plan.service.package'),
+    derived = {'service_name': (technical_identifier(svc.get('name')), 'plan.service.name (lowercase-kebab technical identifier)'), 'base_package': (svc.get('package'), 'plan.service.package'),
                'base_package_path': (svc.get('packagePath'), 'plan.service.packagePath'),
-               'artifact_id': (svc.get('name'), 'plan.service.name (artifact id = service name)'),
+               'artifact_id': (technical_identifier(svc.get('name')), 'plan.service.name (artifact id = lowercase-kebab service name)'),
                'group_id': (svc.get('groupId') or svc.get('package'), 'plan.service.groupId, else base_package (D-010)'),
                'project_version': (svc.get('projectVersion') or '1.0.0-SNAPSHOT', 'plan.service.projectVersion, else the approved default (D-010)')}
     if svc.get('applicationClass'):

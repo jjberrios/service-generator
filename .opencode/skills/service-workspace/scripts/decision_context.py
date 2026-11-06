@@ -102,7 +102,9 @@ def build(repo, service, purpose):
         if root:
             source_path(repo, root.rstrip('/') + '/js/data/' + rel)
     try:
-        evaluation = gate.current_decision(ws.dir, repo, service, persist=False)
+        # Factual evaluation never consumes grants: contexts cannot depend on
+        # the approvals they will later validate (or recursively validate them).
+        evaluation = gate.current_decision(ws.dir, repo, service, persist=False, review_decisions=False)
         registry = evaluation.get('_registry') or {}
         findings = gate.blocking_items(registry)
         audit = {'state': 'evaluated', 'comparison': evaluation.get('comparison', 'sparx-openapi'),

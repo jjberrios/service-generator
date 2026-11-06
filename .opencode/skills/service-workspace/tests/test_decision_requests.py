@@ -184,7 +184,7 @@ class DecisionRequestTests(unittest.TestCase):
                     self.context()
 
     def test_malformed_contracts_and_approval_fields_rejected(self):
-        for change in ({'schemaVersion': 2}, {'schemaVersion': True}, {'approved': True},
+        for change in ({'schemaVersion': 3}, {'schemaVersion': True}, {'approved': True},
                        {'purpose': 'auto-approve'}, {'decisions': []}, {'decisions': 'bad'}):
             p = {**self.proposal, **change}
             with self.assertRaises((ValueError, TypeError)):

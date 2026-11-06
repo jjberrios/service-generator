@@ -98,7 +98,7 @@ class QuestionPolicyTests(unittest.TestCase):
         decisions = [{'decisionId': 'D1', 'humanReviewed': True, 'scope': 'svc-a'},
                      {'decisionId': 'D2', 'humanReviewed': True, 'scope': 'svc-b', 'approvedBy': 'agent'},
                      {'decisionId': 'D3', 'humanReviewed': False, 'scope': 'svc-c'}]
-        self.assertEqual(lc.find_decision(decisions, 'svc-a')['decisionId'], 'D1')
+        self.assertIsNone(lc.find_decision(decisions, 'svc-a'))  # raw flags are historical evidence only
         for other in ('svc-b', 'svc-c', 'svc-z'):
             self.assertIsNone(lc.find_decision(decisions, other))
 

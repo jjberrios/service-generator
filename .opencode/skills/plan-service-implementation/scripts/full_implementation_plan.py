@@ -121,7 +121,7 @@ def parameters(root: Path, yaml: Any, input_path: Path, ctx: tuple) -> dict:
     target = config['target']
     current = {'base_package': target['base_package'], 'base_package_path': target['base_package'].replace('.', '/'),
                'group_id': target['group_id'], 'project_version': target['project_version'],
-               'service_name': target['service'], 'artifact_id': target['service'],
+               'service_name': base.technical_identifier(target['service']), 'artifact_id': base.technical_identifier(target['service']),
                'application_class': base.pascal(target['service']) + 'Application'}
     for key in ('application_log_level', 'corporate_logger_level', 'http_log_level', 'root_log_level', 'log_time_zone', 'jwt_roles_claim'):
         current[key] = config['technical'][key]

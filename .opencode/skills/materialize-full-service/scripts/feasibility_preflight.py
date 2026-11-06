@@ -16,6 +16,10 @@ def evaluate(repo, service, *, supported_only=False, assemble=True):
     import archetype_contract as ac
 
     repo = Path(repo).resolve()
+    import typed_backends
+    typed = typed_backends.load(service)                # typed-model backends (per service) report their own feasibility in the same format
+    if typed is not None:
+        return typed.preflight(repo, service, supported_only=supported_only, assemble=assemble)
     ws = fm.wsm.Workspace(repo, service)
     rows, fingerprints = [], {}
     result = {'schemaVersion': 1, 'service': service, 'profile': None,
@@ -71,6 +75,12 @@ def evaluate(repo, service, *, supported_only=False, assemble=True):
             add('profile', 'contract', 'blocked', 'Plan profile disagrees with explicitly selected archetype')
         if supported_only:
             add('partial-generation', 'contract', 'unsupported', 'Partial generation is not supported by the FULL preflight')
+
+        if profile == ac.LEGACY_JPA and (plan.get('plan') or {}).get('pattern') == 'remote-orchestration':
+            import remote_orchestration_materializer as rom
+            preview = rom.preflight(repo, service, plan, add)
+            result['backendPreview'] = {k: preview[k] for k in ('status', 'payloadTreeSha256') if k in preview}
+            return finish()
 
         operations = (plan.get('api') or {}).get('operations') if profile == ac.LEGACY_JPA else plan.get('operations', [])
         if not isinstance(operations, list):

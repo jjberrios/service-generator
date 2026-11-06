@@ -873,7 +873,8 @@ def _register(plan, ws, fm):
     approved = set()
     if decisions_file.is_file():
         data = yaml.safe_load(decisions_file.read_bytes()) or {}
-        approved = {d.get('decisionId') for d in data.get('decisions', []) if d.get('humanReviewed') is True}
+        import decision_reviews
+        approved = set(decision_reviews.approved_decisions(ws.repo, ws.service))
     rows = []
     for item in plan.get('assumptions', []):
         decision = item.get('decision')

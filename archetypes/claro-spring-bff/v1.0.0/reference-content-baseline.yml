@@ -1,0 +1,9 @@
+schemaVersion: 1
+scope: input/reference/bff-customerbillconfiguration-Feature-300864@ccdb2c4c953
+algorithm: sha256-json-sorted-relative-path-and-content-sha256
+excluded: application*.properties
+fileCount: 50
+permittedContentSha256: 93ee7aacbab48ee0505d5051235a0cf0832e7260d5fce047aa6f3803e80bad26
+referencePomSha256: c4413df8b9d62156bc1a96e5ee3b38114a27f8f3399e1805007ad3844b6acbc2
+purpose: detect-changes-in-the-reference-after-extraction
+notes: Only this reference participates; no timestamps. Protected configuration is never read, hashed or compared.

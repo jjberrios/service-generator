@@ -100,6 +100,12 @@ def valid_kebab(value: str) -> bool:
     return bool(re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", value))
 
 
+def technical_identifier(value: str) -> str:
+    """Lowercase kebab-case technical identifier of a service name (dom-cpeRequest -> dom-cpe-request); lowercase names are unchanged."""
+    text = re.sub(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", "-", value)
+    return re.sub(r"-{2,}", "-", text).lower()
+
+
 def archetype_fingerprint(path: Path) -> str:
     from artifact_integrity import archetype_hashes, IntegrityError
     try:
@@ -263,9 +269,9 @@ def parameter_value(parameter: dict[str, Any], service: dict[str, Any], archetyp
     name = parameter.get("name")
     svc = service.get("service") or {}
     if name == "service_name" and svc.get("name"):
-        return svc["name"], ".factory/service-spec.yml#/service/name", None
-    if name == "artifact_id" and valid_kebab(str(svc.get("name") or "")):
-        return svc["name"], ".factory/service-spec.yml#/service/name (valid lowercase-kebab artifact identifier)", None
+        return technical_identifier(svc["name"]), ".factory/service-spec.yml#/service/name (lowercase-kebab technical identifier)", None
+    if name == "artifact_id" and valid_kebab(technical_identifier(str(svc.get("name") or ""))):
+        return technical_identifier(svc["name"]), ".factory/service-spec.yml#/service/name (valid lowercase-kebab artifact identifier)", None
     if name == "application_class" and svc.get("name"):
         return pascal(str(svc["name"])) + "Application", ".factory/service-spec.yml#/service/name (deterministic UpperCamelCase + Application)", None
     quality = archetype.get("quality") or {}
@@ -552,6 +558,12 @@ def main() -> int:
             if profile == profiles.JDBC_WAR:
                 from jdbc_war_plan import write_plan
                 return write_plan(root, yaml, args.planning_input)
+            if profile == profiles.BFF:
+                from bff_plan import write_plan
+                return write_plan(root, yaml, args.planning_input)
+            import rest_client_plan
+            if rest_client_plan.applies(root, yaml, args.planning_input):
+                return rest_client_plan.write_plan(root, yaml, args.planning_input)
             from full_implementation_plan import write_full_plan
             return write_full_plan(root, yaml, args.planning_input)
         result = plan(root, yaml)

@@ -1,0 +1,1096 @@
+schemaVersion: 1
+identity:
+  name: claro-spring-bff
+  version: 1.0.0
+  operation: extract
+  status: approved-generation-enabled-not-frozen
+  approved: true
+  approvalScope: user-approved-and-enabled-for-generation-BFF-D-012
+  frozen: false
+  generationEnabled: true
+  readyToFreeze: false
+provenance:
+  extractedOn: '2026-11-05'
+  reference: input/reference/bff-customerbillconfiguration-Feature-300864@ccdb2c4c953
+  target: archetypes/claro-spring-bff/v1.0.0
+  policy: AGENTS.md
+  methodology: extract-archetype
+  decisionFile: decisions.md
+  approvedDecisionRefs:
+  - BFF-D-001
+  - BFF-D-002
+  - BFF-D-003
+  - BFF-D-004
+  - BFF-D-005
+  - BFF-D-006
+  - BFF-D-007
+  - BFF-D-008
+  - BFF-D-009
+  - BFF-D-010
+  - BFF-D-011
+  - BFF-D-012
+  inheritedDecisions: []
+  entireReferenceTreeReadOnly: true
+  initialTargetAbsent: true
+  futureContractsInspected: false
+  sparxInspected: false
+  baseline:
+    file: reference-content-baseline.yml
+    protectedContentPattern: '**/application*.properties'
+    limitation: Protected content never read, hashed or compared.
+  referencePomSha256: c4413df8b9d62156bc1a96e5ee3b38114a27f8f3399e1805007ad3844b6acbc2
+platform:
+  status: reference-baseline
+  decisionRefs:
+  - BFF-D-002
+  evidence:
+  - E-POM
+  java: '21'
+  springBoot: 3.4.1
+  packaging: jar
+  servletNamespace: jakarta
+  mavenWrapper: 3.3.4 (distribution 3.10.0)
+  server: embedded-tomcat
+  deliveryRuntime: container-classpath-launch-not-fat-jar
+  jvmFlags:
+  - -Doracle.jdbc.timezoneAsRegion=false
+  - -Duser.timezone=America/Lima
+build:
+  status: reference-baseline
+  decisionRefs:
+  - BFF-D-002
+  - BFF-D-003
+  evidence: E-POM
+  modules: []
+  parent:
+    groupId: org.springframework.boot
+    artifactId: spring-boot-starter-parent
+    version: 3.4.1
+    relativePath: ''
+  wrapper: present
+  settingsXml: present
+  profiles:
+  - id: local
+    activeByDefault: true
+    properties:
+      activeProfile: local
+  properties:
+    java.version: '21'
+    springdoc.version: 2.7.0
+    doxia-core.version: 1.11.1
+    logstash-logback-encoder.version: '7.4'
+    claro-common-logger.version: 3.6.3
+    maven-compiler-plugin.version: 3.8.1
+    maven-surefire-plugin.version: 2.22.2
+    httpclient5.version: 5.4.1
+    jacoco-maven-plugin.version: 0.8.11
+    checkstyle-maven-plugin.version: 3.3.1
+    tomcat.version: 10.1.25
+    claro-common-utilities-version: 1.1.6
+    json.version: '20231013'
+    commons-io.version: 2.11.0
+    jackson.databind.nullable.version: 0.2.2
+    repository-url: http://artifactory.claro.pe/artifactory
+    sonar.coverage.exclusions: layer exclusions + @@APPLICATION_CLASS@@.java (see template/pom.xml)
+  propertyCaveats:
+  - Declared values, not resolved effective versions.
+  - maven-compiler-plugin 3.8.1 and maven-surefire-plugin 2.22.2 override the Boot 3.4.1 managed versions; compatibility not verified (observation, not corrected).
+  - jackson.databind.nullable.version and several declared dependencies have no observed use.
+  dependencyInventorySemantics:
+    scopeWhenAbsent: compile
+    versionWhenAbsent: managed-by-parent-unresolved
+    status: full-declared-baseline
+    count: 21
+    preservation: all-active-direct-dependencies
+    justification: 'Repository policy: no pruning, modernization or scope correction. Declaration does not prove use.'
+  dependencies:
+  - groupId: org.springframework.boot
+    artifactId: spring-boot-starter-web
+    purpose: spring-mvc-servlet-stack
+  - groupId: org.springframework.boot
+    artifactId: spring-boot-starter-actuator
+    purpose: health-endpoints
+  - groupId: org.springframework.boot
+    artifactId: spring-boot-starter-test
+    scope: test
+    purpose: test-stack-junit5-mockito
+  - groupId: org.springframework.boot
+    artifactId: spring-boot-starter-validation
+    purpose: bean-validation
+  - groupId: org.springdoc
+    artifactId: springdoc-openapi-starter-webmvc-ui
+    version: ${springdoc.version}
+    purpose: swagger-ui-openapi
+  - groupId: org.projectlombok
+    artifactId: lombok
+    optional: true
+    purpose: boilerplate-reduction
+  - groupId: net.logstash.logback
+    artifactId: logstash-logback-encoder
+    version: ${logstash-logback-encoder.version}
+    purpose: json-logging
+  - groupId: com.claro.common
+    artifactId: claro-common-utilities
+    version: ${claro-common-utilities-version}
+    purpose: corporate-library-declared
+  - groupId: com.claro.common
+    artifactId: claro-common-logger
+    version: ${claro-common-logger.version}
+    purpose: corporate-logger-appender
+  - groupId: org.apache.tomcat.embed
+    artifactId: tomcat-embed-core
+    version: ${tomcat.version}
+    purpose: embedded-tomcat-version-pin
+  - groupId: io.micrometer
+    artifactId: micrometer-tracing-bridge-brave
+    purpose: tracing-bridge
+  - groupId: commons-io
+    artifactId: commons-io
+    version: ${commons-io.version}
+    purpose: declared-io-library
+  - groupId: org.json
+    artifactId: json
+    version: ${json.version}
+    purpose: declared-json-library
+  - groupId: org.springframework.kafka
+    artifactId: spring-kafka
+    purpose: declared-kafka-support
+  - groupId: org.apache.httpcomponents.client5
+    artifactId: httpclient5
+    version: ${httpclient5.version}
+    purpose: declared-http-client
+  - groupId: org.springframework.boot
+    artifactId: spring-boot-starter-security
+    purpose: spring-security
+  - groupId: io.jsonwebtoken
+    artifactId: jjwt-api
+    version: 0.11.5
+    purpose: jwt-api
+  - groupId: io.jsonwebtoken
+    artifactId: jjwt-impl
+    version: 0.11.5
+    scope: runtime
+    purpose: jwt-runtime
+  - groupId: io.jsonwebtoken
+    artifactId: jjwt-jackson
+    version: 0.11.5
+    scope: runtime
+    purpose: jwt-json-runtime
+  - groupId: org.springframework.boot
+    artifactId: spring-boot-starter-webflux
+    purpose: webclient-reactive-integration
+  - groupId: io.projectreactor
+    artifactId: reactor-test
+    scope: test
+    purpose: reactive-test-support
+  dependencyUsage:
+    spring-boot-starter-web:
+      status: used-main-framework
+      evidence:
+      - E-JAVA-USAGE
+      observation: Spring MVC annotations, ControllerAdvice, servlet API
+    spring-boot-starter-actuator:
+      status: declared-no-direct-use-observed
+      evidence:
+      - E-JAVA-USAGE
+      observation: no actuate import; health endpoint configured by properties template
+    spring-boot-starter-test:
+      status: used-tests
+      evidence:
+      - E-TESTS
+      observation: JUnit 5 and Mockito present transitively; no spring test slice used
+    spring-boot-starter-validation:
+      status: used-main-framework
+      evidence:
+      - E-JAVA-USAGE
+      observation: jakarta.validation constraints and ConstraintViolationException handling
+    springdoc-openapi-starter-webmvc-ui:
+      status: used-main-framework
+      evidence:
+      - E-SWAGGER
+      observation: io.swagger annotations and OpenAPI bean
+    lombok:
+      status: used-main-framework
+      evidence:
+      - E-JAVA-USAGE
+      observation: '@Data/@Builder/@Slf4j/@RequiredArgsConstructor; excluded from boot repackage'
+    logstash-logback-encoder:
+      status: used-config
+      evidence:
+      - E-LOGBACK
+      observation: LoggingEventCompositeJsonEncoder in logback.xml
+    claro-common-utilities:
+      status: declared-no-direct-use-observed
+      evidence:
+      - E-JAVA-USAGE
+      observation: no com.claro.common import; local jar in libs/ not templated
+    claro-common-logger:
+      status: used-config
+      evidence:
+      - E-LOGBACK
+      observation: CommonAppender class referenced in logback.xml; local jar in libs/ not templated
+    tomcat-embed-core:
+      status: declared-no-direct-use-observed
+      evidence:
+      - E-JAVA-USAGE
+      observation: version pin, no import
+    micrometer-tracing-bridge-brave:
+      status: declared-no-direct-use-observed
+      evidence:
+      - E-JAVA-USAGE
+      observation: no import observed
+    commons-io:
+      status: declared-no-direct-use-observed
+      evidence:
+      - E-JAVA-USAGE
+      observation: no import observed
+    json:
+      status: declared-no-direct-use-observed
+      evidence:
+      - E-JAVA-USAGE
+      observation: no org.json import observed
+    spring-kafka:
+      status: declared-no-direct-use-observed
+      evidence:
+      - E-JAVA-USAGE
+      observation: no kafka import; coverage excludes mention **/kafka/**
+    httpclient5:
+      status: declared-no-direct-use-observed
+      evidence:
+      - E-JAVA-USAGE
+      observation: WebClient uses reactor-netty, not httpclient5
+    spring-boot-starter-security:
+      status: used-main-framework
+      evidence:
+      - E-SECURITY
+      observation: SecurityFilterChain, authentication token, filter
+    jjwt-api:
+      status: used-main-framework
+      evidence:
+      - E-SECURITY
+      observation: Jwts, Claims, Keys
+    jjwt-impl:
+      status: declared-runtime-provider
+      evidence:
+      - E-POM
+      observation: runtime scope
+    jjwt-jackson:
+      status: declared-runtime-provider
+      evidence:
+      - E-POM
+      observation: runtime scope
+    spring-boot-starter-webflux:
+      status: used-main-framework
+      evidence:
+      - E-WEBCLIENT
+      observation: WebClient, Mono, reactor-netty
+    reactor-test:
+      status: declared-no-direct-use-observed
+      evidence:
+      - E-JAVA-USAGE
+      observation: no StepVerifier use; tests use Mono.block()
+  plugins:
+  - artifactId: maven-compiler-plugin
+    version: ${maven-compiler-plugin.version}
+    configuration:
+      release: ${java.version}
+  - groupId: org.apache.maven.plugins
+    artifactId: maven-surefire-plugin
+    version: ${maven-surefire-plugin.version}
+    configuration:
+      reuseForks: true
+  - groupId: org.springframework.boot
+    artifactId: spring-boot-maven-plugin
+    versionResolution: inherited-from-parent
+    configuration:
+      excludes:
+      - org.projectlombok:lombok
+  - groupId: org.apache.maven.plugins
+    artifactId: maven-checkstyle-plugin
+    version: ${checkstyle-maven-plugin.version}
+    configuration:
+      configLocation: ${project.basedir}/src/main/resources/checkstyle.xml
+      includeTestSourceDirectory: true
+    executions:
+    - phase: validate
+      goals:
+      - check
+  - groupId: org.jacoco
+    artifactId: jacoco-maven-plugin
+    version: ${jacoco-maven-plugin.version}
+    pluginDependencies:
+    - org.apache.maven.doxia:doxia-core:${doxia-core.version}
+    configuration:
+      excludes:
+      - '**/client/**'
+      - '**/configuration/**'
+      - '**/controller/**'
+      - '**/dto/**'
+      - '**/exception/**'
+      - '**/model/**'
+      - '**/security/**'
+      - '**/kafka/**'
+      - '**/utils/**'
+      - '@@BASE_PACKAGE_PATH@@/*.class'
+      rules: PACKAGE INSTRUCTION COVEREDRATIO minimum 80%
+    executions:
+    - goals:
+      - prepare-agent
+    - id: report
+      phase: test
+      goals:
+      - report
+      - check
+  repositories:
+  - id: release
+    url: ${repository-url}/virtual-claro-maven/
+  - id: local-claro-snapshot
+    url: ${repository-url}/local-claro-maven-snapshot/
+  - id: local-claro-release
+    url: ${repository-url}/local-claro-maven-release/
+structure:
+  status: observed
+  evidence:
+  - E-BOOTSTRAP
+  - E-CONTROLLER
+  - E-SERVICE
+  - E-CLIENT
+  - E-TESTS
+  mainJava: src/main/java
+  testJava: src/test/java
+  resources: src/main/resources
+  packageRoot: '@@BASE_PACKAGE@@'
+  packageRootObservation: reference root package ends with .support; BASE_PACKAGE is the full bootstrap package
+  templatedPackages:
+  - client
+  - configuration
+  - configuration.security
+  - configuration.swagger
+  - dto.response
+  - exception
+  - security.filter
+  - security.service
+  - security.service.impl
+  - utils
+  extensionPackages:
+  - controller
+  - controller.impl
+  - service
+  - service.impl
+  - client.<integration>
+  - dto.request[.<area>]
+  - dto.response.<area>
+  extensionPackagesMaterialized: false
+  observedPatterns:
+    controllers: interface-with-openapi-annotations-plus-impl-in-controller.impl
+    services: interface-plus-impl-constructor-injection-lombok-requiredargs
+    integration: webclient-per-integration-qualified-bean
+    persistence: not-present-in-reference
+    dto: records-for-headers-lombok-beans-for-responses
+    mapping: manual
+    exceptions: runtime-business-exception-with-message-token-mapping
+    reactive: service-and-controller-return-mono
+quality:
+  status: reference-baseline
+  decisionRefs:
+  - BFF-D-002
+  evidence:
+  - E-POM
+  - E-CHECKSTYLE
+  - E-TESTS
+  policyRequired: true
+  tests:
+    framework: JUnit5
+    mockFramework: Mockito
+    style: mock() in @BeforeEach, ExchangeFunction stubs for WebClient, Mono.block(), constants for test data
+    naming: <Class>Test, camelCase method names
+    execution: not-run
+  jacoco:
+    version: 0.8.11
+    threshold: 80% INSTRUCTION COVEREDRATIO per PACKAGE
+    checkGoalObserved: true
+    excludedLayers:
+    - client
+    - configuration
+    - controller
+    - dto
+    - exception
+    - model
+    - security
+    - kafka
+    - utils
+    - bootstrap
+    execution: not-run
+  sonar:
+    coverageExclusionsProperty: true
+    pluginDeclared: false
+    execution: not-run
+  checkstyle:
+    referenceConfigurationObserved: true
+    status: required-by-reference
+    plugin: maven-checkstyle-plugin 3.3.1
+    phase: validate
+    goal: check
+    requiredScopes:
+    - src/main/java
+    - src/test/java
+    configLocation: src/main/resources/checkstyle.xml
+    execution: not-run
+runtime:
+  status: reference-baseline-execution-unverified
+  decisionRefs:
+  - BFF-D-002
+  evidence:
+  - E-LOGBACK
+  - E-DOCKER
+  - E-CONFIGMAP
+  configuration:
+    mechanism: spring.config.location=/config/application.properties mounted from ConfigMap
+    protectedFileContentsInspected: false
+    applicationPropertiesTemplated: false
+    valuesOwner: environment-operator
+  logging:
+    api: SLF4J
+    backend: Logback
+    encoder: logstash LoggingEventCompositeJsonEncoder
+    extraAppender: com.claro.common.commonlogger CommonAppender (logger logAppender)
+    activityPattern: ActivityLogger.inicioActividad/finActividad around service activities
+    transactionPrefix: menTran, observed as empty string in the reference
+    loggerDeclaration: private static final Logger LOG = LoggerFactory.getLogger(X.class) or @Slf4j
+    payloadLoggingRisk: logContenido serializes bodies without masking; review risk, not changed
+  security:
+    configurationObserved: true
+    guarantee: none-all-requests-permitted
+    mechanism: JWT HMAC filter sets authentication but no authorization rule enforces it
+    inferredPolicy: false
+  openapiTooling:
+    observed: true
+    tool: springdoc-openapi-starter-webmvc-ui 2.7.0
+deployment:
+  evidence:
+  - E-DOCKER
+  - E-DEPLOYMENT
+  - E-CI
+  - E-CONFIGMAP
+  - E-EXTSECRET
+  decisionRefs:
+  - BFF-D-002
+  target: kubernetes-container
+  containerPort: 8080
+  externalPrerequisites:
+  - corporate builder and runtime images
+  - corporate Nexus mirror
+  - Jenkins shared library master-library-bitbucket-new
+  - ArgoCD
+  - registry-quay
+  - local claro jars in libs/ (binary, not templated)
+  ci:
+    type: Jenkins
+    call: MicroserviciosPipeline
+    parameterKeys:
+    - nombreDeCompilado
+    - nombreVault
+    sharedLibraryImplementationAvailable: false
+    behaviorVerified: false
+  dockerObserved: true
+  kubernetesObserved: true
+  deploymentExecuted: false
+generationOwnership:
+  platformAndEngineering: archetype-reference-baseline
+  apiContract: OpenAPI
+  requestResponseSchemas: OpenAPI
+  httpValidation: OpenAPI
+  businessBehavior: Sparx
+  businessProcesses: Sparx
+  integrations: Sparx
+  externalClients: Sparx
+  persistenceBehavior: Sparx
+  mappings: OpenAPI+Sparx
+  localConfigurationAndSecrets: environment-operator
+  inventedFutureBehavior: false
+parameters:
+  GROUP_ID:
+    source: target-technical-identity
+    required: true
+    pattern: ^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$
+    replacementScope: xml-text
+    affectedFiles:
+    - pom.xml
+  ARTIFACT_ID:
+    source: target-technical-identity
+    required: true
+    pattern: ^[A-Za-z][A-Za-z0-9-]*$
+    replacementScope: xml-text-properties-java-string-and-ci-name
+    affectedFiles:
+    - config/configmap.yml.j2
+    - Jenkinsfile
+    - pom.xml
+    - src/main/java/@@BASE_PACKAGE_PATH@@/configuration/swagger/SwaggerConfig.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/utils/ConstanApi.java
+  PROJECT_VERSION:
+    source: target-technical-version
+    required: true
+    pattern: ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$
+    replacementScope: xml-text
+    affectedFiles:
+    - pom.xml
+  BASE_PACKAGE:
+    source: target-technical-identity
+    required: true
+    pattern: ^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$
+    replacementScope: java-package-properties-key-and-dockerfile-main-class
+    affectedFiles:
+    - config/configmap.yml.j2
+    - Dockerfile
+    - src/main/java/@@BASE_PACKAGE_PATH@@/@@APPLICATION_CLASS@@.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/client/WebClientConfig.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/configuration/security/SecurityConfig.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/configuration/swagger/SwaggerConfig.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/configuration/WsResponseProperties.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/dto/response/ApiResponseData.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/dto/response/ErrorResponse.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/dto/response/ResponseAudit.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/exception/BusinessException.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/exception/GlobalExceptionHandler.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/security/filter/JwtRequestFilter.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/security/service/impl/JwtValidatorServiceImpl.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/security/service/JwtValidatorService.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/utils/ActivityLogger.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/utils/ConstanApi.java
+  BASE_PACKAGE_PATH:
+    source: derived
+    required: true
+    pattern: ^[a-z][a-z0-9_]*(/[a-z][a-z0-9_]*)+$
+    replacementScope: template-relative-path-and-jacoco-exclude
+    derivedFrom: BASE_PACKAGE
+    transformation: replace-dot-with-slash
+    affectedFiles:
+    - pom.xml
+    - src/main/java/@@BASE_PACKAGE_PATH@@/@@APPLICATION_CLASS@@.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/client/WebClientConfig.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/configuration/security/SecurityConfig.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/configuration/swagger/SwaggerConfig.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/configuration/WsResponseProperties.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/dto/response/ApiResponseData.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/dto/response/ErrorResponse.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/dto/response/ResponseAudit.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/exception/BusinessException.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/exception/GlobalExceptionHandler.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/security/filter/JwtRequestFilter.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/security/service/impl/JwtValidatorServiceImpl.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/security/service/JwtValidatorService.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/utils/ActivityLogger.java
+    - src/main/java/@@BASE_PACKAGE_PATH@@/utils/ConstanApi.java
+  APPLICATION_CLASS:
+    source: target-bootstrap-class-name
+    required: true
+    pattern: ^[A-Z][A-Za-z0-9]*Application$
+    replacementScope: java-identifier-template-filename-sonar-exclusion-and-dockerfile
+    affectedFiles:
+    - Dockerfile
+    - pom.xml
+    - src/main/java/@@BASE_PACKAGE_PATH@@/@@APPLICATION_CLASS@@.java
+  VAULT_NAME:
+    source: target-delivery-vault-name
+    required: true
+    pattern: ^[a-z][a-z0-9-]*$
+    replacementScope: jenkinsfile-string
+    affectedFiles:
+    - Jenkinsfile
+  OWNER_LABEL:
+    source: target-delivery-owner-label
+    required: true
+    pattern: ^[a-z][a-z0-9-]*$
+    replacementScope: kubernetes-label-value
+    affectedFiles:
+    - config/deployment.yml.j2
+  PART_OF_LABEL:
+    source: target-delivery-system-label
+    required: true
+    pattern: ^[a-z][a-z0-9-]*$
+    replacementScope: kubernetes-label-value
+    affectedFiles:
+    - config/deployment.yml.j2
+templateInventory:
+- path: .gitattributes
+  classification: reusable/static
+  evidence:
+  - E-GITATTR
+  status: extracted-pending-review
+  decisionRefs: []
+- path: .gitignore
+  classification: reusable/static
+  evidence:
+  - E-GITIGNORE
+  status: extracted-pending-review
+  decisionRefs: []
+- path: .mvn/wrapper/maven-wrapper.properties
+  classification: reusable/static
+  evidence:
+  - E-WRAPPER
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+- path: config/configmap.yml.j2
+  classification: parameterized
+  evidence:
+  - E-CONFIGMAP
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-003
+- path: config/deployment.yml.j2
+  classification: parameterized
+  evidence:
+  - E-DEPLOYMENT
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+- path: config/ExternalSecret.yml.j2
+  classification: reusable/static
+  evidence:
+  - E-EXTSECRET
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+- path: Dockerfile
+  classification: parameterized
+  evidence:
+  - E-DOCKER
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+  - BFF-D-003
+- path: Jenkinsfile
+  classification: parameterized
+  evidence:
+  - E-CI
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+- path: mvnw
+  classification: reusable/static
+  evidence:
+  - E-WRAPPER
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+- path: mvnw.cmd
+  classification: reusable/static
+  evidence:
+  - E-WRAPPER
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+- path: pom.xml
+  classification: parameterized
+  evidence:
+  - E-POM
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+  - BFF-D-003
+- path: README.md
+  classification: reusable/static
+  evidence:
+  - E-README
+  status: extracted-pending-review
+  decisionRefs: []
+- path: settings.xml
+  classification: reusable/static
+  evidence:
+  - E-SETTINGS
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+- path: src/main/java/@@BASE_PACKAGE_PATH@@/@@APPLICATION_CLASS@@.java
+  classification: parameterized
+  evidence:
+  - E-BOOTSTRAP
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+- path: src/main/java/@@BASE_PACKAGE_PATH@@/client/WebClientConfig.java
+  classification: parameterized
+  evidence:
+  - E-WEBCLIENT
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-003
+- path: src/main/java/@@BASE_PACKAGE_PATH@@/configuration/security/SecurityConfig.java
+  classification: parameterized
+  evidence:
+  - E-SECURITY
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+- path: src/main/java/@@BASE_PACKAGE_PATH@@/configuration/swagger/SwaggerConfig.java
+  classification: parameterized
+  evidence:
+  - E-SWAGGER
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+- path: src/main/java/@@BASE_PACKAGE_PATH@@/configuration/WsResponseProperties.java
+  classification: parameterized
+  evidence:
+  - E-WSPROPS
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-004
+- path: src/main/java/@@BASE_PACKAGE_PATH@@/dto/response/ApiResponseData.java
+  classification: parameterized
+  evidence:
+  - E-ENVELOPE
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-004
+- path: src/main/java/@@BASE_PACKAGE_PATH@@/dto/response/ErrorResponse.java
+  classification: parameterized
+  evidence:
+  - E-ENVELOPE
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-004
+- path: src/main/java/@@BASE_PACKAGE_PATH@@/dto/response/ResponseAudit.java
+  classification: parameterized
+  evidence:
+  - E-ENVELOPE
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-004
+- path: src/main/java/@@BASE_PACKAGE_PATH@@/exception/BusinessException.java
+  classification: parameterized
+  evidence:
+  - E-EXCEPTION
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-004
+- path: src/main/java/@@BASE_PACKAGE_PATH@@/exception/GlobalExceptionHandler.java
+  classification: parameterized
+  evidence:
+  - E-EXCEPTION
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-004
+- path: src/main/java/@@BASE_PACKAGE_PATH@@/security/filter/JwtRequestFilter.java
+  classification: parameterized
+  evidence:
+  - E-SECURITY
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+- path: src/main/java/@@BASE_PACKAGE_PATH@@/security/service/impl/JwtValidatorServiceImpl.java
+  classification: parameterized
+  evidence:
+  - E-SECURITY
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+- path: src/main/java/@@BASE_PACKAGE_PATH@@/security/service/JwtValidatorService.java
+  classification: parameterized
+  evidence:
+  - E-SECURITY
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+- path: src/main/java/@@BASE_PACKAGE_PATH@@/utils/ActivityLogger.java
+  classification: parameterized
+  evidence:
+  - E-UTILS
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+- path: src/main/java/@@BASE_PACKAGE_PATH@@/utils/ConstanApi.java
+  classification: parameterized
+  evidence:
+  - E-UTILS
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+  - BFF-D-003
+- path: src/main/resources/checkstyle.xml
+  classification: reusable/static
+  evidence:
+  - E-CHECKSTYLE
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+- path: src/main/resources/logback.xml
+  classification: reusable/static
+  evidence:
+  - E-LOGBACK
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+exclusions:
+- 'application*.properties: content never read, analyzed, reported, compared, copied or hashed'
+- 'src/main/java/<pkg>/controller/**: OpenAPI-owned contract (paths, headers, schemas, validations)'
+- 'src/main/java/<pkg>/service/**: Sparx-owned business flow (activities, validations, error translation tied to integrations)'
+- 'src/main/java/<pkg>/client/manualseries/**: concrete integration (Sparx-owned)'
+- 'src/main/java/<pkg>/client/RequestHeadersMapper.java and dto/request/RequestHeaders.java: header set is OpenAPI-owned; resolved by BFF-D-005'
+- 'src/main/java/<pkg>/dto/request/**, dto/response/manualseries/**: concrete business DTOs; audit SOAP DTOs unused by any code'
+- 'src/main/java/<pkg>/client/WebClientConfig.java beans manualSeriesWebClient and auditWebClient: integration-specific; only the generic factory is kept (BFF-D-003)'
+- 'ConstanApi ACT* activity constants: Sparx-owned; NOMBRE_APLICACION parameterized'
+- 'config/configmap.yml.j2 keys soap.audit.* and manual.series.*: integration-specific; appended per Sparx. JWT secret default removed (BFF-D-003)'
+- 'src/test/java/**: business tests and fixtures; test conventions documented only'
+- 'libs/*.jar: binary corporate artifacts (BFF-A-004)'
+- Local state, build output, credentials
+evidence:
+  pathBase: input/reference/bff-customerbillconfiguration-Feature-300864@ccdb2c4c953
+  entries:
+    E-POM:
+      path: pom.xml
+      lines: 1-end
+      observed: Java 21, Boot 3.4.1 parent, JAR, 21 dependencies, 5 plugins, 3 repositories, local profile
+      confidence: high
+    E-WRAPPER:
+      path: mvnw, mvnw.cmd, .mvn/wrapper/maven-wrapper.properties
+      lines: all
+      observed: Maven Wrapper 3.3.4, only-script, Maven 3.10.0 distribution URL
+      confidence: high
+    E-SETTINGS:
+      path: settings.xml
+      lines: all
+      observed: Mirror of all repositories to corporate Nexus group; profile custom-repos
+      confidence: high
+    E-GITIGNORE:
+      path: .gitignore
+      lines: all
+      observed: Build/IDE ignores
+      confidence: high
+    E-GITATTR:
+      path: .gitattributes
+      lines: all
+      observed: LF for mvnw, CRLF for cmd
+      confidence: high
+    E-README:
+      path: README.md
+      lines: all
+      observed: Generic boilerplate README
+      confidence: high
+    E-DOCKER:
+      path: Dockerfile
+      lines: all
+      observed: Two-stage build via corporate builder image, runtime openjdk-21, classpath launch classes:dependency/*, external /config/application.properties, timezone America/Lima; main class names a
+        different package than the source (BFF-A-004)
+      confidence: high
+    E-CI:
+      path: Jenkinsfile
+      lines: all
+      observed: Shared library master-library-bitbucket-new, MicroserviciosPipeline(nombreDeCompilado, nombreVault); library unavailable
+      confidence: high
+    E-CONFIGMAP:
+      path: config/configmap.yml.j2
+      lines: all
+      observed: Generic keys (app, logging, swagger, actuator, jwt, ws.* response catalog) plus integration-specific keys (excluded); JWT secret with an in-file default (transformed, BFF-D-003)
+      confidence: high
+    E-DEPLOYMENT:
+      path: config/deployment.yml.j2
+      lines: all
+      observed: Kubernetes Deployment, rolling update, restricted securityContext, ConfigMap mounted at /config
+      confidence: high
+    E-EXTSECRET:
+      path: config/ExternalSecret.yml.j2
+      lines: 0 bytes
+      observed: Empty file in the reference
+      confidence: high
+    E-CHECKSTYLE:
+      path: src/main/resources/checkstyle.xml
+      lines: all
+      observed: Checkstyle ruleset, maven-checkstyle-plugin check at validate including test sources
+      confidence: high
+    E-LOGBACK:
+      path: src/main/resources/logback.xml
+      lines: all
+      observed: Logstash JSON console encoder plus claro CommonAppender logger
+      confidence: high
+    E-BOOTSTRAP:
+      path: src/main/java/<pkg>/BffCustomerBillConfigurationApplication.java
+      lines: all
+      observed: '@SpringBootApplication main class in package ending .support'
+      confidence: high
+    E-WEBCLIENT:
+      path: src/main/java/<pkg>/client/WebClientConfig.java
+      lines: all
+      observed: Reactor-netty WebClient factory with connect/read/write timeouts in seconds; two named beans (excluded) per integration
+      confidence: high
+    E-WSPROPS:
+      path: src/main/java/<pkg>/configuration/WsResponseProperties.java
+      lines: all
+      observed: '@Value constructor binding of ws.* code/message/detail catalog IDF0, IDF1, IDT1-IDT5'
+      confidence: high
+    E-SECURITY:
+      path: src/main/java/<pkg>/configuration/security, security/**
+      lines: all
+      observed: permitAll stateless chain with csrf disabled; JWT HMAC validator and OncePerRequestFilter component
+      confidence: high
+    E-SWAGGER:
+      path: src/main/java/<pkg>/configuration/swagger/SwaggerConfig.java
+      lines: all
+      observed: OpenAPI bean with title, corporate contact, Apache license
+      confidence: high
+    E-ENVELOPE:
+      path: src/main/java/<pkg>/dto/response/{ApiResponseData,ErrorResponse,ResponseAudit}.java
+      lines: all
+      observed: Generic Lombok response envelope and error body
+      confidence: high
+    E-EXCEPTION:
+      path: src/main/java/<pkg>/exception/*
+      lines: all
+      observed: BusinessException RuntimeException; ControllerAdvice mapping validation/header/not-found/business errors to catalog-based ErrorResponse
+      confidence: high
+    E-UTILS:
+      path: src/main/java/<pkg>/utils/*
+      lines: all
+      observed: ActivityLogger (start/end markers, body logging) and ConstanApi constants
+      confidence: high
+    E-CONTROLLER:
+      path: src/main/java/<pkg>/controller/**
+      lines: all
+      observed: Controller interface with OpenAPI annotations plus impl delegating to service returning Mono<ResponseEntity<ApiResponseData<T>>>; contract excluded
+      confidence: high
+    E-SERVICE:
+      path: src/main/java/<pkg>/service/**
+      lines: all
+      observed: 'Reactive service: activity executor, error mapping to BusinessException, response audit builder; business excluded'
+      confidence: high
+    E-CLIENT:
+      path: src/main/java/<pkg>/client/**
+      lines: all
+      observed: WebClient integration pattern with onStatus mapping to BusinessException; concrete integration excluded
+      confidence: high
+    E-TESTS:
+      path: src/test/java/**
+      lines: all
+      observed: JUnit 5, Mockito mock(), WebClient ExchangeFunction stubs, constant test data; business cases excluded
+      confidence: high
+    E-JAVA-USAGE:
+      path: src
+      lines: all 49 Java files; import scan only
+      observed: Direct use distinguished from declaration; no effective POM or transitive resolution
+      confidence: high
+    E-LIBS:
+      path: libs/*.jar
+      lines: 2 binaries
+      observed: claro-common-logger 3.6.3 and claro-common-utilities 1.1.6 jars copied by Dockerfile; binary, not templated
+      confidence: high
+unresolvedAmbiguities: []
+resolvedAmbiguities:
+- id: BFF-A-001
+  resolvedBy: BFF-D-005
+- id: BFF-A-002
+  resolvedBy: BFF-D-006
+- id: BFF-A-003
+  resolvedBy: BFF-D-007
+- id: BFF-A-004
+  resolvedBy: BFF-D-008
+- id: BFF-A-005
+  resolvedBy: BFF-D-009
+- id: BFF-A-006
+  resolvedBy: BFF-D-010
+readiness:
+  extractionComplete: true
+  baselineDecisionsApproved: true
+  freezeAuthorized: false
+  generatorBackend: structure-and-contract-implemented-unverified
+  runtimeCompatibility: unverified
+  dependencyResolution: unverified
+  serviceGenerationAuthorized: true
+  limitations:
+  - No backend capability exists for profile jar-springboot3-webmvc-webclient-bff; the planner/materializer must fail explicitly, not be rewritten to fit.
+  - Maven, Checkstyle, JaCoCo, tests, Docker and CI not executed.
+  - Ambiguities BFF-A-001..006 were resolved by delegated decisions BFF-D-005..010; human review is still required before approval or freeze.
+validation:
+  report: extraction-report.md
+  reproducibleStaticChecks: validate-extraction.py
+  mode: static-only
+  maven: not-run
+  tests: not-run
+  checkstyle: unverified
+  jacoco: not-run
+  database: not-applicable
+  deployment: not-run
+  protectedConfigurationContentIntegrity: not-compared-by-policy
+generation:
+  status: extracted-pending-review
+  decisionRefs:
+  - BFF-D-002
+  - BFF-D-003
+  - BFF-D-004
+  profile: jar-springboot3-webmvc-webclient-bff
+  profileOwner: this-archetype
+  backendSupport: structure-and-contract
+  utilities:
+    decisionRefs:
+    - BFF-D-002
+    evidence: E-UTILS
+    mustBeUsedByGeneratedCode: true
+    items:
+    - template: src/main/java/@@BASE_PACKAGE_PATH@@/utils/ActivityLogger.java
+      class: utils.ActivityLogger
+      scope: activity start/end markers and JSON body logging (technical)
+      requiredConstants:
+        SEPARADOR: string
+        SEPARADOR_ACTIVIDAD: string
+        INICIO_ACTIVIDAD: string
+        FIN_ACTIVIDAD: string
+    - template: src/main/java/@@BASE_PACKAGE_PATH@@/utils/ConstanApi.java
+      class: utils.ConstanApi
+      scope: technical constants (HTTP codes, error tokens, statuses, types, logging markers); activity names (ACT<n>_*) are appended per Sparx flow
+      requiredConstants: {}
+  configuration:
+    decisionRefs:
+    - BFF-D-003
+    evidence:
+    - E-CONFIGMAP
+    - E-DEPLOYMENT
+    items:
+    - template: config/configmap.yml.j2
+      kind: external-properties-template
+      generatedKeysAppended: per integration <prefix>.baseurl, <prefix>.url, <prefix>.rest-client.connect-timeout, <prefix>.rest-client.read-timeout; keys already present are never duplicated
+    - template: config/deployment.yml.j2
+      kind: kubernetes-deployment
+    - template: config/ExternalSecret.yml.j2
+      kind: external-secret-empty-in-reference
+    secrets: none; JWT_SECRET_KEY supplied by environment
+  rulesSource: reference-project-observed-conventions
+  persistence:
+    mechanism: not-present-in-reference
+    jpa: not-applicable
+  logging:
+    pattern: activity-logger-and-slf4j-per-class
+    activityLogger: present-in-reference
+    requestHeadersRecord: excluded-openapi-owned-BFF-D-005
+    source: runtime.logging
+  quality:
+    checkstyle: required-by-reference
+    mandatoryStyleGate: true
+  packaging:
+    type: jar
+    server: embedded-tomcat
+    bootstrap: SpringBootApplication
+  tests:
+    framework: JUnit5
+    mock: Mockito
+    setup: mock() in BeforeEach
+  mavenAssembler: archetype-token-render-at-at
+  unsupportedBehavior: stop-never-invent
+  style:
+    source: reference-project-observed-conventions
+    decisionRefs:
+    - BFF-D-004
+    constantsClass: utils.ConstanApi
+    externalPropertiesClass: configuration.WsResponseProperties
+    hardcodedLiterals: partial-observed-codes-and-markers-in-constants-log-texts-and-some-messages-inline
+    bindingStyle: '@Value constructor injection with ${key}'
+    webClientBeanNaming: <integration>WebClient with @Qualifier in the client
+    exceptionHierarchy: BusinessException(RuntimeException) with ConstanApi tokens
+    classNaming: XController + XControllerImpl in controller.impl, XService + XServiceImpl in service.impl, XClient in client.<integration>
+    propertyKeys:
+      responseCode: ws.codigoId<xx>
+      responseMessage: ws.mensajeId<xx>
+      responseDetail: ws.detailId<xx>
+      integrationBaseUrl: <prefix>.baseurl
+      integrationPath: <prefix>.url
+      integrationTimeouts: <prefix>.rest-client.connect-timeout / read-timeout (seconds)
+      jwtSecret: security.jwt.secret-key

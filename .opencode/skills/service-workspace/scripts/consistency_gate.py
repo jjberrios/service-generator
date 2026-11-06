@@ -192,7 +192,11 @@ def semantic_review_ok(supplemental: dict | None, registry: dict) -> bool:
     return against.get('openapiSha256') == (sources.get('openapi') or {}).get('sha256') and against.get('endpointDetailSha256') == sources.get('endpointDetailSha256')
 
 
-def decide(registry: dict | None, resolutions: list, decision_ids: set, authorization: dict | None, semantic_ok: bool, coverage: list | None = None, decisions: dict | None = None) -> dict:
+def decide(registry: dict | None, resolutions: list, decision_ids: set, authorization: dict | None, semantic_ok: bool, coverage: list | None = None, decisions: dict | None = None, *, _operational=False) -> dict:
+    # Pure helper inputs are NOT evidence of a manual review. Only the workspace
+    # consumer supplies verified operational grants. Historical flags are inert.
+    if not _operational:
+        resolutions, decision_ids, authorization, coverage, decisions = [], set(), None, [], {}
     if registry is None:
         return {'status': NO_AUDIT, 'blocking': [], 'resolved': [], 'orphanedResolutions': [], 'coveredByDecision': [], 'coverageProblems': [], 'topics': [],
                 'evaluationHash': None, 'problems': ['no audit registry']}
@@ -296,22 +300,71 @@ def fresh_registry(ws_dir: Path, repo: Path, service: str, persist: bool = False
     return yaml.safe_load(Path(output).read_bytes())
 
 
-def current_decision(ws_dir: Path, repo: Path, service: str, persist: bool = False) -> dict:
+def current_decision(ws_dir: Path, repo: Path, service: str, persist: bool = False, *, review_decisions=True) -> dict:
+    import decision_reviews as reviews
+    # The sandbox presents links; review scopes always refer to the real tree.
+    ws_dir = Path(ws_dir).resolve()
+    if ws_dir.parent.name == 'services' and ws_dir.parent.parent.name == '.factory':
+        repo, actual_service = reviews.consumer_workspace(ws_dir)
+        if actual_service != service:
+            raise GateError(NO_AUDIT, 'review workspace service mismatch')
     spec = load(Path(ws_dir) / 'service-spec.yml') or {}
+    if not isinstance(spec, dict) or not isinstance(spec.get('service', {}), dict):
+        raise GateError(NO_AUDIT, 'invalid service specification identity')
+    import bff_gate
+    if bff_gate.applies(Path(ws_dir), Path(repo), sys.modules[__name__]):  # BFF without Sparx: source-only gate, selected through the checkpoint archetype
+        result = bff_gate.evaluate(Path(ws_dir), Path(repo), service, sys.modules[__name__])
+        if review_decisions and result['status'] == AWAITING_AUTHORIZATION:
+            try:
+                grants = reviews.current(repo, service)
+                if any(g['binding'] == {'kind': 'resume', 'evaluationHash': result['evaluationHash']} for g in grants):
+                    result['status'] = CLEARED
+            except (ValueError, OSError, KeyError, TypeError, yaml.YAMLError) as error:
+                result.update(status=BLOCKED, problems=[f'operational-review-unavailable: {error}'])
+        return result
     if not spec:  # batch candidate: the normalized Sparx spec exists before the service spec is consolidated
         candidate = load(Path(ws_dir) / 'sparx-spec.yml') or {}
+        if not isinstance(candidate, dict) or not isinstance(candidate.get('service', {}), dict):
+            raise GateError(NO_AUDIT, 'invalid Sparx specification identity')
         if (candidate.get('service') or {}).get('profile') == 'batch-shell':
             spec = candidate
     if (spec.get('service') or {}).get('profile') == 'batch-shell':
         import batch_gate
-        return batch_gate.evaluate(Path(ws_dir), Path(repo), service, sys.modules[__name__])
+        result = batch_gate.evaluate(Path(ws_dir), Path(repo), service, sys.modules[__name__])
+        if review_decisions and result['status'] == AWAITING_AUTHORIZATION:
+            try:
+                grants = reviews.current(repo, service)
+                if any(g['binding'] == {'kind': 'resume', 'evaluationHash': result['evaluationHash']} for g in grants):
+                    result['status'] = CLEARED
+            except (ValueError, OSError, KeyError, TypeError, yaml.YAMLError) as error:
+                result.update(status=BLOCKED, problems=[f'operational-review-unavailable: {error}'])
+        return result
     p = paths(ws_dir)
     registry = fresh_registry(ws_dir, repo, service, persist)
     supplemental = load(p['supplemental'])
-    resolutions = (load(p['resolutions'], {}) or {}).get('resolutions', [])
-    coverage = (load(p['coverage'], {}) or {}).get('coverage', [])
-    result = decide(registry, resolutions, decision_ids(p['decisions']), load(p['authorization']),
-                    semantic_review_ok(supplemental, registry) if registry else False, coverage, decisions_by_id(p['decisions']))
+    resolutions, coverage, decisions, grants = [], [], {}, []
+    try:
+        if review_decisions:
+            grants = reviews.current(repo, service)
+            raw = decisions_by_id(p['decisions'])
+            decisions = {ident: d for ident, d in raw.items() if any(g['binding'] ==
+                         {'kind': 'historical-decision', 'decisionId': ident, 'contentSha256': reviews.dc.digest(d)} for g in grants)}
+            coverage = [e for e in (load(p['coverage'], {}) or {}).get('coverage', []) if e.get('decisionId') in decisions]
+            for grant in grants:
+                binding = grant['binding']
+                if binding['kind'] == 'resolve-finding':
+                    resolutions.append({'findingFingerprint': binding['fingerprint'], 'status': 'approved',
+                                        'disposition': binding['disposition'], 'approvedBy': 'local-manual-review-model-b',
+                                        'approvedAt': grant['recordedAt'], 'scope': [service],
+                                        'justification': grant['decision']['problem'], 'reviewEventId': grant['eventId']})
+        result = decide(registry, resolutions, set(decisions), None,
+                        semantic_review_ok(supplemental, registry) if registry else False, coverage, decisions, _operational=True)
+        if result['status'] == AWAITING_AUTHORIZATION and any(g['binding'] ==
+                {'kind': 'resume', 'evaluationHash': result['evaluationHash']} for g in grants):
+            result['status'] = CLEARED
+    except (ValueError, OSError, KeyError, TypeError, yaml.YAMLError) as error:
+        result = decide(registry, [], set(), None, False)
+        result.update(status=BLOCKED, problems=[f'operational-review-unavailable: {error}'])
     return {**result, '_registry': registry}
 
 
@@ -337,43 +390,25 @@ def check_cleared(ws_dir: Path, repo: Path, service: str | None = None) -> dict:
     result.pop('_registry', None)
     if result['status'] != CLEARED:
         message = f'{len(result["blocking"])} blocking item(s) pending' if result['blocking'] else 'consistency gate is not cleared'
-        if result.get('comparison') == 'not-applicable-non-http-batch' and result.get('problems'):
+        if str(result.get('comparison', '')).startswith('not-applicable-') and result.get('problems'):
             message += ': ' + '; '.join(str(p) for p in result['problems'])
         raise GateError(result['status'], message, result)
+    try:
+        import decision_reviews
+        for name in ('sparx-spec.yml', 'service-spec.yml'):
+            decision_reviews.require_citations(ws_dir, load(ws_dir / name) or {})
+    except (ValueError, OSError, KeyError, TypeError, yaml.YAMLError) as error:
+        raise GateError(BLOCKED, f'consumed decision is not currently reviewed: {error}') from error
     return result
 
 
 # --------------------------------------------------------------------------------------------------------------- human steps
 def record_resolution(ws_dir: Path, repo: Path, service: str, item_id: str, disposition: str, justification: str, approved_by: str,
                       scope: list | None = None, based_on_decision: str | None = None) -> dict:
-    """Persist an approved human resolution bound to the current content of the item. Never called automatically."""
-    p = paths(ws_dir)
-    result = current_decision(ws_dir, repo, service)
-    item = next((i for i in result['blocking'] + [r for r in result['resolved']] if i['id'] == item_id), None)
-    if item is None:
-        raise GateError(NO_AUDIT, f'unknown blocking item {item_id}')
-    scope = scope or [f"{item['operation']['method']} {item['operation']['path']}" if isinstance(item.get('operation'), dict) and item['operation'].get('method') else 'service']
-    entry = {'findingId': item_id, 'findingFingerprint': item['fingerprint'], 'status': 'approved', 'disposition': disposition, 'justification': justification, 'scope': scope,
-             'approvedBy': approved_by, 'approvedAt': now(), 'approvalSource': 'explicit user decision', **({'basedOnDecision': based_on_decision} if based_on_decision else {})}
-    problem = resolution_problem(entry, decision_ids(p['decisions']))
-    if problem:
-        raise GateError(BLOCKED, problem)
-    data = load(p['resolutions'], {}) or {'schemaVersion': 1, 'resolutions': []}
-    data['resolutions'] = [r for r in data['resolutions'] if r.get('findingFingerprint') != entry['findingFingerprint']] + [entry]
-    p['base'].mkdir(parents=True, exist_ok=True)
-    p['resolutions'].write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True, width=200), encoding='utf-8')
-    return entry
+    """Retired compatibility entry point: never writes, regardless of name/flags."""
+    raise GateError(BLOCKED, 'legacy approval command replaced; use review_cli.py review (Model B, H-02 open)')
 
 
 def authorize(ws_dir: Path, repo: Path, service: str, authorized_by: str, statement: str) -> dict:
-    """Explicit user authorization to resume development; only possible when nothing blocking remains, bound to this exact evaluation."""
-    result = current_decision(ws_dir, repo, service)
-    if result['status'] not in (AWAITING_AUTHORIZATION, CLEARED):
-        raise GateError(result['status'], 'resuming cannot be authorized while the gate has pending items', result)
-    if str(authorized_by).strip().lower() in FORBIDDEN_APPROVERS or not str(statement).strip():
-        raise GateError(BLOCKED, 'authorization must come from the user and quote their statement')
-    entry = {'schemaVersion': 1, 'service': service, 'authorizedBy': authorized_by, 'statement': statement, 'authorizedAt': now(), 'evaluationHash': result['evaluationHash']}
-    p = paths(ws_dir)
-    p['base'].mkdir(parents=True, exist_ok=True)
-    p['authorization'].write_text(yaml.safe_dump(entry, sort_keys=False, allow_unicode=True), encoding='utf-8')
-    return entry
+    """Retired compatibility entry point: use the separate manual review UI."""
+    raise GateError(BLOCKED, 'legacy approval command replaced; use review_cli.py review (Model B, H-02 open)')

@@ -87,7 +87,9 @@ class BatchShellTests(unittest.TestCase):
         dump(self.ws / 'consistency/batch-review.yml', {'reviewed': True, 'reviewedBy': 'test-semantic-review', 'reviewedAgainst': hashes, 'findings': []})
 
     def authorize(self):
-        gate.authorize(self.ws, self.repo, self.service, 'fixture-human', 'Fixture authorization only; never a real service decision.')
+        sys.path.insert(0, str(REPO / '.opencode/skills/service-workspace/tests'))
+        import fixtures
+        fixtures.simulate_manual(self.repo, self.service)
 
     def plan(self):
         return bp.write_plan(self.repo, yaml, self.ws / 'full-planning-input.yml')
@@ -102,10 +104,11 @@ class BatchShellTests(unittest.TestCase):
 
     def test_cli_dispatch_in_workspace_sandbox_and_parameter_resolver(self):
         import workspace
-        (self.repo / '.opencode').mkdir()
+        shutil.copytree(REPO / '.opencode/skills', self.repo / '.opencode/skills',
+                        ignore=shutil.ignore_patterns('__pycache__'))
         ws = workspace.Workspace(self.repo, self.service)
         for name in ('build_implementation_plan.py', 'resolve_generation_parameters.py'):
-            run = workspace.run_script(ws, REPO / '.opencode/skills/plan-service-implementation/scripts' / name,
+            run = workspace.run_script(ws, self.repo / '.opencode/skills/plan-service-implementation/scripts' / name,
                                        ['--mode', 'full', '--planning-input', '.factory/full-planning-input.yml'])
             self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
             self.assertEqual(yaml.safe_load((self.ws / 'implementation-plan.yml').read_bytes())['plan']['profile'], bm.PROFILE)
@@ -146,7 +149,8 @@ class BatchShellTests(unittest.TestCase):
         self.assertNotIn('System.exit', (out / 'src/main/java/pe/com/claro/shell/example/ExampleMain.java').read_text())
 
     def test_gate_requires_review_authorization_and_live_sources(self):
-        (self.ws / 'consistency/authorization.yml').unlink()
+        import fixtures
+        fixtures.revoke_reviews(self.repo, self.service)
         self.assertEqual(gate.current_decision(self.ws, self.repo, self.service)['status'], gate.AWAITING_AUTHORIZATION)
         with self.assertRaises(gate.GateError):
             self.plan()
@@ -220,7 +224,7 @@ class BatchShellTests(unittest.TestCase):
             fm.materialize(self.repo, self.service)
         self.plan()
         (self.ws / 'generation-parameters.yml').write_text('changed', encoding='utf-8')
-        with self.assertRaises(fm.MaterializationError):
+        with self.assertRaises((fm.MaterializationError, gate.GateError)):
             fm.materialize(self.repo, self.service)
         self.assertFalse((self.repo / 'output').exists())
 
@@ -338,7 +342,9 @@ class BatchFlowPackage7Tests(BatchShellTests):
         self.review()
         self.authorize()
         self.assertEqual(gate.current_decision(self.ws, self.repo, self.service)['status'], gate.CLEARED)
-        script = REPO / '.opencode/skills/reconcile-service-spec/scripts/consolidate_batch_spec.py'
+        shutil.copytree(REPO / '.opencode/skills', self.repo / '.opencode/skills',
+                        ignore=shutil.ignore_patterns('__pycache__'))
+        script = self.repo / '.opencode/skills/reconcile-service-spec/scripts/consolidate_batch_spec.py'
         import workspace
         (self.repo / '.opencode').mkdir(exist_ok=True)
         run = workspace.run_script(workspace.Workspace(self.repo, self.service), script, [])
@@ -349,7 +355,8 @@ class BatchFlowPackage7Tests(BatchShellTests):
 
     def test_consolidation_is_refused_without_authorization(self):
         (self.ws / 'service-spec.yml').unlink()
-        (self.ws / 'consistency/authorization.yml').unlink()
+        import fixtures
+        fixtures.revoke_reviews(self.repo, self.service)
         import workspace
         (self.repo / '.opencode').mkdir(exist_ok=True)
         with self.assertRaises(Exception):

@@ -2,6 +2,7 @@
 from pathlib import Path
 import hashlib
 import yaml
+import shutil
 
 SCRIPTS = Path(__file__).resolve().parents[1] / 'scripts'
 
@@ -63,6 +64,30 @@ def make_repo(tmp: Path) -> Path:
     for folder in ('.factory', 'input', 'output', 'archetypes', '.opencode'):
         (tmp / folder).mkdir(parents=True, exist_ok=True)
     return tmp
+
+
+def simulate_manual(repo, service, *, kind='gate', choice=None, decision_id=None, path=None):
+    """Tests ONLY: simulate explicit manual selection, never human authentication."""
+    import decision_reviews as reviews
+    import review_proposals
+    state_file = repo / '.factory/services' / service / 'service-generation-state.yml'
+    state = yaml.safe_load(state_file.read_bytes()) if state_file.is_file() else {}
+    if not (state.get('archetype') or {}).get('path'):
+        arch = 'archetypes/claro-spring-ms/v1.0.1'
+        if not (repo / arch).exists():
+            shutil.copytree(Path(__file__).resolve().parents[4] / arch, repo / arch)
+        dump(state_file, {**state, 'targetService': service, 'archetype': {'path': arch}})
+    request = review_proposals.prepare(repo, service, kind, decision_id=decision_id, path=path)
+    if not request.get('requestId'):
+        return None
+    return reviews._record(repo, service, request['requestId'], {
+        d['decisionId']: ('approved', choice or d['alternatives'][0]['id']) for d in request['decisions']})
+
+
+def revoke_reviews(repo, service):
+    import decision_reviews as reviews
+    for event_id in {g['eventId'] for g in reviews.current(repo, service)}:
+        reviews._revoke(repo, service, event_id)
 
 
 def java_files(*roots: Path) -> list[str]:

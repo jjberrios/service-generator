@@ -206,7 +206,7 @@ def clear_gate(repo: Path, service: str, route: str):
     wfx.review(ws.dir)
     result = gate.evaluate(ws.dir, repo, service)
     assert not result['blocking'], result['blocking']
-    gate.authorize(ws.dir, repo, service, APPROVER, 'authorize (fixture)')
+    wfx.simulate_manual(repo, service)
     return ws
 
 

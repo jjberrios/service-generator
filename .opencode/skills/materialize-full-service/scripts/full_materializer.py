@@ -242,7 +242,10 @@ def assumption_register(plan: dict, ws: 'wsm.Workspace') -> dict:
         add('archetype-technical', f'technical:{key}', str((choice or {}).get('mechanism', ''))[:240])
     for decision_id in sorted(d for d in cited if d in decisions or d.startswith('human-reviewed')):
         record = decisions.get(decision_id)
-        if record is None or record.get('humanReviewed') is not True:
+        import decision_reviews
+        try:
+            decision_reviews.require_records(ws.dir, [record] if record else [{'decisionId': decision_id}])
+        except (ValueError, OSError, KeyError, TypeError) as error:
             raise MaterializationError('missing-decision', f'the plan relies on human decision {decision_id} which is not an approved human review of this workspace')
         add('human-decision', decision_id, 'approved human decision applied by the plan')
     spec = yaml.safe_load((ws.dir / 'service-spec.yml').read_bytes()) or {}
@@ -325,6 +328,12 @@ def _materialize_unlocked(repo: Path, service: str, supported_only: bool = False
     ws = wsm.Workspace(repo, service)
     # 1. The gate comes first: a blocked service gets no further than this line (GateError propagates; no file has been touched).
     gate.check_cleared(ws.dir, repo, service)
+    import typed_backends
+    typed = typed_backends.load(service)                # per-service typed-model backends declare TYPED_BACKEND_SERVICES; other services are unaffected
+    if typed is not None:
+        if supported_only:
+            raise MaterializationError('unsupported', 'typed-model backends require full atomic project assembly; partial generation is not supported')
+        return typed.materialize_unlocked(repo, service, dry_run, assemble)
     from generation_context import resolve_context, SelectionError
     plan_file = ws.dir / 'implementation-plan.yml'
     try:
@@ -354,9 +363,22 @@ def _materialize_unlocked(repo: Path, service: str, supported_only: bool = False
                 raise MaterializationError('unsupported', 'batch requires full atomic project assembly; partial generation is not supported')
             return batch._materialize_checked(repo, service, dry_run)
         import jdbc_war_materializer as jdbc
+        import bff_materializer as bff
+        if profile == bff.PROFILE:
+            if supported_only or not assemble:
+                raise MaterializationError('unsupported', 'the BFF profile requires full atomic project assembly; partial generation is not supported')
+            return bff._materialize_checked(repo, service, dry_run)
         if profile != jdbc.PROFILE:
             raise MaterializationError('unsupported', f'generation profile {profile!r} has no materializer', {'unsupported': [{'path': 'implementation-plan.yml', 'componentType': 'profile', 'reason': profile}]})
         return jdbc._materialize_checked(repo, service, dry_run)
+    if isinstance(plan_section, dict) and plan_section.get('pattern') == 'remote-orchestration':
+        import remote_orchestration_materializer as rom
+        if supported_only or not assemble:
+            raise MaterializationError('unsupported', 'the remote-orchestration pattern requires full atomic project assembly; partial generation is not supported')
+        try:
+            return rom._materialize_checked(repo, service, dry_run)
+        except rom.Failure as error:
+            raise MaterializationError(error.kind, str(error).split(': ', 1)[-1], error.details) from error
     plan, plan_bytes = load_plan(ws, repo)
     out_dir = repo / plan['service']['outputDirectory']
     for entry in plan['files']['generate']:

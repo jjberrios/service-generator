@@ -2,16 +2,20 @@
 description: Extracts, revises, and validates a reusable Java/Spring microservice archetype from an approved reference project while excluding business-specific implementation.
 mode: subagent
 
-permission:
-  read:
-    "*": allow
-    "**/application*.properties": deny
-  edit:
-    "*": deny
-    "archetypes/**": allow
-    "input/reference/**": deny
-    "**/input/reference/**": deny
-  bash: ask
+permissions:
+  - {action: read, resource: "**/application*.properties", effect: deny}
+  - {action: edit, resource: "*", effect: deny}
+  - {action: edit, resource: "archetypes/**", effect: allow}
+  - {action: shell, resource: "*", effect: ask}
+  - {action: shell, resource: "*review_cli*", effect: deny}
+  - {action: shell, resource: "*decision_reviews*", effect: deny}
+  - {action: shell, resource: "*gate-resolve*", effect: deny}
+  - {action: shell, resource: "*gate-authorize*", effect: deny}
+  - {action: shell, resource: "*protect-authorize*", effect: deny}
+  - {action: shell, resource: "*record_resolution*", effect: deny}
+  - {action: shell, resource: "*authorize_overwrite*", effect: deny}
+  - {action: subagent, resource: "*", effect: deny}
+  - {action: execute, resource: "*", effect: deny}
 ---
 
 # Archetype Extractor

@@ -31,6 +31,7 @@ ROOT = Path.cwd().resolve()
 F = ROOT / ".factory"
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
+sys.path.insert(0, str(SCRIPT_DIR.parents[1] / 'service-workspace/scripts'))
 import reconcile_specs as rs  # noqa: E402  (contract builder shared with the existing reconciliation script)
 
 PATHS = {
@@ -98,6 +99,8 @@ class Context:
         self.detail = load("detail")
         self.authority = load("authority")
         self.decisions = load("decisions")["decisions"]
+        import decision_reviews
+        decision_reviews.require_records(F, self.decisions)
         self.sequence = load("sequence")
         self.prose = load("prose")
         self.previous = load("previousReassessment")

@@ -1,12 +1,26 @@
 ---
 description: Validates and deterministically normalizes OpenAPI 3.x YAML or JSON contracts into .factory/openapi-spec.yml without inferring business behavior.
 mode: subagent
-permission:
-  edit:
-    "*": deny
-    ".factory/**": allow
-    "**/.factory/**": allow
-  bash: ask
+permissions:
+  - {action: edit, resource: "*", effect: deny}
+  - {action: edit, resource: ".factory/**", effect: allow}
+  - {action: edit, resource: "**/decision-reviews/*", effect: deny}
+  - {action: edit, resource: "**/authorization.yml", effect: deny}
+  - {action: edit, resource: "**/resolutions.yml", effect: deny}
+  - {action: edit, resource: "**/sparx-reviewed-decisions.yml", effect: deny}
+  - {action: edit, resource: "**/decision-coverage.yml", effect: deny}
+  - {action: edit, resource: "**/overwrite-authorizations.yml", effect: deny}
+  - {action: shell, resource: "*", effect: ask}
+  - {action: shell, resource: "*review_cli*", effect: deny}
+  - {action: shell, resource: "*decision_reviews*", effect: deny}
+  - {action: shell, resource: "*gate-resolve*", effect: deny}
+  - {action: shell, resource: "*gate-authorize*", effect: deny}
+  - {action: shell, resource: "*protect-authorize*", effect: deny}
+  - {action: shell, resource: "*record_resolution*", effect: deny}
+  - {action: shell, resource: "*authorize_overwrite*", effect: deny}
+  - {action: subagent, resource: "*", effect: deny}
+  - {action: execute, resource: "*", effect: deny}
+  - {action: read, resource: "**/application*.properties", effect: deny}
 ---
 
 # OpenAPI Analyzer

@@ -1,0 +1,6 @@
+@Library('master-library-bitbucket-new')_
+
+MicroserviciosPipeline(
+    nombreDeCompilado: '@@ARTIFACT_ID@@',
+    nombreVault: '@@VAULT_NAME@@',
+)

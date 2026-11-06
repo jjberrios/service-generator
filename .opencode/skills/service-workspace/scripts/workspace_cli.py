@@ -1,6 +1,7 @@
 """Command line for service workspaces, the consistency gate, migration, file protection and the sandbox runner.
 
   workspace_cli.py list
+  workspace_cli.py resolve-sparx <path>                       (repo-relative Sparx export root: input/sparx/PROYECT, input/sparx or sparx)
   workspace_cli.py init <service>
   workspace_cli.py status <service>
   workspace_cli.py migrate-archive <service> <archive-dir>
@@ -22,8 +23,8 @@
   workspace_cli.py decision-request-status <service> <request-id>
   workspace_cli.py decision-request-stale <service>
 
-Decision requests are proposals only. Legacy gate-resolve/gate-authorize remain
-unchanged and do NOT authenticate humans (H-02 remains open pending stage 2B).
+Decision requests are proposals only. Legacy approval commands are retired;
+use the separate manual review_cli.py. Model B does NOT close H-02.
 """
 from pathlib import Path
 import argparse
@@ -42,6 +43,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('list')
+    sub.add_parser('resolve-sparx').add_argument('path')
     for name in ('init', 'status', 'gate-evaluate', 'gate-check', 'resume', 'preflight'):
         sub.add_parser(name).add_argument('service')
     m = sub.add_parser('migrate-archive')
@@ -80,12 +82,16 @@ def main(argv=None) -> int:
     pa.add_argument('--by', required=True)
     pa.add_argument('--reason', required=True)
     import decision_context as dc
-    for name in ('decision-request-create', 'decision-request-list', 'decision-request-show',
+    for name in ('decision-request-create', 'decision-request-prepare', 'decision-request-list', 'decision-request-show',
                  'decision-request-context', 'decision-request-status', 'decision-request-stale'):
         cmd = sub.add_parser(name)
         cmd.add_argument('service')
         if name == 'decision-request-create':
             cmd.add_argument('--proposal', required=True)
+        if name == 'decision-request-prepare':
+            cmd.add_argument('--kind', choices=('gate', 'historical', 'overwrite'), default='gate')
+            cmd.add_argument('--decision')
+            cmd.add_argument('--path')
         if name in ('decision-request-show', 'decision-request-status'):
             cmd.add_argument('request_id')
         if name == 'decision-request-context':
@@ -98,6 +104,9 @@ def main(argv=None) -> int:
         if args.command == 'list':
             print(yaml.safe_dump(wsm.list_services(repo)))
             return 0
+        if args.command == 'resolve-sparx':
+            print(wsm.resolve_sparx_root(repo, args.path))
+            return 0
         if args.command == 'migrate-root':
             print(yaml.safe_dump(mig.migrate_root_active(repo), allow_unicode=True))
             return 0
@@ -106,6 +115,7 @@ def main(argv=None) -> int:
             return decision_command(args, ws)
         if args.command == 'init':
             ws.ensure()
+            (ws.dir / 'consistency').mkdir(exist_ok=True)
             ws.set_state(schemaVersion=1, status=ws.state().get('status', 'idle'))
             print(ws.dir)
         elif args.command == 'lifecycle':
@@ -180,7 +190,10 @@ def decision_command(args, ws):
     try:
         command = args.command.removeprefix('decision-request-')
         code = 0
-        if command == 'create':
+        if command == 'prepare':
+            import review_proposals
+            out = review_proposals.prepare(ws.repo, ws.service, args.kind, decision_id=args.decision, path=args.path)
+        elif command == 'create':
             if protected(args.proposal):
                 raise dc.DecisionError('protected-proposal-path')
             proposal = load_mapping(safe_path(ws.dir, args.proposal))

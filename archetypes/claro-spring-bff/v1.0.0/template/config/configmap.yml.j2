@@ -1,0 +1,60 @@
+# ===============================
+# = APPLICATION
+# ===============================
+spring.threads.virtual.enabled=true
+spring.application.name=@@ARTIFACT_ID@@
+# ===============================
+# = LOGGING
+# ===============================
+logging.level.root=INFO
+logging.level.@@BASE_PACKAGE@@=DEBUG
+# ===============================
+# = SWAGGER
+# ===============================
+springdoc.packagesToScan=@@BASE_PACKAGE@@
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.swagger-ui.disable-swagger-default-url=true
+# ===============================
+# = ACTUATOR
+# ===============================
+management.health.defaults.enabled=true
+management.health.livenessstate.enabled=true
+management.health.readinessstate.enabled=true
+management.endpoints.web.exposure.include=health
+management.endpoint.health.show-details=always
+# ===============================
+# = JWT TOKEN
+# ===============================
+security.jwt.secret-key=${JWT_SECRET_KEY}
+# ===============================
+# = REST CLIENT
+# ===============================
+# ===============================
+# = RESPONSE AUDIT
+# ===============================
+ws.codigoIdf0=IDF0
+ws.mensajeIdf0=OK
+ws.detailIdf0=OPERACION EXITOSA
+ws.codigoIdf1=IDF1
+ws.mensajeIdf1=Bad Request
+ws.detailIdf1=LA SOLICITUD CONTIENE DATOS INVALIDOS
+ws.codigoIdt1=IDT1
+ws.mensajeIdt1=Not Found
+ws.detailIdt1=EL RECURSO SOLICITADO NO EXISTE
+ws.codigoIdt2=IDT2
+ws.mensajeIdt2=Service unavailable
+ws.detailIdt2=SERVICIO NO ESTA DISPONIBLE TEMPORALMENTE
+ws.codigoIdt3=IDT3
+ws.mensajeIdt3=Gateway Timeout
+ws.detailIdt3=EL SERVICIO NO RESPONDIO A TIEMPO
+ws.codigoIdt4=IDT4
+ws.mensajeIdt4=Internal Server Error
+ws.detailIdt4=ERROR GENERICO
+ws.codigoIdt5=IDT5
+ws.mensajeIdt5=Conflict
+ws.detailIdt5=CONFLICTO POR REGISTRO DUPLICADO
+
+# ===============================
+# = SPRING CLOUD
+# ===============================
+spring.cloud.compatibility-verifier.enabled=false

@@ -6,8 +6,6 @@ the frozen mailing-info fixture. All artifacts and approvals are temp-test-only.
 """
 import copy
 import shutil
-import subprocess
-import sys
 from pathlib import Path
 
 import yaml
@@ -136,19 +134,15 @@ def prepare(repo, name):
         'project_version': '1.0.0-SNAPSHOT', 'output_directory': f'output/{name}', 'archetype': fx.ARCHETYPE},
         'naming': {'domain_prefix': shape['prefix'], 'table_models': {shape['table']: {'class_name': shape['entity'], 'properties': {f[0]: f[1] for f in shape['fields']}}}},
         'technical': technical}
-    # A temporary planner root with regular .factory files: no symlink escape, no mocked gate.
-    planner_root = repo / ('planner-' + name)
-    planner_root.mkdir()
-    shutil.copytree(repo / fx.ARCHETYPE, planner_root / fx.ARCHETYPE)
-    shutil.copytree(repo / 'input', planner_root / 'input')
-    shutil.copytree(ws.dir, planner_root / '.factory')
-    fx.wfx.dump(planner_root / '.factory/service-spec.yml', spec)
-    fx.wfx.dump(planner_root / '.factory/full-planning-input.yml', config)
-    script = fx.SKILLS / 'plan-service-implementation/scripts/build_implementation_plan.py'
-    done = subprocess.run([sys.executable, str(script), '--mode', 'full', '--planning-input', '.factory/full-planning-input.yml'],
-                          cwd=planner_root, capture_output=True, text=True)
+    # Use the same service-local reviewed workspace as production. A flat copy of
+    # .factory cannot carry a worktree-scoped approval into another directory.
+    fx.wfx.dump(ws.dir / 'service-spec.yml', spec)
+    fx.wfx.dump(ws.dir / 'full-planning-input.yml', config)
+    fx.wfx.simulate_manual(repo, name)
+    local_skills = repo / '.opencode/skills'
+    shutil.copytree(fx.SKILLS, local_skills, ignore=shutil.ignore_patterns('__pycache__'), dirs_exist_ok=True)
+    script = local_skills / 'plan-service-implementation/scripts/build_implementation_plan.py'
+    done = fx.wsm.run_script(ws, script, ['--mode', 'full', '--planning-input', '.factory/full-planning-input.yml'])
     if done.returncode:
         raise AssertionError(f'real planner failed ({done.returncode}): {done.stdout}\n{done.stderr}')
-    for artifact in ('service-spec.yml', 'full-planning-input.yml', 'implementation-plan.yml', 'generation-parameters.yml'):
-        shutil.copy2(planner_root / '.factory' / artifact, ws.dir / artifact)
     return ws

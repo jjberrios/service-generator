@@ -13,8 +13,10 @@ PLAN = ROOT / '.opencode/skills/plan-service-implementation/scripts'
 MAT = ROOT / '.opencode/skills/materialize-full-service/scripts'
 SELECTED = {'claro-spring-ms/v1.0.1': ac.LEGACY_JPA,
             'claro-spring-java-8/v1.0.0': ac.JDBC_WAR,
-            'claro-java-8-shell/v1.0.0': ac.BATCH_SHELL}
-FOREIGN = {ac.JDBC_WAR: ('claro-spring-ms', 'activity_logging_plan', 'spring-data-jpa', 'SFTP'),
+            'claro-java-8-shell/v1.0.0': ac.BATCH_SHELL,
+            'claro-spring-bff/v1.0.0': ac.BFF}
+FOREIGN = {ac.BFF: ('claro-spring-ms', 'activity_logging_plan', 'spring-data-jpa', 'CallableStatement', 'SFTP'),
+           ac.JDBC_WAR: ('claro-spring-ms', 'activity_logging_plan', 'spring-data-jpa', 'SFTP'),
            ac.BATCH_SHELL: ('claro-spring-ms', 'activity_logging_plan', 'spring-data-jpa',
                             'CallableStatement', 'openapi-spec', 'CRMLITE')}
 
@@ -55,7 +57,8 @@ class ProfileMatrixTests(unittest.TestCase):
     def test_profiles_do_not_borrow_other_profile_rules(self):
         files = {ac.JDBC_WAR: [PLAN / 'jdbc_war_plan.py', MAT / 'jdbc_war_materializer.py'],
                  ac.BATCH_SHELL: [PLAN / 'batch_shell_plan.py', PLAN / 'batch_shell_contract.py',
-                                  MAT / 'batch_shell_materializer.py']}
+                                  MAT / 'batch_shell_materializer.py'],
+                 ac.BFF: [PLAN / 'bff_plan.py', MAT / 'bff_materializer.py']}
         for profile, paths in files.items():
             for path in paths:
                 text = path.read_text(encoding='utf-8')
