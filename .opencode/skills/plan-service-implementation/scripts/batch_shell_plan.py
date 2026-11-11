@@ -127,6 +127,11 @@ def build(repo, spec, cfg):
     package = values['BASE_PACKAGE_PATH']
     def entry(path, ct):
         return {'path': path, 'action': 'update' if (repo / target['output_directory'] / path).exists() else 'create', 'componentType': ct}
+    payment_sync = batch.get('variant') == 'payment-sync-v1'
+    if payment_sync:
+        import batch_payment_sync_model as payment
+        for path in payment.java_inventory(package):
+            entries.append(entry(path, 'batch-payment-sync'))
     if ports_flow:
         for dto in batch['dtos']:
             entries.append(entry(f"src/main/java/{package}/dto/{dto['name']}.java", 'batch-dto'))
@@ -155,11 +160,11 @@ def build(repo, spec, cfg):
             'service': {'name': service, 'profile': 'batch-shell', 'basePackage': values['BASE_PACKAGE'], 'outputDirectory': target['output_directory']},
             'inputs': {'archetype': {'path': arch_path, 'fingerprint': base.archetype_fingerprint(arch_root)}},
             'templateParameters': values, 'batch': batch, 'technicalProfile': generation, 'usage': usage,
-            'mavenAdditions': maven_additions(batch) if ports_flow else [],
+            'mavenAdditions': (payment.maven_additions() if payment_sync else maven_additions(batch) if ports_flow else []),
             'readiness': ready, 'qualityGates': {'checkstyle': {'status': 'not-applicable', 'reason': 'not-present-in-reference'}},
             'files': {'generate': entries}, 'generation': {'functionalGenerationReady': not structure},
             'scope': scope,
-            'limitations': ([('Ports-flow scope: the Sparx flow is orchestrated against generated ports; ' + ('adapters declared in batch.adapters are implemented from ASSUMPTIONS (SQL, columns, payloads, URLs deduced from Sparx names; see assumptions-register) and every port without adapter raises OperacionNoImplementadaException; scheduling is external. ' if batch.get('adapters') else 'concrete adapters (persistence, REST, mail) and scheduling are NOT implemented; adapters raise OperacionNoImplementadaException. ') if ports_flow else 'Structure-only scope: ') + 'the behavior listed in batch.omittedBehavior is NOT implemented or NOT specified by Sparx; run() never simulates concrete integrations as successful.'] if structure else []) + ['Nested loops and unrecognized steps are unsupported; SOAP credential decryption only when the archetype feature credential-decrypt-soap is implemented.',
+            'limitations': ([('Ports-flow scope: the Sparx flow is orchestrated against generated ports; ' + ('adapters declared in batch.adapters are implemented from ASSUMPTIONS (SQL, columns, payloads, URLs deduced from Sparx names; see assumptions-register) and every port without adapter raises OperacionNoImplementadaException; scheduling is external. ' if batch.get('adapters') else 'concrete adapters (persistence, REST, mail) and scheduling are NOT implemented; adapters raise OperacionNoImplementadaException. ') if ports_flow else 'Structure-only scope: ') + 'the behavior listed in batch.omittedBehavior is NOT implemented or NOT specified by Sparx; run() never simulates concrete integrations as successful.'] if structure else []) + [('Closed payment-sync-v1 REST orchestration; delegated contract assumptions are explicit in the model and review. External REST compatibility remains unverified.' if payment_sync else 'Nested loops and unrecognized steps are unsupported; SOAP credential decryption only when the archetype feature credential-decrypt-soap is implemented.'),
                             'External properties/log4j and Lib/ artifacts must be supplied by the operator.',
                             'Maven, runtime, remote connections and coverage are not verified by materialization.']}
 

@@ -31,6 +31,19 @@ def page_text(data: bytes) -> str:
 
 
 def _evidence_lists(batch: dict):
+    if batch.get('variant') == 'payment-sync-v1':
+        def nested(value, label):
+            if isinstance(value, dict):
+                if 'evidence' in value:
+                    yield label, value['evidence']
+                for key, child in value.items():
+                    if key != 'evidence':
+                        yield from nested(child, label + '/' + key)
+            elif isinstance(value, list):
+                for index, child in enumerate(value):
+                    yield from nested(child, f'{label}/{index}')
+        yield from nested(batch, 'payment-sync')
+        return
     for section in ('properties', 'connections', 'steps'):
         for item in batch.get(section, []):
             yield from _walk(item, f'{section}[{item.get("id", item.get("key"))}]')

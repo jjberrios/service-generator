@@ -364,6 +364,9 @@ def maven_additions(batch):
 
 def validate(batch, features=frozenset()):
     """Validate normalized functional spec; evidence uses source binding ids, e.g. ea#node."""
+    if isinstance(batch, dict) and batch.get('variant') == 'payment-sync-v1':
+        import batch_payment_sync_model
+        return batch_payment_sync_model.validate(batch)
     decrypt = DECRYPT_FEATURE in features
     base = ('version', 'properties', 'connections', 'steps', 'outcomes', 'sourceBindings')
     structure = isinstance(batch, dict) and batch.get('scope') == STRUCTURE_ONLY

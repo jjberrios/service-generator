@@ -30,6 +30,9 @@ def secret_keys(batch):
 
 
 def fill_readme(text, batch, plan):
+    if batch.get('variant') == 'payment-sync-v1':
+        import batch_payment_sync_java as payment
+        return payment.readme(text, batch, plan)
     if ports_flow(batch):
         omitted = '\n'.join(f"- {i['id']}: {i['description']}" for i in batch['omittedBehavior'])
         kinds = adapter_kinds(batch)
@@ -93,6 +96,31 @@ def check_quality(result, plan, batch):
             continue
         used = any(re.search(r'\b' + re.escape(name) + r'\b', t) for other, t in texts.items() if other != path)
         require(used, f'unused class {name}: generated services must not carry unused code (SH-D-019)')
+
+
+def maven_baseline(result, plan, repo):
+    """Compare the rendered baseline structurally, allowing only planned additions."""
+    import xml.etree.ElementTree as ET
+    template = repo / plan['inputs']['archetype']['path'] / 'template/pom.xml'
+    baseline = ET.fromstring(planner.substitute(template.read_text(encoding='utf-8'), plan['templateParameters']))
+    actual = ET.fromstring(result['pom.xml'][1])
+    ns = {'m': 'http://maven.apache.org/POM/4.0.0'}
+    before, after = baseline.find('m:dependencies', ns), actual.find('m:dependencies', ns)
+    def structure(node):
+        return (node.tag, tuple(sorted(node.attrib.items())), (node.text or '').strip(), tuple(structure(c) for c in node))
+    original = list(before)
+    additions = list(plan.get('mavenAdditions', []))
+    require(len(list(after)) == len(original) + len(additions), 'Maven baseline dependency count changed')
+    require([structure(c) for c in list(after)[:len(original)]] == [structure(c) for c in original],
+            'Maven baseline dependencies changed')
+    for dep, expected in zip(list(after)[len(original):], additions):
+        require({key: dep.find('m:' + key, ns).text for key in ('groupId', 'artifactId', 'version')}
+                == {key: expected[key] for key in ('groupId', 'artifactId', 'version')}, 'unplanned Maven addition')
+        after.remove(dep)
+    require(structure(actual) == structure(baseline), 'Maven baseline build/properties/repositories changed')
+    return {'schemaVersion': 1, 'status': 'preserved', 'baseline': str(template.relative_to(repo)).replace('\\', '/'),
+            'baselineDependencies': len(original), 'additions': additions,
+            'comparison': 'XML structure; identity parameterization and explicitly justified additions only', 'maven': 'not-run'}
 
 
 def literal(value):
@@ -166,6 +194,9 @@ def structure_test_source(plan, batch):
 
 def service_source(plan):
     values, batch = plan['templateParameters'], validate(plan['batch'], features_of(plan['technicalProfile']))
+    if batch.get('variant') == 'payment-sync-v1':
+        import batch_payment_sync_java as payment
+        return payment.service_source(plan)
     if ports_flow(batch):
         import batch_ports_flow as pf
         return pf.service_source(plan, batch)
@@ -289,6 +320,9 @@ def service_source(plan):
 def test_source(plan):
     """Reference-shaped JUnit4/Mockito tests; no real network or Spring context."""
     v, batch = plan['templateParameters'], plan['batch']
+    if batch.get('variant') == 'payment-sync-v1':
+        import batch_payment_sync_tests as payment
+        return payment.service_test(plan)
     if ports_flow(batch):
         import batch_ports_flow as pf
         return pf.test_source(plan, batch)
@@ -413,16 +447,22 @@ def render_project(plan, repo):
                 text = text.replace('   </dependencies>', deps + '   </dependencies>')
         elif ct == 'batch-config':
             secrets = set(secret_keys(batch))
+            defaults = ({p['key']: p.get('default') for p in batch['model']['properties']}
+                        if batch.get('variant') == 'payment-sync-v1' else {})
             lines = ['# Configuracion externa del batch. Completar los valores del entorno; no versionar secretos.']
             for key in sorted(required_keys(batch)):
                 if key in secrets:
                     lines.append('# secreta: definir fuera del control de versiones')
-                lines.append(key + '=')
+                default = defaults.get(key)
+                lines.append(key + '=' + (str(default) if default is not None and key not in secrets else ''))
             text = '\n'.join(lines) + '\n'
         elif ct == 'batch-service':
             text = service_source(plan)
         elif ct == 'batch-unit-test':
             text = test_source(plan)
+        elif ct == 'batch-payment-sync':
+            import batch_payment_sync_java as payment
+            text = payment.render(path, plan)
         elif ct in ('batch-dto', 'batch-port', 'batch-port-impl', 'batch-exception') and ports_flow(batch):
             import batch_ports_flow as pf
             stem = Path(path).stem
@@ -446,6 +486,7 @@ def render_project(plan, repo):
         require(path not in result, 'duplicate rendered path')
         result[path] = (ct, text.replace('\r\n', '\n'))
     check_quality(result, plan, batch)
+    maven_baseline(result, plan, repo)
     return result
 
 
@@ -542,9 +583,37 @@ def _materialize_checked(repo, service, dry_run=False):
                 'mavenAdditions': plan.get('mavenAdditions', []),
                 'rules': {'owner': 'Sparx', 'sourceBindings': plan['batch']['sourceBindings'], 'steps': plan['batch']['steps'],
                           'omittedBehavior': plan['batch'].get('omittedBehavior', [])},
-                'technicalBaseline': plan['inputs']['archetype'], 'limitations': plan['limitations']}
+                 'technicalBaseline': plan['inputs']['archetype'], 'limitations': plan['limitations']}
+    if plan['batch'].get('variant') == 'payment-sync-v1':
+        import batch_payment_sync_tests as payment_tests
+        trace = payment_tests.traceability(plan)
+        register['assumptions'] = [dict(d, source='explicit-agent-delegation',
+            operationalAuthority='current scoped resume review; recomputed by the consistency gate',
+            externalContractVerified=False) for d in plan['batch']['decisions']]
+        register['rules']['owner'] = 'Sparx with separately identified delegated decisions'
+        register['rules']['algorithms'] = plan['batch']['model']['algorithms']
+        defaults = {p['key']: p.get('default') for p in plan['batch']['model']['properties']}
+        for prop in properties['keys']:
+            if prop['key'] in defaults:
+                prop['source'] = 'normalized-Sparx-or-delegated-technical-configuration'
+                if not prop['secret'] and defaults[prop['key']] is not None:
+                    prop['documentedDefault'] = defaults[prop['key']]
+        import xml.etree.ElementTree as ET
+        pom = ET.fromstring(rendered['pom.xml'][1])
+        ns = {'m': 'http://maven.apache.org/POM/4.0.0'}
+        jacoco = [ET.tostring(p, encoding='unicode') for p in pom.findall('.//m:plugin', ns)
+                  if p.findtext('m:artifactId', namespaces=ns) == 'jacoco-maven-plugin']
+        fm.write_atomic(ws.dir / 'coverage-scope.yml', dump({
+            'schemaVersion': 2, 'service': service, 'profile': PROFILE,
+            'payloadTreeSha256': tree_hash, 'jacocoConfiguration': jacoco,
+            'generatedTests': sum(len(re.findall(r'@Test(?:\([^)]*\))?\s+public void ', text))
+                                  for path, (_, text) in rendered.items() if path.startswith('src/test/java/')),
+            'maven': 'not-executed', 'checkstyle': 'not-applicable', 'jacoco': 'not-verified',
+            'compilation': 'not-executed', 'tests': 'not-executed', 'coveragePercentage': None,
+            'limitations': ['A local javac/JUnit run, if recorded separately, is not Maven or measured JaCoCo coverage.']}))
     fm.write_atomic(ws.dir / 'assumptions-register.yml', dump(register))
     fm.write_atomic(ws.dir / 'required-properties.yml', dump(properties))
     fm.write_atomic(ws.dir / 'tests-traceability.yml', dump(trace))
+    fm.write_atomic(ws.dir / 'maven-baseline-comparison.yml', dump(maven_baseline(rendered, plan, repo)))
     fm.write_atomic(ws.dir / fm.REPORT, dump(report))
     return report
