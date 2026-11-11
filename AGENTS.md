@@ -63,6 +63,31 @@ Examples of business-specific content that must not become part of the archetype
 
 ## Source Responsibilities
 
+### Services without Swagger and Sparx attachments
+
+The Sparx export for this project may be rooted directly at `input/sparx/`;
+`PROJECT`/`PROYECT` is not mandatory. Resolve the actual export root, never
+append a subfolder by convention.
+
+Swagger is optional for a service explicitly identified as having none.
+For HTTP use checkpoint `inputs.contractMode: sparx-only` and the separately
+evidenced `sparx-http-contract.yml` (see
+`.opencode/skills/service-workspace/docs/sparx-only.md`). Sparx and its selected
+target-local attachments own documented contract and behavior in this mode;
+never invent missing fields or manufacture an OpenAPI artifact. A supplied but
+missing/invalid Swagger is an error, not automatic fallback. Absence of Swagger
+does not mean batch. When Swagger exists, its normal ownership and two-source
+comparison remain unchanged.
+
+For EVERY service with Sparx, WITH or WITHOUT Swagger, always review attached
+and linked documents of the selected service, not just diagrams
+or the first embedded HTML body. Preserve exact document/section/quote and byte
+hashes; unreadable, missing or contradictory indispensable evidence blocks the
+affected behavior. Never execute documents or fetch external references. The
+source-only HTTP gate reports `not-applicable-no-swagger`, not a successful audit;
+live evidence, semantic review, explicit resume authorization, readiness and
+technical backend checks remain mandatory.
+
 ### Archetype
 
 Defines:
@@ -148,6 +173,37 @@ Unresolved areas must remain explicit in readiness and any later implementation
 plan; they must not be hidden behind placeholders that imply behavior.
 
 ## Conflict Handling
+
+### Autonomous technical judgment during service generation
+
+Agents must investigate, resolve and document ordinary engineering choices instead
+of asking the user to design the implementation. Apply the shared policy in
+`.opencode/skills/service-workspace/question-policy.md` in every specialist.
+Source-backed contract names/routes, the selected archetype's implemented database
+access mechanism, internal Java names and package organization are not repeated
+business questions. Missing analysis requires more bounded analysis, including
+attachments, before requesting clarification. No Swagger means use documented
+Sparx contract evidence, not guessed public routes or a batch assumption.
+
+The archetype is a technical baseline, not an exhaustive inventory of service
+components. Compatible service-specific helpers, adapters and justified dependencies
+may be planned autonomously when their functional need is evidenced and the backend
+supports them. Record evidence, compatibility and justification in the plan;
+preserve baseline files/dependencies and do not revise the frozen archetype. A
+technology replacement, invented business semantics or unsupported backend remains
+outside this autonomy. Java output still goes only through the guarded materializer.
+
+Runtime connection values and credentials are external prerequisites, not reasons
+to ask for secrets during static generation. Use only the selected profile's
+supported external-configuration mechanism; never read local application properties,
+invent connection values or claim database execution. If that configuration shape
+is unsupported, report a technical limitation, not a database-design question.
+
+Full generation requests cover their bounded analysis, planning, materialization
+and static validation phases without repeated permission questions in prose.
+Human review/resume gates, manual-file protection and separate execution approvals
+remain in force. Check backend profile support before expensive interpretation;
+reuse hash-current analysis and do not loop on an unchanged technical failure.
 
 Do not invent behavior when sources conflict.
 

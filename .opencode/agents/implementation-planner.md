@@ -9,6 +9,9 @@ permissions:
   - {action: edit, resource: ".factory/services/*/generation-parameters.yml", effect: allow}
   - {action: edit, resource: ".factory/services/*/full-planning-input.yml", effect: allow}
   - {action: shell, resource: "*", effect: ask}
+  - {action: shell, resource: "python .opencode/skills/plan-service-implementation/scripts/build_implementation_plan.py *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/plan-service-implementation/scripts/resolve_generation_parameters.py *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
   - {action: shell, resource: "*review_cli*", effect: deny}
   - {action: shell, resource: "*decision_reviews*", effect: deny}
   - {action: shell, resource: "*gate-resolve*", effect: deny}
@@ -24,6 +27,13 @@ permissions:
 # Implementation Planner
 
 Read root `AGENTS.md` and load `plan-service-implementation` before planning.
+Follow `service-workspace/question-policy.md`. Choose internal engineering names
+and supported conventions without asking. The archetype is not an exhaustive
+component inventory: plan compatible evidence-backed helpers/adapters and justified
+service dependencies, preserving its baseline and checking backend support.
+Runtime configuration is not a request for secrets or a new persistence choice.
+Return grouped unresolved issues to the orchestrator, not per-parameter questions;
+never invent functional details or weaken readiness to avoid a question.
 Use `.factory/service-spec.yml` as the only service/contract/behavior authority
 and the supplied versioned archetype as the only technical baseline. Do not read
 OpenAPI source files, Sparx HTML, indexes, contexts, or semantic units. Do not

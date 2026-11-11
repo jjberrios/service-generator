@@ -35,6 +35,8 @@ permissions:
   - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py status *", effect: allow}
   - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py resolve-sparx *", effect: allow}
   - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py lifecycle *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py capability-check *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py question-triage *", effect: allow}
   - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
   - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py preflight *", effect: allow}
   - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py materialize *", effect: allow}
@@ -59,6 +61,32 @@ permissions:
 ---
 
 # Service Generator — orchestration only
+
+## Autonomous engineering, not repeated user design questions
+
+Apply `service-workspace/question-policy.md` before every question. You own user
+communication; specialists return issues to you, not independent question loops.
+After selecting/persisting the archetype, run `workspace_cli.py capability-check
+<service>` BEFORE expensive semantic analysis. Unsupported profiles stop as an
+engineering limitation; do not spend an hour asking business questions about them.
+After planning, component-level `preflight` remains mandatory.
+
+Resolve documented public names from their owning contract (Sparx/attachments in
+sparx-only mode). Use the selected archetype's implemented persistence mechanism;
+never ask the user to choose JDBC/JPA when that is already defined. Choose internal
+class/helper names and consistent implementation conventions autonomously. Plan
+evidence-backed compatible service extensions and justified dependencies without
+requiring those components to exist in the archetype; preserve the frozen baseline.
+Check actual materializer support, never bypass it or write Java directly.
+
+Before presenting blockers, classify workspace-local issues through
+`workspace_cli.py question-triage <service> --input <file.yml>`. Finish analysis
+first; do not turn missing investigation or runtime secrets into business questions.
+Only unresolved indispensable business facts/conflicts, intentional deviations and
+required human authorizations reach the user, grouped wherever possible. Technical
+choices are recorded in the plan with rationale, not forged human resolutions.
+Do not repeat covered phase requests or unchanged analysis. Reuse only hash-current
+artifacts, while retaining live gate and file-protection checks on resume.
 
 Model B: use `workspace_cli.py decision-request-prepare <service>` (or a typed
 v2 proposal) for actual blockers. Never execute review_cli, legacy approvals,
@@ -115,10 +143,20 @@ them against the repository `.factory/` root. Use `workspace_cli.py migrate-arch
 
 ## Invocation and defaults
 
-Required: `target_service`, `openapi_path`, `sparx_export_path`. Accept the natural
+Required: `target_service`, `sparx_export_path`; `openapi_path` is optional when
+the service has no Swagger. For this project use `input/sparx/` directly; never
+append or require `PROJECT`/`PROYECT`. Accept the natural
 language labels “Target service”, “OpenAPI”, and “Sparx”. On resume, a bare
 `@service-generator` plus “Resume” may use these inputs from the checkpoint.
 Missing required initial inputs are the only normal setup questions.
+
+Persist `inputs.contractMode: openapi` when a contract is supplied, or
+`inputs.contractMode: sparx-only` when the user identifies an HTTP service without
+Swagger. Record the absent OpenAPI as null, skip normalization, and never create
+`openapi-spec.yml` from inferred facts. Absence is not batch classification. A
+missing file at a supplied Swagger path is an error, not permission to switch
+modes. On resume reuse the explicit mode; a mode change invalidates dependent
+artifacts/reviews and must not silently ignore an existing contract.
 
 Select the archetype explicitly or reuse the target checkpoint's selection.
 There is no implicit archetype. Use the versioned, approved technical
@@ -180,7 +218,7 @@ output under `output/`. Service names may be mixed case (`dom-cpeRequest`) or
 lowercase; the workspace/output directory keeps the exact name, while Maven
 `artifact_id`/`service_name` use the lowercase-kebab technical identifier
 (`dom-cpe-request`). Resolve the Sparx path with
-`workspace_cli.py resolve-sparx <path>`: `input/sparx/PROYECT/`, `input/sparx/`
+`workspace_cli.py resolve-sparx <path>`: `input/sparx/` (also `/input/sparx/`), an explicitly selected subfolder
 and `/sparx` are all accepted and resolve to the actual export root (ambiguity
 fails, never guessed); use the printed path for every later phase. Reject missing/unsafe paths or symlink escapes.
 Fingerprint OpenAPI bytes, archetype version/tree, and relevant export hierarchy
@@ -191,7 +229,7 @@ branch order as source authority. No secret values belong in state/parameters.
 
 ### 2. OpenAPI normalization
 
-Delegate to `openapi-analyzer` / `parse-openapi`, supplying the actual contract:
+Only in `openapi` mode, delegate to `openapi-analyzer` / `parse-openapi`, supplying the actual contract:
 `normalize_openapi.py <openapi_path> .factory/openapi-spec.yml`.
 Require reliable normalization and empty blocking validation errors; preserve
 source ownership and local-reference provenance. Reuse a matching valid output.
@@ -209,6 +247,18 @@ use `--non-http` instead of `--openapi` and follow the batch flow in
 `consolidate_batch_spec.py` -> plan -> materialize); never fabricate an OpenAPI or a
 Swagger audit. Locate the actual export root containing
 the hierarchy metadata without changing the user-supplied source scope.
+
+For HTTP without Swagger use `--sparx-only`, NOT `--non-http`. It resolves
+target-local identities without OpenAPI. During semantic selection pass
+`--service-spec .factory/sparx-http-contract.yml` to `select_target_units.py`
+and `--sparx-only` to `select_target_semantics.py`; neither step may create
+`openapi-spec.yml`. The latter uses the source contract only as retrieval hints.
+The authority resolver discovers literal HTTP method/path names owned by the target.
+Nonliteral routes remain a source/capability gap, never guessed. Have
+`sparx-analyzer` prepare `.factory/sparx-http-contract.yml` under the source
+contract in `service-workspace/docs/sparx-only.md`, preserving all field-level
+citations, active/inactive lifecycle and unresolved gaps. Decisions use Sparx
+and its available attachments as authority in this mode, not a fabricated Swagger.
 
 Require unique evidence-backed authority. Preserve candidate branch/root UUIDs,
 hierarchy, backup/historical markers, status, timestamps and endpoint ownership.
@@ -238,6 +288,19 @@ export and supported depth; do not recursively follow ordinary links. Preserve
 source identities, branch, evidence IDs and byte hashes. Do not default to a
 whole-export Stage 1 or global Stage 2B when the target-local path suffices.
 
+For EVERY service with Sparx, WITH or WITHOUT Swagger, review its attachments.
+This is mandatory on initial analysis and on resume, including legacy checkpoints;
+missing inventory or unbound review requires extraction/review before continuing.
+The detail builder also produces `.factory/sparx-attachments.yml` from selected
+branch/service/method/activity pages. Review every attached document and linked
+document body (including DOCX/PDF when readable), not just the first iframe.
+Preserve source page, document path/hash, exact quote and page/section/paragraph
+locator for each derived fact. Never execute macros/scripts or fetch remote
+documents. Missing, unsupported, unreadable, nested or external attachments
+remain explicit review gaps; block only affected indispensable behavior. Do not
+declare a complete review when a required attachment cannot be read. Include
+documents in the source closure and checkpoint fingerprints for invalidation.
+
 ### 5. Minimal semantic interpretation
 
 Have `sparx-analyzer` use `interpret-sparx` and `slice_endpoint_detail.py` for
@@ -252,12 +315,23 @@ it. Global analysis requires separate authorization and a documented need.
 
 ### 5b. Mandatory Sparx vs Swagger consistency gate (blocking, no bypass)
 
+For `sparx-only` HTTP, the same gate dispatches to `sparx_only.py` and reports
+`comparison: not-applicable-no-swagger`. It validates target authority, live TOC,
+field-level contract citations, active/inactive coverage and current attachment
+inventory. Prepare `consistency/sparx-only-review.yml` as documented in
+`service-workspace/docs/sparx-only.md`; unresolved contradictions/gaps within
+Sparx or attachments remain blocking. A current semantic review and the existing
+explicit scoped resume authorization are still mandatory. Do not run the
+two-source audit or report it as passed. The numbered comparison steps below
+apply to services WITH Swagger only. On ALL OpenAPI runs and resumes, supplemental review
+also binds `reviewedAgainst.attachmentsSha256` to `sparx-attachments.yml`.
+
 After the authority and endpoint details exist and BEFORE any consolidation, planning, scaffold or Java generation, run the gate (skill `service-workspace`,
 which reuses `sparx-swagger-validator`/`audit-sparx-swagger`; do not duplicate its comparison):
 
 1. `workspace_cli.py gate-evaluate <service>` recomputes the audit from the workspace artifacts and the live sources (Swagger file and Sparx export hashes).
 2. Do the agent semantic review of Activities/CONSIDERACIONES prose exactly as the auditor skill describes and write
-   `consistency/supplemental.yml` with `reviewed: true`, `reviewer` and `reviewedAgainst` (OpenAPI sha256 and endpointDetailSha256). Without it the gate stays
+   `consistency/supplemental.yml` with `reviewed: true`, `reviewer` and `reviewedAgainst` (OpenAPI sha256, endpointDetailSha256 and attachmentsSha256). Review the attached documents alongside Activities/CONSIDERACIONES, including contradictions with Swagger. Without it the gate stays
    `SEMANTIC_REVIEW_PENDING` and nothing continues. Rerun `gate-evaluate`.
 3. Verified contradictions, documental differences and unverified behavior that is indispensable (`comportamiento-no-especificado`, `verificacion-pendiente`) BLOCK.
    Internal-to-one-source issues, non comparable sources and discarded false positives do not. A false positive of the deterministic audit still needs a human
@@ -280,6 +354,13 @@ ownership. OpenAPI owns external methods/routes/headers/parameters/schemas,
 declared validation and statuses. Authoritative Sparx owns behavior, persistence,
 integrations, relationships, business validation and evidenced process outcomes.
 The archetype owns technical implementation only.
+
+Exception for explicit `sparx-only` HTTP: use `sparx-http-contract.yml` as the
+contract input, retain `sparxContract` provenance throughout service-spec, and
+derive only documented contract fields from authoritative Sparx/attachments.
+Do not fill unspecified schemas, statuses, security or validation by convention.
+The generic reconciler selects this input from the checkpoint; downstream
+planning/materialization retain their normal readiness and backend checks.
 
 Do not infer SELECT/INSERT/UPDATE from GET/POST/PATCH. Show contradictory source
 statements side by side. Separate true business/source blockers from technical
@@ -421,7 +502,7 @@ blockers, reviewedDecisions, pendingQuestion, nextRequiredAction, failure and
 output manifest/tree fingerprint. Do not store secrets or model conversation.
 
 Derive runId once from a canonical digest of target, resolved input paths,
-OpenAPI hash, initial hierarchy fingerprint and archetype fingerprint. Preserve
+contract mode and contract hash (or explicit OpenAPI absence), initial hierarchy fingerprint and archetype fingerprint. Preserve
 it through human-decision resumes; record input revisions/invalidation explicitly.
 An artifact entry includes its targetService/runId owner and producer phase; the
 checkpoint itself is excluded from its own output hash inventory.
@@ -495,4 +576,4 @@ internal phases yourself.
 The deterministic materializer also writes the planned JUnit 5/Mockito tests of the supported pattern and the workspace registers `tests-traceability.yml` and `coverage-scope.yml`. Report them as written but unexecuted: Maven, Checkstyle (D-014) and JaCoCo (80%) stay `not-verified` until separately authorized. Persistence tests are reported unsupported until a test-database dependency is authorized; never claim coverage from the scope report.
 
 ## Project assembly and official evidence (materializer v5)
-The materializer assembles the archetype technical files (pom, wrapper, configuration, security, logback, Checkstyle; deployment files only if the plan authorizes them) and stops with `missing-parameter` when a required value is absent: ask the user for it, never invent it. `application*.properties` is never touched. Official Maven evidence is recorded only by `validation_evidence.py` with explicit user authorization; report each tool as the evidence says and treat `stale` as not verified.
+The materializer assembles the archetype technical files (pom, wrapper, configuration, security, logback, Checkstyle; deployment files only if the plan authorizes them) and stops with `missing-parameter` when a required value is absent. Classify before asking: resolve internal conventions from the selected baseline; externalize runtime configuration only through a supported mechanism; group only indispensable unresolved inputs for the user. Never invent business values or bypass a materializer rejection. `application*.properties` is never touched. Official Maven evidence is recorded only by `validation_evidence.py` with explicit user authorization; report each tool as the evidence says and treat `stale` as not verified.

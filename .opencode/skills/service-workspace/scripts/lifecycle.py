@@ -95,6 +95,12 @@ def service_lifecycle(repo, service, gate):
 # ---- question policy -------------------------------------------------------------------------------
 
 POLICY = {
+    'source-evidence-clear': ('apply-and-cite', False, 'use the owning contract, Sparx or attachment evidence; do not ask for it again'),
+    'analysis-incomplete': ('analyze-target-evidence', False, 'finish bounded source and attachment analysis before asking'),
+    'technical-convention': ('resolve-and-record', False, 'choose a consistent internal convention without changing public or business semantics'),
+    'supported-service-extension': ('plan-extension', False, 'plan a compatible evidence-backed service addition; preserve the versioned archetype'),
+    'environment-configuration': ('externalize-configuration', False, 'keep runtime values external; never request credentials for static generation'),
+    'functional-evidence-missing': ('group-ask', True, 'indispensable functional evidence is absent after target-local analysis'),
     'reference-evidence-clear': ('apply-and-cite', False, 'the selected reference decides; cite the evidence'),
     'technology-absent-in-reference': ('record-absent', False, 'record it as not-present-in-reference; never offer another stack'),
     'decision-already-approved': ('reuse-decision', False, 'reuse the approved decision for the same target/version; do not reopen it'),
@@ -145,3 +151,37 @@ def group_questions(questions):
     if params:
         grouped.append({'kind': 'required-parameter-missing', 'keys': sorted(params)})
     return grouped
+
+
+def triage(issues):
+    """Classify proposed issues, never grant reviews or change readiness.
+
+    Extensions require both source references and explicit backend capability.
+    Claims here are routing metadata, not proof of functional readiness.
+    """
+    actions = []
+    for issue in issues:
+        item = dict(issue)
+        kind = item['kind']
+        if kind == 'supported-service-extension':
+            if not item.get('evidence'):
+                kind = 'analysis-incomplete'
+            elif item.get('backendSupported') is not True or item.get('compatibleWithArchetype') is not True:
+                kind = 'unsupported-backend'
+        item['kind'] = kind
+        actions.append({**item, **decide(kind)})
+    return {'actions': actions, 'questions': group_questions(actions), 'grantsAuthority': False}
+
+
+def capability_check(repo, service):
+    """Early read-only profile check, before semantic analysis or the gate."""
+    context = gc.resolve_context(Path(repo), service=service)
+    contract = ac.normalize(gc.load_mapping(Path(repo) / context.archetype / 'archetype.yml'))
+    try:
+        ac.require_backend(contract, mode='full')
+    except ac.ContractError as error:
+        return {'service': service, 'supported': False, 'askUser': False,
+                'action': 'technical-failure', 'reason': str(error), 'gateEvaluated': False}
+    return {'service': service, 'supported': True, 'askUser': False,
+            'action': 'continue-analysis', 'gateEvaluated': False,
+            'note': 'profile support only; component feasibility, readiness and human review still required'}

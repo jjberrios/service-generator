@@ -191,7 +191,22 @@ def main() -> int:
             if not args.archetype:
                 raise ReconciliationFailure("--archetype is required with --readiness-only.")
             return recalculate_readiness(root, args.output, args.archetype, yaml)
-        openapi, openapi_bytes = safe_read_yaml(root / OPENAPI_PATH, yaml, root)
+        state_path = factory / 'service-generation-state.yml'
+        state = yaml.safe_load(state_path.read_bytes()) if state_path.is_file() else {}
+        sparx_only_mode = (state.get('inputs') or {}).get('contractMode') == 'sparx-only'
+        contract_path = OPENAPI_PATH
+        contract_owner = 'openapi'
+        if sparx_only_mode:
+            import sparx_only
+            import consistency_gate
+            contract_path = Path('.factory/sparx-http-contract.yml')
+            from decision_reviews import consumer_workspace
+            actual_repo, _ = consumer_workspace(factory.resolve())
+            openapi = sparx_only.normalized(factory.resolve(), actual_repo, state['targetService'], consistency_gate)
+            openapi_bytes = (root / contract_path).read_bytes()
+            contract_owner = 'sparxContract'
+        else:
+            openapi, openapi_bytes = safe_read_yaml(root / OPENAPI_PATH, yaml, root)
         sparx, sparx_bytes = safe_read_yaml(root / SPARX_PATH, yaml, root)
         output = (root / args.output).absolute()
         if output.parent.resolve() != factory.resolve() or output.is_symlink():
@@ -409,6 +424,28 @@ def main() -> int:
         if conflicts:
             spec["validation"]["warnings"].append("Active source conflicts block affected reconciliation.")
 
+        if sparx_only_mode:
+            by_identity = {(op['method'], op['path']): op for op in operations}
+            for generated in spec['operations']:
+                source_op = by_identity[(generated['method'], generated['path'])]
+                contract = generated['contract']
+                # Optional metadata absent from Sparx is unknown, not an asserted
+                # empty/default value with a citation to a nonexistent field.
+                for field in ('summary', 'description', 'tags', 'deprecated', 'pathItem', 'servers'):
+                    if field not in source_op:
+                        contract.pop(field, None)
+                        contract['provenance'].pop(field, None)
+            # Preserve actual source ownership throughout nested provenance. Never
+            # claim that Sparx-derived facts were declared by a missing OpenAPI.
+            def rebind(value):
+                if isinstance(value, dict):
+                    return {(contract_owner if k == 'openapi' else k): rebind(v) for k, v in value.items()}
+                if isinstance(value, list):
+                    return [rebind(v) for v in value]
+                return contract_path.as_posix() if value == OPENAPI_PATH.as_posix() else value
+            spec = rebind(spec)
+            spec['service']['contractMode'] = 'sparx-only'
+            spec['statistics']['activeSparxContractOperations'] = spec['statistics'].pop('activeOpenapiOperations')
         payload = encode_yaml(spec, yaml)
         temp_path = None
         try:

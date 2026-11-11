@@ -78,7 +78,7 @@ class LifecycleTests(unittest.TestCase):
 class QuestionPolicyTests(unittest.TestCase):
     def test_only_real_conflicts_parameters_deviations_and_gate_release_ask(self):
         asking = {k for k in lc.POLICY if lc.decide(k)['askUser']}
-        self.assertEqual(asking, {'source-conflict', 'required-parameter-missing', 'intentional-deviation', 'gate-release'})
+        self.assertEqual(asking, {'source-conflict', 'required-parameter-missing', 'intentional-deviation', 'gate-release', 'functional-evidence-missing'})
         for k in ('reference-evidence-clear', 'technology-absent-in-reference', 'decision-already-approved', 'request-covers-phase', 'unsupported-backend'):
             self.assertFalse(lc.decide(k)['askUser'], k)
         self.assertEqual(lc.decide('unsupported-backend')['action'], 'technical-failure')
@@ -86,6 +86,25 @@ class QuestionPolicyTests(unittest.TestCase):
     def test_unknown_kind_is_an_error(self):
         with self.assertRaises(ValueError):
             lc.decide('whatever')
+
+    def test_technical_judgment_does_not_become_business_questions(self):
+        result = lc.triage([{'kind': kind, 'key': kind} for kind in
+                            ('technical-convention', 'environment-configuration', 'analysis-incomplete', 'source-evidence-clear')])
+        self.assertEqual(result['questions'], [])
+        self.assertFalse(result['grantsAuthority'])
+
+    def test_extensions_need_evidence_compatibility_and_backend_support(self):
+        issue = {'kind': 'supported-service-extension', 'key': 'adapter'}
+        self.assertEqual(lc.triage([issue])['actions'][0]['action'], 'analyze-target-evidence')
+        issue['evidence'] = ['.factory/service-spec.yml#/integrations/0']
+        self.assertEqual(lc.triage([issue])['actions'][0]['action'], 'technical-failure')
+        issue.update(backendSupported=True, compatibleWithArchetype=True)
+        self.assertEqual(lc.triage([issue])['actions'][0]['action'], 'plan-extension')
+        self.assertEqual(lc.triage([issue])['questions'], [])
+
+    def test_missing_business_evidence_remains_a_question(self):
+        issue = {'kind': 'functional-evidence-missing', 'key': 'response-status'}
+        self.assertEqual(len(lc.triage([issue, issue])['questions']), 1)
 
     def test_missing_parameters_are_one_grouped_question_without_duplicates(self):
         qs = [{'kind': 'required-parameter-missing', 'key': 'B'}, {'kind': 'required-parameter-missing', 'key': 'A'},

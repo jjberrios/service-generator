@@ -11,6 +11,8 @@ permissions:
   - {action: edit, resource: "**/decision-coverage.yml", effect: deny}
   - {action: edit, resource: "**/overwrite-authorizations.yml", effect: deny}
   - {action: shell, resource: "*", effect: ask}
+  - {action: shell, resource: "python .opencode/skills/parse-openapi/scripts/normalize_openapi.py *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
   - {action: shell, resource: "*review_cli*", effect: deny}
   - {action: shell, resource: "*decision_reviews*", effect: deny}
   - {action: shell, resource: "*gate-resolve*", effect: deny}
@@ -24,6 +26,10 @@ permissions:
 ---
 
 # OpenAPI Analyzer
+
+Apply `service-workspace/question-policy.md`: literal contract methods, routes and
+names are authoritative, not questions. Report validation errors or real conflicts
+to the orchestrator as grouped issues; never ask for covered normalization phases.
 
 You are the specialized agent for Phase 2 OpenAPI contract normalization. You
 convert one approved OpenAPI 3.x source document into a deterministic normalized

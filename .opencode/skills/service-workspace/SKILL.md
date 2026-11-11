@@ -18,6 +18,12 @@ H-02 remains open: same-user arbitrary execution is not prevented or authenticat
 Scripts (`.opencode/skills/service-workspace/scripts/`): `workspace.py` (workspaces, checkpoints, sandbox runner), `consistency_gate.py` (blocking gate; reuses
 `audit-sparx-swagger`), `gate_guard.py` (guard called by every post-gate script), `migrate_legacy.py`, `file_protection.py`, `workspace_cli.py`.
 
+Autonomous engineering: follow `question-policy.md` in every specialist. Run
+`workspace_cli.py capability-check <service>` before expensive source interpretation
+and `workspace_cli.py question-triage <service> --input <workspace-relative.yml>`
+before presenting grouped blockers. These commands are read-only, grant no
+authority and do not replace the post-plan feasibility check or consistency gate.
+
 ## Layout
 
 `.factory/services/<service>/` holds, per service: `openapi-spec.yml`, `sparx-target-authority.yml`, `sparx-authoritative-endpoint-detail.yml`,
@@ -28,6 +34,21 @@ Provenance paths inside artifacts keep their `.factory/...` form; `workspace_cli
 `archetypes`, `output` and `.opencode` are directory links, so unchanged scripts read and write the service workspace.
 
 ## Consistency gate (mandatory, blocking)
+
+For EVERY service with Sparx, WITH or WITHOUT Swagger, review all selected
+target attachments. Swagger never waives this requirement. On OpenAPI runs and
+resumes (including legacy authorities without `contractMode`), a current
+`sparx-attachments.yml` inventory and semantic review bound through
+`reviewedAgainst.attachmentsSha256` are mandatory. Missing/stale inventory or
+unbound review blocks continuation; do not silently authorize legacy workspaces.
+The source-only HTTP review binds the same inventory by its artifact hash.
+
+HTTP services explicitly lacking Swagger use checkpoint `inputs.contractMode:
+sparx-only`, the separate evidenced `sparx-http-contract.yml`, and
+`consistency/sparx-only-review.yml` (see `docs/sparx-only.md`). The gate reports
+`comparison: not-applicable-no-swagger`, never a passed Swagger audit or a batch
+classification. Current source/attachment hashes, semantic review, no unresolved
+indispensable gaps and explicit scoped resume authorization remain mandatory.
 
 Stage 2A adds proposal-only decision requests and deterministic contexts via
 `workspace_cli.py decision-request-{create,list,show,context,status,stale}`;

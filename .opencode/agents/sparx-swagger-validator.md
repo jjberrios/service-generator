@@ -49,6 +49,7 @@ the skill steps: deterministic comparison, semantic review of prose, registry, v
 (Swagger file and Sparx export hashes); a stale snapshot aborts the audit.
 
 Rules:
+- Always review all attached/linked documents of the selected target, using the snapshot's `sparx-attachments.yml`, not just diagrams or the first iframe. Compare their documented claims with Swagger and cite exact document/hash/quote/locator. Missing or unreadable indispensable evidence remains unverified; never execute documents or fetch external links.
 - Use only the authoritative Sparx branch (unmarked branch whose parallel branches are marked backup/historical, or the only branch). BKP/historical evidence never produces findings. If authority is ambiguous, stop and ask the minimum question.
 - Classify every result as `contradiccion-verificada`, `diferencia-documental` or `no verificado`; never mix them. A contradiction needs normative evidence on both sides (a Swagger example is not enough).
 - A contradiction internal to Sparx is not a Sparx/Swagger inconsistency. An absent constraint is not a finding when each source owns different concerns (Swagger validation constraints, internal Oracle columns, error envelope).

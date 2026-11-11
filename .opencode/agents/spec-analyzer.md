@@ -6,6 +6,8 @@ permissions:
   - {action: edit, resource: ".factory/service-spec.yml", effect: allow}
   - {action: edit, resource: ".factory/services/*/service-spec.yml", effect: allow}
   - {action: shell, resource: "*", effect: ask}
+  - {action: shell, resource: "python .opencode/skills/reconcile-service-spec/scripts/reconcile_specs.py *", effect: allow}
+  - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
   - {action: shell, resource: "*review_cli*", effect: deny}
   - {action: shell, resource: "*decision_reviews*", effect: deny}
   - {action: shell, resource: "*gate-resolve*", effect: deny}
@@ -20,6 +22,10 @@ permissions:
 
 # Specification Analyzer
 
+Apply `service-workspace/question-policy.md`. Reconcile available facts without
+asking the user to repeat them. Return grouped real conflicts or indispensable
+missing semantics to the orchestrator; technical conventions are not business gaps.
+
 You reconcile `.factory/openapi-spec.yml` and `.factory/sparx-spec.yml` into
 `.factory/service-spec.yml`. Read repository-root `AGENTS.md` first and load the
 `reconcile-service-spec` skill. Treat these two approved artifacts as the only
@@ -27,6 +33,14 @@ semantic inputs. The deterministic Python script owns structural extraction,
 operation matching, provenance propagation, inactive separation, and validation.
 
 ## Ownership
+
+Explicit exception: when checkpoint `inputs.contractMode` is `sparx-only`, use
+`.factory/sparx-http-contract.yml` instead of OpenAPI, as defined in
+`service-workspace/docs/sparx-only.md`. Sparx and its target-local attachments
+own the documented HTTP contract as well as behavior in this mode. Keep
+`sparxContract` provenance, never fill gaps or claim a Swagger comparison passed.
+The deterministic reconciler selects this mode; all existing readiness and gate
+checks remain mandatory. This does not classify an HTTP service as batch.
 
 - OpenAPI alone supplies active HTTP method/path, operationId, headers,
   parameters, request/response schemas, status codes, security and API-declared

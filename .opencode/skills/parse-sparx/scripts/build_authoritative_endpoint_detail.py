@@ -182,6 +182,11 @@ def main() -> int:
                   "complementBranches": [c["branchRootId"] for c in complements]},
     }
     args.output.write_bytes(dump_bytes(document))
+    # Include target-owned linked documents as a separate evidence artifact. This
+    # inventory never changes normalized endpoint semantics or follows model links.
+    import sparx_attachments
+    attachments = sparx_attachments.inventory(repo, root, sparx_attachments.authorized_pages(authority))
+    args.output.with_name('sparx-attachments.yml').write_bytes(dump_bytes(attachments))
 
     # ---- non-authoritative evidence register (prior artifacts classified by source-page branch)
     prefixes = {b["branchRootId"]: b for b in authority["branches"]}

@@ -42,11 +42,18 @@ def make_service(repo: Path, service: str, path='/api/v1/items', sparx_required=
     contract.parent.mkdir(parents=True, exist_ok=True)
     contract.write_text(f'openapi: 3.0.1\ninfo:\n  title: {service}\n', encoding='utf-8')
     (repo / 'input' / 'sparx' / 'P' / 'js' / 'data').mkdir(parents=True, exist_ok=True)
+    page = repo / 'input' / 'sparx' / 'P' / f'{service}.htm'
+    page.write_text('<html><body>Service documentation</body></html>', encoding='utf-8')
     ws = repo / '.factory' / 'services' / service
     dump(ws / 'openapi-spec.yml', {'source': {'path': f'input/contracts/{service}.yml', 'sha256': sha(contract.read_bytes())}, 'service': {'title': service},
                                    'operations': [swagger_operation(path, swagger_required)]})
     dump(ws / 'sparx-target-authority.yml', {'target': {'name': service, 'sourceRoot': 'input/sparx/P'}, 'selection': {'status': 'resolved', 'authoritativeBranchRootId': '0.2'}, 'hierarchySources': {'tocFiles': {}},
-                                              'branches': [{'branchRootId': '0.2', 'operations': [], 'sparxOnlyMethods': []}]})
+                                              'branches': [{'branchRootId': '0.2', 'page': page.name, 'operations': [], 'sparxOnlyMethods': []}]})
+    import sys
+    sys.path.insert(0, str(SCRIPTS.parents[1] / 'parse-sparx/scripts'))
+    from sparx_attachments import inventory, authorized_pages
+    authority = yaml.safe_load((ws / 'sparx-target-authority.yml').read_bytes())
+    dump(ws / 'sparx-attachments.yml', inventory(repo, page.parent, authorized_pages(authority)))
     dump(ws / 'sparx-authoritative-endpoint-detail.yml', {'authority': {'branch': BRANCH}, 'excludedInactiveOperations': [],
                                                            'operations': sparx_ops if sparx_ops is not None else [sparx_operation(path, sparx_required, extra_header)]})
     return ws
@@ -57,6 +64,7 @@ def review(ws: Path, reviewer='sparx-swagger-validator', unverified=None, discar
     openapi = yaml.safe_load((ws / 'openapi-spec.yml').read_bytes())
     data = {'reviewed': True, 'reviewer': reviewer, 'reviewedAgainst': {'openapiSha256': openapi['source']['sha256'], 'endpointDetailSha256': sha((ws / 'sparx-authoritative-endpoint-detail.yml').read_bytes())},
             'findings': [], 'unverified': unverified or [], 'discarded': discarded or []}
+    data['reviewedAgainst']['attachmentsSha256'] = sha((ws / 'sparx-attachments.yml').read_bytes())
     dump(ws / 'consistency' / 'supplemental.yml', data)
 
 

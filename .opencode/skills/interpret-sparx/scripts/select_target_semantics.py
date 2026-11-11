@@ -491,6 +491,7 @@ def write_output(path: Path, value: dict[str, Any], yaml: Any) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--openapi", default=OPENAPI_FILE)
+    parser.add_argument("--sparx-only", action="store_true", help="Use the separate evidenced Sparx HTTP contract, not OpenAPI")
     parser.add_argument("--manifest", default=RESULTS_MANIFEST)
     parser.add_argument("--output", default=OUTPUT_FILE)
     args = parser.parse_args()
@@ -498,13 +499,20 @@ def main() -> int:
         root = repository_root()
         if args.openapi != OPENAPI_FILE or args.manifest != RESULTS_MANIFEST or args.output != OUTPUT_FILE:
             raise SelectionFailure("This selector accepts only canonical approved inputs and output paths.")
-        api_path = safe_factory_path(root, args.openapi)
+        contract_file = ".factory/sparx-http-contract.yml" if args.sparx_only else args.openapi
+        if args.sparx_only and (root / OPENAPI_FILE).exists():
+            raise SelectionFailure("Sparx-only selection must not ignore an existing OpenAPI resource.")
+        api_path = safe_factory_path(root, contract_file)
         manifest_path = safe_factory_path(root, args.manifest)
         output_path = root / OUTPUT_FILE
         if output_path.exists() and output_path.is_symlink():
             raise SelectionFailure("Output must not be a symlink.")
         yaml = load_yaml_support()
         openapi, api_bytes = load_yaml(api_path, yaml)
+        if args.sparx_only:
+            if openapi.get("kind") != "sparx-http-contract" or not openapi.get("targetService"):
+                raise SelectionFailure("A target-local Sparx HTTP contract is required.")
+            openapi = {**openapi, "service": {"title": openapi["targetService"]}}
         manifest, manifest_bytes = load_yaml(manifest_path, yaml)
         if not isinstance(openapi, dict) or not isinstance(openapi.get("operations"), list):
             raise SelectionFailure("OpenAPI normalized resource has no operations list.")
@@ -524,6 +532,9 @@ def main() -> int:
         if not re.fullmatch(r"[0-9a-f]{64}", str((manifest.get("source") or {}).get("fingerprint") or "")):
             raise SelectionFailure("Semantic-results manifest fingerprint is missing or malformed.")
         query, hints = target_hints(openapi)
+        if args.sparx_only:
+            for hint in hints:
+                hint["source"] = hint.get("source", "").replace("openapi.", "sparxContract.")
 
         scanned_results = 0
         scanned_items = 0
@@ -689,6 +700,11 @@ def main() -> int:
                 "openapiUsedAsSemanticEvidence": False,
             },
         }
+        if args.sparx_only:
+            output["source"]["sparxContract"] = output["source"].pop("openapi").replace(OPENAPI_FILE, contract_file)
+            output["source"]["sparxContractFingerprint"] = output["source"].pop("openapiFingerprint")
+            output["target"]["sparxContractHintsOnly"] = output["target"].pop("openapiHintsOnly")
+            output["validation"]["contractUsedAsSemanticEvidence"] = output["validation"].pop("openapiUsedAsSemanticEvidence")
         output_path.parent.mkdir(parents=True, exist_ok=True)
         write_output(output_path, output, yaml)
         print(output["statistics"], file=sys.stderr)

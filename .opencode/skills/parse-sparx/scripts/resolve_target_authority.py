@@ -148,13 +148,15 @@ def element_view(row: dict[str, Any], root: Path) -> dict[str, Any]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("source_root", type=Path, help="Sparx export root containing js/data (e.g. input/sparx/PROYECT)")
+    parser.add_argument("source_root", type=Path, help="Sparx export root containing js/data (e.g. input/sparx)")
     parser.add_argument("output", type=Path)
     parser.add_argument("--target", required=True, help="Exact element name of the target service")
-    parser.add_argument("--openapi", type=Path, help=".factory/openapi-spec.yml (operations list); required unless --non-http")
+    parser.add_argument("--openapi", type=Path, help=".factory/openapi-spec.yml; alternative to --sparx-only or --non-http")
     parser.add_argument("--non-http", action="store_true",
                         help="target has no HTTP contract (batch/shell): no OpenAPI is read, no operation matching is done; "
-                             "only the branch of the exactly named service element is resolved")
+                              "only the branch of the exactly named service element is resolved")
+    parser.add_argument("--sparx-only", action="store_true",
+                        help="HTTP service without Swagger; discover literal METHOD-path operations from target-owned Sparx methods")
     parser.add_argument("--reviewed-decisions", type=Path)
     parser.add_argument("--source-authority-decision", type=Path,
                         help="Approved human decision (YAML: decisionId, primaryBranchRootId, complementBranchRootIds[], operationMatch) "
@@ -166,9 +168,9 @@ def main() -> int:
     root = (repo / args.source_root).resolve()
     packages, elements, toc_hashes = load_toc(root / "js" / "data")
     pkg_by_id = {p["id"]: p for p in packages}
-    if args.non_http == (args.openapi is not None):
-        raise SystemExit("exactly one of --openapi (HTTP target) or --non-http (batch/shell target) is required")
-    if args.non_http:
+    if sum((args.non_http, args.sparx_only, args.openapi is not None)) != 1:
+        raise SystemExit("exactly one of --openapi, --sparx-only (HTTP without Swagger), or --non-http is required")
+    if args.non_http or args.sparx_only:
         operations = []
     else:
         openapi = yaml.safe_load(args.openapi.read_bytes())
@@ -236,16 +238,25 @@ def main() -> int:
         for e in branch_elements:
             children.setdefault(e["parentId"], []).append(e)
         prefixes = sorted({posixpath.dirname(e["page"].replace("\\", "/")) for e in branch_elements if e["page"]})
-        page_prefix = posixpath.commonpath([p for p in prefixes if p]) if prefixes else ""
+        page_prefix = posixpath.commonpath([p for p in prefixes if p]) if any(prefixes) else ""
         service = service_rows[0]
         branch_ops = []
         method_rows = [e for e in branch_elements if role_of(e) == "method"]
         service_ids = {r["ownId"] for r in service_rows if role_of(r) == "service"} or {service["ownId"]}
         is_complement = branch_id in complement_ids
         lane_rows = [e for e in branch_elements if role_of(e) == "lane"]
-        for op in operations:
+        branch_operations = operations
+        if args.sparx_only:
+            branch_operations = []
+            for row in method_rows:
+                match = re.fullmatch(r'(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|TRACE)[ -](/\S+)', row['name'])
+                if row['parentId'] in service_ids and match:
+                    branch_operations.append({'method': match[1], 'path': match[2], 'operationId': None})
+        for op in branch_operations:
             literal = f"{op['method']}-{op['path']}"
             hits = [m for m in method_rows if m["name"] in (literal, f"{op['method']} {op['path']}")]
+            if args.sparx_only:
+                hits = [m for m in hits if m['parentId'] in service_ids]
             segment = op["path"].rstrip("/").rsplit("/", 1)[-1]
             matched_by = "literal-method-path"
             if not hits and authority_decision and not is_complement:
@@ -283,7 +294,7 @@ def main() -> int:
                     entry["ambiguity"] = "multiple Sparx method elements share the literal name in this branch"
             branch_ops.append(entry)
         sparx_only = [element_view(m, root) for m in method_rows
-                      if m["parentId"] in service_ids and all(m["name"] != f"{o['method']}-{o['path']}" for o in operations)
+                      if m["parentId"] in service_ids and all(m["name"] not in (f"{o['method']}-{o['path']}", f"{o['method']} {o['path']}") for o in branch_operations)
                       and not (authority_decision and any(m["name"] == o["path"].rstrip("/").rsplit("/", 1)[-1] for o in operations))]
         branches.append({
             "branchRootId": branch_id, "branchRootGuid": package["guid"], "name": package["name"], "page": package["page"],
@@ -293,6 +304,10 @@ def main() -> int:
             "metadata": {"branchRoot": page_metadata(package["page"], root) if package["page"] else None,
                          "service": page_metadata(service["page"], root)},
             "operations": branch_ops, "sparxOnlyMethods": sparx_only,
+            **({'unresolvedHttpMethods': [element_view(m, root) for m in method_rows
+                 if m['parentId'] in service_ids and not re.fullmatch(
+                     r'(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|TRACE)[ -](/\S+)', m['name'])]}
+               if args.sparx_only else {}),
         })
 
     # --- authority classification (explicit structural/provenance evidence only)
@@ -378,6 +393,7 @@ def main() -> int:
 
     document = {
         "version": 1, "kind": "sparx-target-authority",
+        "contractMode": "sparx-only" if args.sparx_only else "non-http" if args.non_http else "openapi",
         "target": {"name": args.target, "sourceRoot": args.source_root.as_posix(), "matchedElements": len(matches)},
         "hierarchySources": {"tocFiles": toc_hashes, "openapi": ({"file": args.openapi.as_posix(), "sha256": sha256(args.openapi)} if args.openapi else None),
                              "reviewedDecisions": ({"file": args.reviewed_decisions.as_posix(), "sha256": sha256(args.reviewed_decisions)}

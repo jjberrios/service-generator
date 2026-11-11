@@ -14,6 +14,14 @@ specific Stage 2A units referenced by target semantic result source units.
 
 ## Ownership and reconciliation
 
+For explicit checkpoint `inputs.contractMode: sparx-only`, the contract input is
+`.factory/sparx-http-contract.yml`, validated by `service-workspace/scripts/sparx_only.py`.
+See `service-workspace/docs/sparx-only.md`. The shared gate verifies live evidence;
+the reconciler uses the same normalized contract shape and emits `sparxContract`
+provenance rather than pretending an OpenAPI existed. This exception supersedes
+OpenAPI-only ownership statements below only for services without Swagger.
+Never silently fall back from a missing or invalid supplied Swagger.
+
 OpenAPI owns active HTTP method/path, operationId, path/query/header/cookie
 parameters, request bodies, response schemas/status codes/headers, security,
 and API-level declared schema constraints. Copy these values from the normalized

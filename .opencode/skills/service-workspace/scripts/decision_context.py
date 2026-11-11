@@ -17,7 +17,7 @@ ARTIFACTS = ('openapi-spec.yml', 'sparx-target-authority.yml',
              'sparx-authoritative-endpoint-detail.yml', 'sparx-spec.yml', 'service-spec.yml',
              'sparx-reviewed-decisions.yml', 'consistency/resolutions.yml',
              'consistency/decision-coverage.yml', 'consistency/supplemental.yml',
-             'consistency/batch-review.yml')
+              'consistency/batch-review.yml', 'sparx-http-contract.yml', 'sparx-attachments.yml', 'consistency/sparx-only-review.yml')
 
 
 class DecisionError(ValueError):

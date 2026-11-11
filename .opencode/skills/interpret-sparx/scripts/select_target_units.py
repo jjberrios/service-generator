@@ -49,7 +49,7 @@ def make_hints(spec: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[st
     service = spec.get("service") or {}
     ops = []
     hints = []
-    title = str(service.get("title") or service.get("name") or "").strip()
+    title = str(service.get("title") or service.get("name") or spec.get("targetService") or "").strip()
     for operation in spec.get("operations") or []:
         contract = operation.get("contract") or {}
         entry = {"method": str(operation.get("method") or "").upper(),
@@ -443,7 +443,7 @@ def main() -> int:
                 args.prior_results_manifest or Path(".factory/sparx-semantic-results/manifest.yml"),
             )
         decisions = safe_yaml(factory / "sparx-reviewed-decisions.yml", yaml, factory)
-        title = str((spec.get("service") or {}).get("title") or (spec.get("service") or {}).get("name") or "")
+        title = str((spec.get("service") or {}).get("title") or (spec.get("service") or {}).get("name") or spec.get("targetService") or "")
         operations, hints = make_hints(spec)
 
         units: list[dict[str, Any]] = []

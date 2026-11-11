@@ -13,6 +13,8 @@
   workspace_cli.py gate-check <service>                       (exit 3 unless CLEARED)
   workspace_cli.py resume <service>                           (re-evaluates; a blocked service stays blocked)
   workspace_cli.py preflight <service>                        (read-only YAML feasibility; exit 4 unless all mandatory requirements supported)
+  workspace_cli.py capability-check <service>                 (early read-only backend profile check, no gate required)
+  workspace_cli.py question-triage <service> --input <file.yml> (workspace-relative issue list; routing only, never approval)
   workspace_cli.py materialize <service> [--supported-only] [--dry-run] [--no-assemble]   (deterministic FULL materializer; gate and file protection enforced inside)
   workspace_cli.py protect-check <service> --plan <implementation-plan.yml>   (exit 3 when manual content would be overwritten)
   workspace_cli.py protect-authorize <service> <relative-path> --by NAME --reason TEXT
@@ -44,8 +46,11 @@ def main(argv=None) -> int:
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('list')
     sub.add_parser('resolve-sparx').add_argument('path')
-    for name in ('init', 'status', 'gate-evaluate', 'gate-check', 'resume', 'preflight'):
+    for name in ('init', 'status', 'gate-evaluate', 'gate-check', 'resume', 'preflight', 'capability-check'):
         sub.add_parser(name).add_argument('service')
+    qt = sub.add_parser('question-triage')
+    qt.add_argument('service')
+    qt.add_argument('--input', required=True)
     m = sub.add_parser('migrate-archive')
     m.add_argument('service')
     m.add_argument('archive')
@@ -118,6 +123,24 @@ def main(argv=None) -> int:
             (ws.dir / 'consistency').mkdir(exist_ok=True)
             ws.set_state(schemaVersion=1, status=ws.state().get('status', 'idle'))
             print(ws.dir)
+        elif args.command in ('capability-check', 'question-triage'):
+            import lifecycle
+            from artifact_integrity import safe_path
+            try:
+                if args.command == 'capability-check':
+                    out = lifecycle.capability_check(repo, args.service)
+                    code = 0 if out['supported'] else 4
+                else:
+                    doc = lifecycle.gc.load_mapping(safe_path(ws.dir, args.input))
+                    if not isinstance(doc.get('issues'), list) or not all(isinstance(i, dict) for i in doc['issues']):
+                        raise ValueError('issues must be a list of mappings')
+                    out = lifecycle.triage(doc['issues'])
+                    code = 0
+            except (ValueError, KeyError, TypeError, OSError) as error:
+                print(f'workspace_cli: technical-check: {error}', file=sys.stderr)
+                return 4
+            print(yaml.safe_dump(out, allow_unicode=True, sort_keys=False))
+            return code
         elif args.command == 'lifecycle':
             import lifecycle
             state = ws.state()

@@ -21,7 +21,7 @@ SPARX_MARKERS = ('js/data', 'EARoot', 'index.htm')
 
 CANONICAL = ('openapi-spec.yml', 'sparx-target-authority.yml', 'sparx-authoritative-endpoint-detail.yml', 'sparx-nonauthoritative-evidence.yml', 'sparx-spec.yml',
              'service-spec.yml', 'sparx-reviewed-decisions.yml', 'full-planning-input.yml', 'generation-parameters.yml', 'implementation-plan.yml',
-             'service-generation-state.yml')
+              'service-generation-state.yml', 'sparx-http-contract.yml', 'sparx-attachments.yml')
 
 # Pipeline phases in order. Everything from CONSOLIDATION on requires a cleared Sparx/Swagger consistency gate.
 PHASES = ('input-validation', 'openapi-normalization', 'target-authority', 'consistency-validation', 'specification-consolidation',
@@ -64,6 +64,7 @@ def resolve_sparx_root(repo: Path, requested: str) -> str:
     repo = Path(repo).resolve()
     base = (repo / 'input' / 'sparx').resolve()
     text = str(requested).strip().replace('\\', '/').strip('/')
+    # User-facing /input/sparx is a repository path, not a drive-root path.
     if text == 'sparx' or text.startswith('sparx/'):
         text = 'input/' + text
     candidate = (repo / text).resolve() if text else base

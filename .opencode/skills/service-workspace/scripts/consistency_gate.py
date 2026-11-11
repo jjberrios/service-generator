@@ -224,7 +224,8 @@ def decide(registry: dict | None, resolutions: list, decision_ids: set, authoriz
     sources = registry.get('sources') or {}
     evaluation_hash = digest({'covered': sorted((fp, e['decisionId'], e['decisionSha256']) for fp, e in covered.items()), 'items': sorted((i['fingerprint'], valid[i['fingerprint']]['disposition'], valid[i['fingerprint']]['approvedAt']) for i in items if i['fingerprint'] in valid),
                               'unresolved': sorted(i['fingerprint'] for i in unresolved), 'openapi': (sources.get('openapi') or {}).get('sha256'),
-                              'detail': sources.get('endpointDetailSha256'), 'authority': sources.get('authoritySha256')})
+                              'detail': sources.get('endpointDetailSha256'), 'authority': sources.get('authoritySha256'),
+                              **({'attachments': sources['attachmentsSha256']} if 'attachmentsSha256' in sources else {})})
     if not semantic_ok:
         status = SEMANTIC_REVIEW_PENDING
     elif unresolved:
@@ -339,9 +340,34 @@ def current_decision(ws_dir: Path, repo: Path, service: str, persist: bool = Fal
             except (ValueError, OSError, KeyError, TypeError, yaml.YAMLError) as error:
                 result.update(status=BLOCKED, problems=[f'operational-review-unavailable: {error}'])
         return result
+    state = load(Path(ws_dir) / 'service-generation-state.yml') or {}
+    if (state.get('inputs') or {}).get('contractMode') == 'sparx-only':
+        import sparx_only
+        result = sparx_only.evaluate(Path(ws_dir), Path(repo), service, sys.modules[__name__])
+        if review_decisions and result['status'] == AWAITING_AUTHORIZATION:
+            try:
+                grants = reviews.current(repo, service)
+                if any(g['binding'] == {'kind': 'resume', 'evaluationHash': result['evaluationHash']} for g in grants):
+                    result['status'] = CLEARED
+            except (ValueError, OSError, KeyError, TypeError, yaml.YAMLError) as error:
+                result.update(status=BLOCKED, problems=[f'operational-review-unavailable: {error}'])
+        return result
     p = paths(ws_dir)
     registry = fresh_registry(ws_dir, repo, service, persist)
     supplemental = load(p['supplemental'])
+    authority = load(Path(ws_dir) / 'sparx-target-authority.yml') or {}
+    # Attachment review is mandatory with Swagger too, including legacy resumes.
+    # A legacy authority without contractMode must not bypass evidence checks.
+    if registry:
+        import sparx_only
+        try:
+            attachments_hash = sparx_only.attachment_check(Path(ws_dir), Path(repo), authority, sys.modules[__name__])
+            if registry:
+                registry.setdefault('sources', {})['attachmentsSha256'] = attachments_hash
+            if (supplemental or {}).get('reviewedAgainst', {}).get('attachmentsSha256') != attachments_hash:
+                supplemental = None
+        except (ValueError, OSError, KeyError, TypeError) as error:
+            raise GateError(BLOCKED, f'attachment evidence: {error}') from error
     resolutions, coverage, decisions, grants = [], [], {}, []
     try:
         if review_decisions:

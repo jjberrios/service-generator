@@ -10,6 +10,22 @@ that evidence. Never combine the stages implicitly.
 
 ## Inputs And Invariants
 
+Target-local exports may live directly at `input/sparx/`; no PROJECT/PROYECT
+subfolder is mandatory. Use the workspace resolver and preserve its actual root.
+For HTTP services without Swagger use `resolve_target_authority.py --sparx-only`
+and the evidenced contract format in `service-workspace/docs/sparx-only.md`.
+`--non-http` remains exclusive to genuinely non-HTTP services.
+
+For every service with Sparx, WITH or WITHOUT Swagger, attachment review is
+mandatory; Swagger never replaces the attached functional documentation.
+Target-local detail extraction also inventories attached documents with
+`sparx_attachments.py` into `sparx-attachments.yml`. Review these as source
+evidence: HTML embeds, linked DOCX/PDF/text documents, their exact quotes and
+page/paragraph/section locators. No remote fetch, document execution, macros or
+general link crawl. Unsupported or missing documents stay unverified. PDF text
+extraction uses an already-installed optional `pypdf`; no dynamic installation
+or implicit OCR. All selected branch pages are checked, not the whole export.
+
 Establish:
 
 - `<source>`: one Sparx HTML export directory under `input/sparx/`, read-only;
