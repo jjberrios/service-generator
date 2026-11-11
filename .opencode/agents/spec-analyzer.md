@@ -8,6 +8,10 @@ permissions:
   - {action: shell, resource: "*", effect: ask}
   - {action: shell, resource: "python .opencode/skills/reconcile-service-spec/scripts/reconcile_specs.py *", effect: allow}
   - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/reconcile-service-spec/scripts/reconcile_specs.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/reconcile-service-spec/scripts/reconcile_specs.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
   - {action: shell, resource: "*review_cli*", effect: deny}
   - {action: shell, resource: "*decision_reviews*", effect: deny}
   - {action: shell, resource: "*gate-resolve*", effect: deny}
@@ -21,6 +25,11 @@ permissions:
 ---
 
 # Specification Analyzer
+
+Inherit project routine reads/searches; keep them scoped to approved phase inputs
+and exclude secrets/environment files. The orchestrator owns the checkpoint;
+serialize same-service `workspace_cli.py run` calls that write shared artifacts.
+Isolated invocations still require disjoint outputs to run in parallel.
 
 Apply `service-workspace/question-policy.md`. Reconcile available facts without
 asking the user to repeat them. Return grouped real conflicts or indispensable

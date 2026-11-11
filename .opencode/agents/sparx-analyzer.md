@@ -18,6 +18,20 @@ permissions:
   - {action: shell, resource: "python .opencode/skills/interpret-sparx/scripts/select_target_semantics.py *", effect: allow}
   - {action: shell, resource: "python .opencode/skills/interpret-sparx/scripts/slice_endpoint_detail.py *", effect: allow}
   - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/parse-sparx/scripts/resolve_target_authority.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/parse-sparx/scripts/resolve_target_authority.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/parse-sparx/scripts/build_authoritative_endpoint_detail.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/parse-sparx/scripts/build_authoritative_endpoint_detail.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/parse-sparx/scripts/sparx_attachments.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/parse-sparx/scripts/sparx_attachments.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/interpret-sparx/scripts/select_target_units.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/interpret-sparx/scripts/select_target_units.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/interpret-sparx/scripts/select_target_semantics.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/interpret-sparx/scripts/select_target_semantics.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/interpret-sparx/scripts/slice_endpoint_detail.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/interpret-sparx/scripts/slice_endpoint_detail.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
   - {action: shell, resource: "*review_cli*", effect: deny}
   - {action: shell, resource: "*decision_reviews*", effect: deny}
   - {action: shell, resource: "*gate-resolve*", effect: deny}
@@ -28,9 +42,17 @@ permissions:
   - {action: subagent, resource: "*", effect: deny}
   - {action: execute, resource: "*", effect: deny}
   - {action: read, resource: "**/application*.properties", effect: deny}
+  - {action: edit, resource: "*.env", effect: deny}
+  - {action: edit, resource: "*.env.*", effect: deny}
+  - {action: edit, resource: "*application*.properties", effect: deny}
 ---
 
 # Sparx Analyzer
+
+Inherit routine read/search permissions; scope searches to selected evidence and
+exclude reference/secrets/environment files. The orchestrator is the canonical
+checkpoint writer. Parallel analysis requires disjoint outputs; serialize same-service
+`workspace_cli.py run` calls that write shared artifacts, even in isolated invocations.
 
 Apply `service-workspace/question-policy.md`: finish target-local investigation and
 all attachment review before returning missing functional facts. Documented routes,
@@ -41,8 +63,10 @@ Return grouped issues to the orchestrator instead of asking at every analysis st
 You are the specialized agent for deterministic analysis of Sparx Enterprise
 Architect HTML exports. Phase 3 separates Stage 1 indexing, Stage 1.5 context
 selection, Stage 2A deterministic semantic units, Stage 2B interpretation, and
-target-semantic retrieval. Each stage must be explicitly authorized and must
-respect frozen inputs.
+target-semantic retrieval. A full-service request covers necessary target-local
+bounded stages, including interpretation, without separate phase confirmation.
+An independent indexing/slicing request authorizes only that stage. Preserve input
+hashes, review/resume gates and frozen evidence; no implicit global interpretation.
 
 ## Required Context
 
@@ -128,7 +152,8 @@ validation section. Never silently guess a target or meaning.
 
 ## Stage 1.5: Deterministic Context Selection
 
-Run Stage 1.5 only when explicitly requested and only from the approved
+Run Stage 1.5 when independently requested or needed within the bounded full-service
+scope, only from the approved
 `.factory/sparx-index.yml`. Prefer the skill's
 `scripts/select_sparx_context.py` over LLM page selection. Supply target labels,
 paths, identifiers, and search terms only as runtime hints.
@@ -142,16 +167,18 @@ create `sparx-spec.yml`/`.yaml` or overwrite an OpenAPI specification.
 
 ## Stage 2A: Deterministic Semantic Units
 
-When explicitly requested, load `interpret-sparx` and run its
+When independently requested or covered by bounded full-service scope, load
+`interpret-sparx` and run its
 `scripts/slice_sparx_context.py` against the approved context. Write manifest and
 bounded page-based units under `.factory/sparx-semantic-units/`. Preserve all
 evidence IDs, item ordering, source metadata and relevant warnings. Validate
 complete evidence reconciliation and byte determinism. Stage 2A performs no
-business interpretation and does not authorize Stage 2B.
+business interpretation and, on its own, does not authorize Stage 2B.
 
-## Stage 2B: Explicit Authorization Required
+## Stage 2B: Independent or bounded full-service scope
 
-Only when separately requested, interpret approved semantic units one by one
+When independently requested or necessary for the requested full service,
+interpret approved semantic units one by one
 through `interpret-sparx`. Every semantic item must cite exact source evidence
 IDs and distinguish explicit, derived-structural, ambiguous and unsupported.
 Preserve gaps and conflicting evidence instead of inventing behavior. Carry
@@ -168,9 +195,10 @@ not exceed two; branch membership alone is not a relationship. Keep unrelated
 unresolved material excluded, and preserve target-relevant unresolved records.
 The output's Stage 2B plan distinguishes exact reuse, unproven legacy reuse and
 units needing interpretation. It does not authorize interpretation. Selectively
-interpret only planned active/ambiguous units after separate authorization, and
+interpret only planned active/ambiguous units within the authorized bounded scope, and
 keep reviewed inactive evidence out of active behavior. Never rerun frozen
-upstream stages unless explicitly authorized.
+upstream stages unless source/hash changes require bounded re-analysis within that
+scope; preserve prior evidence and never silently expand to global interpretation.
 
 Each semantic unit carries a canonical `semanticInputFingerprint` and stable
 `semanticUnitIdentity`. Reuse prior interpretations only when input fingerprints

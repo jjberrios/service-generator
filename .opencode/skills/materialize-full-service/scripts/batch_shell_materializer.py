@@ -6,8 +6,22 @@ import yaml
 
 from batch_shell_contract import PROFILE, GENERIC_KEYS, features_of, require, validate, adapter_properties, adapter_kinds
 import batch_shell_plan as planner
+from artifact_reads import load_yaml, reuse_preparation
 
 VERSION = 'batch-shell-materializer-2'
+
+
+def preparation_hash(root):
+    """Live template membership plus bytes, including after a prepared preview."""
+    from artifact_integrity import archetype_hashes, template_paths, protected
+    actual = set()
+    template = root / 'template'
+    for path in template.rglob('*'):
+        relative = path.relative_to(template).as_posix()
+        if not protected(relative) and path.is_file():
+            actual.add(relative)
+    require(actual == set(template_paths(root)), 'archetype template inventory differs from actual files')
+    return archetype_hashes(root)['technical']
 
 WS_KEYS = ('ws.ebsConsultaClavesWS.url', 'ws.ebsConsultaClavesWS.max.request.timeout',
            'ws.ebsConsultaClavesWS.max.connection.timeout', 'ws.ebsConsultaClavesWS.codigo.aplicacion')
@@ -502,31 +516,43 @@ def _materialize_checked(repo, service, dry_run=False):
     ws = fm.wsm.Workspace(repo, service)
     fm.gate.check_cleared(ws.dir, repo, service)
     plan_raw = (ws.dir / 'implementation-plan.yml').read_bytes()
-    plan = yaml.safe_load(plan_raw)
+    plan = load_yaml(plan_raw)
     try:
+        artifact_raw = {name: (ws.dir / name).read_bytes() for name in (
+            'service-spec.yml', 'full-planning-input.yml', 'generation-parameters.yml',
+            'service-generation-state.yml')}
         require(plan['plan'] == {'version': 3, 'mode': 'full', 'profile': PROFILE}, 'wrong plan version/mode/profile')
         inputs = plan['inputs']
         for key, filename, hashkey in (('serviceSpec', 'service-spec.yml', 'artifactSha256'),
                                        ('planningInput', 'full-planning-input.yml', 'sha256'),
                                        ('generationParameters', 'generation-parameters.yml', 'sha256')):
-            require(inputs[key][hashkey] == fm.sha((ws.dir / filename).read_bytes()), f'stale {filename}')
+            require(inputs[key][hashkey] == fm.sha(artifact_raw[filename]), f'stale {filename}')
             if key != 'serviceSpec':
                 require(inputs[key]['path'] == '.factory/' + filename, 'wrong artifact binding')
-        cfg = yaml.safe_load((ws.dir / 'full-planning-input.yml').read_bytes())
-        spec = yaml.safe_load((ws.dir / 'service-spec.yml').read_bytes())
+        cfg = load_yaml(artifact_raw['full-planning-input.yml'])
+        spec = load_yaml(artifact_raw['service-spec.yml'])
         require(cfg['target']['service'] == service, 'wrong workspace service')
-        state = yaml.safe_load((ws.dir / 'service-generation-state.yml').read_bytes())
+        state = load_yaml(artifact_raw['service-generation-state.yml'])
         require(cfg['target']['archetype'] == state['archetype']['path'], 'selected archetype mismatch')
-        expected = planner.build(repo, spec, cfg)
+        # Preflight and publication run in one locked invocation. Reuse only
+        # pure planning/rendering; the live gate, bindings and protection below
+        # are ALWAYS checked again. Hash templates afresh, never stat/mtime.
+        arch_hash = preparation_hash(repo / cfg['target']['archetype'])
+        preparation_key = (str(repo), fm.sha(plan_raw), arch_hash,
+                           fm.sha(artifact_raw['service-spec.yml']),
+                           fm.sha(artifact_raw['full-planning-input.yml']))
+        expected = reuse_preparation('batch-plan', preparation_key,
+                                    lambda: planner.build(repo, spec, cfg))
         require(inputs['archetype'] == expected['inputs']['archetype'], 'stale archetype')
         for key in set(expected) - {'inputs', 'files'}:
             require(plan[key] == expected[key], f'plan differs from authorized inputs: {key}')
         def inventory(p):
             return [{k: v for k, v in e.items() if k != 'action'} for e in p['files']['generate']]
         require(inventory(plan) == inventory(expected), 'unplanned or missing component')
-        params = yaml.safe_load((ws.dir / 'generation-parameters.yml').read_bytes())
+        params = load_yaml(artifact_raw['generation-parameters.yml'])
         require(params == {'parameters': {'version': 2, 'profile': PROFILE}, 'values': plan['templateParameters']}, 'parameter conflict')
-        rendered = render_project(plan, repo)
+        rendered = reuse_preparation('batch-render', preparation_key,
+                                    lambda: render_project(plan, repo))
         output = repo / cfg['target']['output_directory']
         require(output.resolve().is_relative_to((repo / 'output').resolve()), 'output escapes configured directory')
         for path in [*rendered, fm.MANIFEST]:
@@ -559,6 +585,13 @@ def _materialize_checked(repo, service, dry_run=False):
                              'jacoco': 'not-verified', 'checkstyle': 'not-applicable'}}
     if dry_run:
         return report
+    # Preparation reuse must never turn into cached authority. Revalidate live
+    # evidence/reviews and the exact snapshots just before guarded publication.
+    fm.gate.check_cleared(ws.dir, repo, service)
+    require((ws.dir / 'implementation-plan.yml').read_bytes() == plan_raw
+            and all((ws.dir / name).read_bytes() == raw for name, raw in artifact_raw.items())
+            and preparation_hash(repo / cfg['target']['archetype']) == arch_hash,
+            'generation inputs changed during preparation; retry from current inputs')
     # Manifest is guarded too. Excluded local environment files are never enumerated/read.
     publish(output, ws.dir, payload, dump(manifest))
     declared = [p['key'] for p in plan['batch']['properties']]

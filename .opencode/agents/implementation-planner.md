@@ -12,6 +12,12 @@ permissions:
   - {action: shell, resource: "python .opencode/skills/plan-service-implementation/scripts/build_implementation_plan.py *", effect: allow}
   - {action: shell, resource: "python .opencode/skills/plan-service-implementation/scripts/resolve_generation_parameters.py *", effect: allow}
   - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/plan-service-implementation/scripts/build_implementation_plan.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/plan-service-implementation/scripts/build_implementation_plan.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/plan-service-implementation/scripts/resolve_generation_parameters.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/plan-service-implementation/scripts/resolve_generation_parameters.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
   - {action: shell, resource: "*review_cli*", effect: deny}
   - {action: shell, resource: "*decision_reviews*", effect: deny}
   - {action: shell, resource: "*gate-resolve*", effect: deny}
@@ -25,6 +31,11 @@ permissions:
 ---
 
 # Implementation Planner
+
+Inherit routine reads/searches, scoped to approved plan inputs and excluding
+secrets/environment files. The orchestrator owns canonical checkpoint publication;
+serialize same-service `workspace_cli.py run` calls that write shared artifacts.
+Isolated invocations still require disjoint outputs to run in parallel.
 
 Read root `AGENTS.md` and load `plan-service-implementation` before planning.
 Follow `service-workspace/question-policy.md`. Choose internal engineering names
@@ -63,7 +74,7 @@ The planner scripts refuse to run unless the Sparx/Swagger consistency gate of t
 legacy root `.factory/` files or from another service's artifacts.
 
 The following logging and Checkstyle paragraphs apply ONLY to
-`claro-spring-ms/1.0.0`. D-011 also preserves its JPA/Hibernate/Oracle/HikariCP
+`claro-spring-ms/1.0.1`. D-011 also preserves its JPA/Hibernate/Oracle/HikariCP
 baseline. Other archetypes use their own conventions, including absence.
 
 Activity logging is inherited from that archetype (D-013, reference `ActivityLogger`

@@ -7,6 +7,8 @@ backends), so adding a service never edits this file and never changes the behav
 from pathlib import Path
 import ast
 import importlib
+import hashlib
+import sys
 
 HERE = Path(__file__).resolve().parent
 DECLARATION = 'TYPED_BACKEND_SERVICES'
@@ -14,8 +16,23 @@ DECLARATION = 'TYPED_BACKEND_SERVICES'
 
 def declared(path):
     try:
-        tree = ast.parse(Path(path).read_text(encoding='utf-8'))
-    except (OSError, SyntaxError, UnicodeDecodeError):
+        raw = Path(path).read_bytes()
+        text = raw.decode('utf-8')
+    except (OSError, UnicodeDecodeError):
+        return ()
+    # Discovery still reads current source bytes on every lookup. Only parsing
+    # is reused inside an existing invocation; standalone callers need no cache.
+    reads = sys.modules.get('artifact_reads')
+    if reads is not None:
+        return reads.reuse_preparation(('typed-declaration', str(Path(path).resolve())),
+                                       hashlib.sha256(raw).digest(), lambda: _declared_text(text))
+    return _declared_text(text)
+
+
+def _declared_text(text):
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
         return ()
     for node in tree.body:
         if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == DECLARATION for t in node.targets):

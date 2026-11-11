@@ -371,7 +371,7 @@ The archetype owns:
 The selected archetype owns these choices through its own reference evidence
 and approved decisions, subject to the Reference-Based Extraction Policy above.
 
-### Existing claro-spring-ms / 1.0.0 Decisions
+### Existing claro-spring-ms / 1.0.1 Decisions
 
 The following approved baselines apply specifically to
 `archetypes/claro-spring-ms/v1.0.1`, extracted from `input/reference/ms-individual`.
@@ -453,7 +453,7 @@ Delegation: only when the user explicitly states in the conversation that the ag
 overwrite and historical reattestation stay manual, business behavior is never invented (conservative option, reported as an assumption). The consolidation, parameter,
 planning and materialization scripts enforce the gate themselves.
 
-Java for a service is written only by the deterministic FULL materializer (skill `materialize-full-service`, `workspace_cli.py materialize <service>`), which recomputes the consistency gate, protects manual files, writes through `guard_write` and stops on unsupported components; `@service-generator` has no direct edit permission on `output/**`. A generic validator and a preventive style lint exist, but only the actual Checkstyle execution can pass a Checkstyle gate required by the selected archetype (D-014 for claro-spring-ms/1.0.0). An archetype whose reference has no Checkstyle has no such mandatory gate; absence is not a pass.
+Java for a service is written only by the deterministic FULL materializer (skill `materialize-full-service`, `workspace_cli.py materialize <service>`), which recomputes the consistency gate, protects manual files, writes through `guard_write` and stops on unsupported components; `@service-generator` has no direct edit permission on `output/**`. A generic validator and a preventive style lint exist, but only the actual Checkstyle execution can pass a Checkstyle gate required by the selected archetype (D-014 for claro-spring-ms/1.0.1). An archetype whose reference has no Checkstyle has no such mandatory gate; absence is not a pass.
 The following materializer capabilities describe its currently supported technical profile, not requirements to transplant into every extracted archetype. Before using a different archetype, establish backend support for its Java version, templates, persistence and test framework; stop on unsupported profiles instead of rewriting the archetype to match the backend.
 For the supported pattern the materializer generates JUnit 5/Mockito tests with a rule traceability register and a static JaCoCo scope report (`tests-traceability.yml`, `coverage-scope.yml`, always `not-verified`); persistence tests need an explicitly authorized test-database dependency.
 Declared parameter/DTO constraints are exercised through Bean Validation, audit dates use an injectable `Clock` (system default zone, never SYSDATE), and `coverage-scope.yml` reports tool states honestly (Maven/Checkstyle/JaCoCo never claimed).
@@ -482,6 +482,45 @@ Existing output files modified by hand (or listed as user-owned) are preserved; 
   unsupported backends are never turned into repeated questions.
 - Official Maven tests run only with `SERVICE_GENERATOR_AUTHORIZED_MAVEN_TESTS=1`.
 
+## Portable OpenCode V2 operation
+
+Project permissions live in `opencode.jsonc`, not in user/global configuration.
+See https://opencode.ai/docs/permissions and https://opencode.ai/docs/config.
+Rules are ordered, last match wins, and agent rules are appended after project
+rules. Routine non-sensitive reads and bounded searches need no approval. Agents
+inherit that baseline and narrow mutation/execution scope; do not append a broad
+read allow that reopens secrets. Only the extractor may inspect the explicitly
+selected reference for extraction/revision/provenance, never normal generation;
+it remains read-only and secret/application-property exclusions still apply.
+
+Glob permission resources are requested patterns; grep resources are expressions,
+not search paths. Their allow rules do not enforce path exclusions. Agents must
+scope searches to permitted roots, exclude reference/secrets/environment files,
+and never search the repository wholesale for content. Read denies do not sandbox
+shell: use dedicated tools, never shell/Python to evade them. Shell commands have
+host authority; no blanket shell or `python *` authorization is appropriate.
+
+Use repository-relative slash paths from the checkout root. Canonical script
+invocation is `python -B .opencode/skills/<skill>/scripts/<script>.py ...`;
+`py -3 -B` is the Windows launcher equivalent. Only explicitly allowlisted script
+commands receive these equivalent spellings, with unchanged arguments/gates.
+Legacy `python` examples remain valid; do not invent absolute user paths,
+package installation or interpreter `-c` allowlists. Before sharing a checkout,
+`python -B tools/doctor.py` performs read-only local prerequisite/config/agent
+checks. It installs nothing, reads no global config, uses no network and cannot
+prove the effective merged runtime permissions. It does not clear service gates.
+
+A full-service request covers necessary target-local bounded discovery, attachment
+review, slicing, interpretation, reconciliation, planning and static validation:
+no separate per-stage confirmation. A standalone indexing/slicing request does not
+authorize interpretation or generation. Human review, explicit resume authorization,
+delegation requirements, manual-file protection and unsupported-backend stops remain.
+Independent work may run in parallel only with disjoint outputs and one canonical
+writer. Isolated invocations do not authorize concurrent canonical writers:
+serialize same-service `workspace_cli.py run` calls that write shared artifacts,
+checkpoints, manifests or reviews. Serialize canonical publication.
+Normal generation does not run global regression suites or Maven by default.
+
 ## Service Generation Orchestrator
 
 ### Non-HTTP batch backend
@@ -501,11 +540,12 @@ enable/freeze an archetype or authorize a real service, Maven or remote executio
 
 Use `.opencode/agents/service-generator.md` to coordinate the existing specialized
 agents and skills. The orchestrator resumes from
-`.factory/service-generation-state.yml`, validates input/artifact hashes, selects
+`.factory/services/<service>/service-generation-state.yml`, validates input/artifact hashes, selects
 authoritative target-local evidence, pauses only for blocking source/business
 decisions, and requires full readiness before functional planning/materialization.
-Do not reuse another target's canonical artifacts or reviewed decisions. Archive
-previous run state/artifacts before switching the active target; preserve outputs.
+Do not reuse another target's canonical artifacts or reviewed decisions. Switching
+targets never archives or overwrites another service workspace; root checkpoints
+are legacy, recovered only by explicit copy-only migration. Preserve outputs.
 
 Minimal invocation:
 
@@ -514,6 +554,9 @@ Minimal invocation:
 
 Target service:
 dom-example-service
+
+Archetype:
+archetypes/<name>/<version>
 
 OpenAPI:
 input/contracts/dom-example-service.yml

@@ -5,14 +5,21 @@ scripts keep their `.factory/...` relative conventions: the runner executes them
 and `.opencode` entries are directory links to the service workspace and the real folders. Provenance paths therefore stay valid inside a workspace.
 """
 from pathlib import Path
+from contextlib import contextmanager
+import json
+import math
 import os
 import re
+import signal
 import subprocess
 import sys
+import time
+import uuid
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import consistency_gate as gate  # noqa: E402
+from artifact_integrity import safe_path, write_atomic  # noqa: E402
 
 SERVICES = Path('.factory') / 'services'
 SANDBOXES = Path('.factory') / '.sandboxes'
@@ -117,33 +124,91 @@ class Workspace:
         return self
 
     def state(self) -> dict:
-        return yaml.safe_load(self.state_file.read_bytes()) if self.state_file.is_file() else {}
+        state = yaml.safe_load(self.state_file.read_bytes()) if self.state_file.is_file() else {}
+        if state is None:
+            return {}
+        self._validate_state(state)
+        return state
 
-    def write_state(self, state: dict):
-        self.ensure()
-        tmp = self.state_file.with_suffix('.tmp')
-        tmp.write_text(yaml.safe_dump(state, sort_keys=False, allow_unicode=True, width=200), encoding='utf-8')
-        os.replace(tmp, self.state_file)
-
-    def set_state(self, **fields) -> dict:
-        state = self.state() or {'schemaVersion': 1, 'targetService': self.service}
+    def _validate_state(self, state):
+        if not isinstance(state, dict):
+            raise WorkspaceError('checkpoint must be a mapping')
         if state.get('targetService') not in (None, self.service):
             raise WorkspaceError(f'state belongs to {state.get("targetService")}, not {self.service}')
-        state.update({'targetService': self.service, **fields})
-        self.write_state(state)
-        return state
+
+    @contextmanager
+    def _checkpoint_lock(self, timeout=5.0):
+        """Short cooperative writer lock, independent of the materializer lock.
+
+        Never evict stale locks. Direct/manual writers must serialize with this
+        lock too; this is not an authentication or approval boundary.
+        """
+        self.ensure()
+        # Validate the stable directory, not a contended lock-file pathname:
+        # Windows resolve() can observe DELETE_PENDING during another release.
+        directory = safe_path(self.repo, self.dir.relative_to(self.repo).as_posix())
+        target = directory / '.checkpoint.lock'
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                fd = os.open(target, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+                break
+            except (FileExistsError, PermissionError) as error:
+                # Windows can report EACCES rather than EEXIST while the prior
+                # owner's lock is pending deletion. Retry boundedly, never unlink.
+                if time.monotonic() >= deadline:
+                    raise WorkspaceError('checkpoint busy; inspect stale lock manually') from error
+                time.sleep(0.01)
+        try:
+            with os.fdopen(fd, 'w') as stream:
+                stream.write(str(os.getpid()))
+            yield
+        finally:
+            target.unlink()
+
+    def _write_state(self, state: dict):
+        self._validate_state(state)
+        write_atomic(safe_path(self.dir, self.state_file.name),
+                     yaml.safe_dump(state, sort_keys=False, allow_unicode=True, width=200).encode('utf-8'))
+
+    def write_state(self, state: dict):
+        """Explicit full replacement; callers must not pass stale snapshots.
+
+        Normal checkpoint updates use set_state/complete_phase instead. Approval
+        records and manual output files are never written by this API.
+        """
+        with self._checkpoint_lock():
+            self._write_state(state)
+
+    def _update_state(self, update):
+        with self._checkpoint_lock():
+            target = safe_path(self.dir, self.state_file.name)
+            before = target.read_bytes() if target.exists() else None
+            state = yaml.safe_load(before) if before is not None else None
+            state = state if state is not None else {'schemaVersion': 1, 'targetService': self.service}
+            self._validate_state(state)
+            update(state)
+            # Fail conservatively if a non-cooperating/manual writer changed the
+            # checkpoint during this update. External writers still need the lock
+            # to close the final check/replace race.
+            if (target.read_bytes() if target.exists() else None) != before:
+                raise WorkspaceError('checkpoint changed concurrently; retry after serializing writers')
+            self._write_state(state)
+            return state
+
+    def set_state(self, **fields) -> dict:
+        return self._update_state(lambda state: state.update({'targetService': self.service, **fields}))
 
     def refresh_gate(self) -> dict:
         """Evaluate the consistency gate and mirror the outcome in the checkpoint (BLOCKED_BY_INCONSISTENCIES, ...)."""
         result = gate.evaluate(self.dir, self.repo, self.service)
         if result['status'] == gate.CLEARED:
-            state = self.state()
-            status = state.get('status')
             fields = {'consistencyGate': {'status': gate.CLEARED, 'evaluationHash': result['evaluationHash'], 'evaluatedAt': result['evaluatedAt']}}
-            if status in set(GATE_STATUS_TO_STATE.values()):
-                fields['status'] = 'in-progress'
-                fields['pendingQuestion'] = None
-            self.set_state(**fields)
+            def update(state):
+                if state.get('status') in set(GATE_STATUS_TO_STATE.values()):
+                    state.update(status='in-progress', pendingQuestion=None)
+                state.update(fields)
+            self._update_state(update)
         else:
             blockers = [{'id': i['id'], 'category': i['category'], 'element': i['element']} for i in result['blocking']]
             self.set_state(status=GATE_STATUS_TO_STATE.get(result['status'], BLOCKED_BY_INCONSISTENCIES), currentPhase='consistency-validation',
@@ -158,14 +223,15 @@ class Workspace:
             raise WorkspaceError(f'unknown phase {phase}')
         if PHASES.index(phase) >= GATED_FROM:
             gate.check_cleared(self.dir, self.repo, self.service)
-        done = list(self.state().get('completedPhases') or [])
-        return self.set_state(currentPhase=phase, status='in-progress', completedPhases=done)
+        return self.set_state(currentPhase=phase, status='in-progress')
 
     def complete_phase(self, phase: str) -> dict:
-        done = list(self.state().get('completedPhases') or [])
-        if phase not in done:
-            done.append(phase)
-        return self.set_state(completedPhases=done)
+        def update(state):
+            done = list(state.get('completedPhases') or [])
+            if phase not in done:
+                done.append(phase)
+            state['completedPhases'] = done
+        return self._update_state(update)
 
     def resume(self) -> dict:
         """Resuming never trusts the stored checkpoint: the gate is recomputed and a blocked service stays blocked."""
@@ -192,10 +258,14 @@ def make_link(link: Path, target: Path):
 
 def drop_sandbox(box: Path):
     """Remove the links first (rmdir on a link never touches its target), then the empty sandbox directory."""
+    if box.is_symlink() or _is_junction(box):
+        raise WorkspaceError('refusing redirected sandbox root')
     if not box.is_dir():
         return
     for child in list(box.iterdir()):
-        if child.is_symlink() or os.path.isjunction(child):
+        if child.is_symlink():
+            child.unlink()
+        elif _is_junction(child):
             os.rmdir(child)
         elif child.is_file():
             child.unlink()
@@ -204,13 +274,63 @@ def drop_sandbox(box: Path):
     box.rmdir()
 
 
+def _is_junction(path: Path) -> bool:
+    """Python <3.12 on Windows has no os.path.isjunction."""
+    probe = getattr(os.path, 'isjunction', None)
+    if probe is not None:
+        return probe(path)
+    if os.name == 'nt':
+        import stat
+        try:
+            return bool(path.lstat().st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT)
+        except FileNotFoundError:
+            return False
+    return False
+
+
+def _cancel_process_tree(process):
+    if os.name == 'nt':
+        # A separate process group plus taskkill /T covers ordinary descendants.
+        # This is operational cancellation, not containment of hostile processes.
+        try:
+            subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'],
+                           capture_output=True, timeout=10, check=False)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+        if process.poll() is None:
+            process.kill()
+    else:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+
+
+def _record_run(ws, run_id, metadata):
+    """Best effort metadata only; never changes a result or grants authority."""
+    try:
+        # Stabilize the parent before path validation: concurrent creation of a
+        # missing intermediate directory can confuse Windows path resolution.
+        (ws.dir / 'runs').mkdir(parents=True, exist_ok=True)
+        write_atomic(safe_path(ws.dir, f'runs/{run_id}.json'),
+                     json.dumps(metadata, sort_keys=True).encode('utf-8'))
+    except Exception:
+        pass
+
+
 def skill_of(script: Path) -> str | None:
     parts = Path(script).resolve().parts
     return parts[parts.index('skills') + 1] if 'skills' in parts else None
 
 
-def run_script(ws: Workspace, script: Path, args: list[str]) -> subprocess.CompletedProcess:
-    """Run an existing pipeline script against the service workspace. Post-gate scripts are refused unless the gate is cleared."""
+def run_script(ws: Workspace, script: Path, args: list[str], *, timeout: float = 900) -> subprocess.CompletedProcess:
+    """Run in a unique sandbox; timeout is seconds, explicitly bounded to [1, 86400].
+
+    Does not authorize Maven or concurrent canonical artifact writers. Scripts
+    writing the same canonical artifacts must still be scheduled serially.
+    """
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or not 1 <= timeout <= 86400:
+        raise WorkspaceError('runner timeout must be finite seconds in [1, 86400]')
     script = Path(script).resolve()
     allowed = (ws.repo / '.opencode/skills').resolve()
     if (not script.is_relative_to(allowed) or script.parent.name != 'scripts' or script.suffix != '.py'
@@ -219,14 +339,57 @@ def run_script(ws: Workspace, script: Path, args: list[str]) -> subprocess.Compl
     if skill_of(script) in POST_GATE_SKILLS:
         gate.check_cleared(ws.dir, ws.repo, ws.service)
     ws.ensure()
-    box = ws.repo / SANDBOXES / ws.service
-    drop_sandbox(box)
+    phase = ws.state().get('currentPhase')
+    run_id = uuid.uuid4().hex
+    box = safe_path(ws.repo, (SANDBOXES / ws.service / run_id).as_posix())
     box.mkdir(parents=True)
+    started = time.monotonic()
+    metadata = {'schemaVersion': 1, 'runId': run_id, 'phase': phase if phase in PHASES else None,
+                'command': script.name, 'skill': skill_of(script), 'timeoutSeconds': timeout,
+                'exitCode': None, 'outcome': 'error'}
+    process = None
     try:
         for name, target in (('.factory', ws.dir), ('input', ws.repo / 'input'), ('archetypes', ws.repo / 'archetypes'), ('output', ws.repo / 'output'), ('.opencode', ws.repo / '.opencode')):
             if name == 'output':
                 target.mkdir(parents=True, exist_ok=True)
             make_link(box / name, target)
-        return subprocess.run([sys.executable, str(script), *args], cwd=box, capture_output=True, text=True)
+        command = [sys.executable, str(script), *args]
+        options = {'creationflags': subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == 'nt' else {'start_new_session': True}
+        process = subprocess.Popen(command, cwd=box, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, **options)
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except BaseException:
+            try:
+                _cancel_process_tree(process)
+            except OSError:
+                pass
+            # Descendants may have inherited the pipes. Never wait unboundedly.
+            try:
+                process.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.stdout.close()
+                process.stderr.close()
+            raise
+        metadata['outcome'] = 'completed'
+        return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+    except subprocess.TimeoutExpired:
+        metadata['outcome'] = 'timeout'
+        raise
+    except KeyboardInterrupt:
+        metadata['outcome'] = 'cancelled'
+        raise
     finally:
-        drop_sandbox(box)
+        metadata['durationSeconds'] = max(0, time.monotonic() - started)
+        metadata['exitCode'] = process.returncode if process is not None else None
+        _record_run(ws, run_id, metadata)
+        # Cleanup must not mask an original timeout/nonzero exit or interruption.
+        try:
+            drop_sandbox(box)
+            try:
+                box.parent.rmdir()  # Empty only; another run's sandbox is untouched.
+            except OSError:
+                pass
+        except OSError:
+            pass
+        except WorkspaceError:
+            pass

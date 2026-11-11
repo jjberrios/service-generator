@@ -4,6 +4,7 @@ from pathlib import Path, PurePosixPath
 import os
 import re
 import yaml
+from artifact_reads import load_yaml, DuplicateKeyError
 
 
 class SelectionError(ValueError):
@@ -16,19 +17,10 @@ def load_mapping(path):
         return {}
     if path.is_symlink():
         raise SelectionError(f"unsafe-selection-input: {path}")
-    class UniqueLoader(yaml.SafeLoader):
-        pass
-    def mapping(loader, node):
-        result = {}
-        for key_node, value_node in node.value:
-            key = loader.construct_object(key_node)
-            if key in result:
-                raise SelectionError(f"duplicate-selection-key: {key} in {path}")
-            result[key] = loader.construct_object(value_node)
-        return result
-    UniqueLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, mapping)
     try:
-        value = yaml.load(path.read_bytes(), Loader=UniqueLoader)
+        value = load_yaml(path.read_bytes(), reject_duplicates=True)
+    except DuplicateKeyError as error:
+        raise SelectionError(f"duplicate-selection-key: {error} in {path}") from error
     except yaml.YAMLError as error:
         raise SelectionError(f'invalid-selection-yaml: {path}') from error
     if not isinstance(value, dict):

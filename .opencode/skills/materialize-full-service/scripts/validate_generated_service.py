@@ -80,8 +80,9 @@ def validate_typed_backend(repo: Path, service: str, backend) -> dict:
     java_on_disk = sorted(p.relative_to(out).as_posix() for sub in ('src/main/java', 'src/test/java') if (out / sub).is_dir() for p in (out / sub).rglob('*.java'))
     if manifest is not None:
         check('manifestComplete', manifest.get('complete') is True and not manifest.get('unsupportedComponents'), 'manifest is partial or lists unsupported components')
-        check('manifestRowsMatchDisk', all((out / p).is_file() and sha((out / p).read_bytes()) == r['sha256'] for p, r in rows.items() if not fp.is_excluded(p)),
-              [p for p, r in rows.items() if not (out / p).is_file() or sha((out / p).read_bytes()) != r['sha256']][:10])
+        mismatches = [p for p, r in rows.items() if not fp.is_excluded(p)
+                      and (not (out / p).is_file() or sha((out / p).read_bytes()) != r['sha256'])]
+        check('manifestRowsMatchDisk', not mismatches, mismatches[:10])
         check('manifestTreeHash', manifest.get('payloadTreeSha256') == tree_hash({p: r['sha256'] for p, r in rows.items()}))
         check('javaTrackedByManifest', all(p in rows for p in java_on_disk), [p for p in java_on_disk if p not in rows][:10])
         check('applicationPropertiesNotInInventory', not any(fp.is_excluded(p) for p in rows), [p for p in rows if fp.is_excluded(p)])
@@ -176,9 +177,9 @@ def validate(repo: Path, service: str) -> dict:
               and inputs.get('serviceSpecSha256') == sha(spec_file.read_bytes()), 'the plan or spec changed after generation')
         check('javaTrackedByManifest', all(p in rows for p in java_on_disk if p in planned and planned[p]['action'] != 'retain'), [p for p in java_on_disk if p in planned and p not in rows][:10])
     # structure of each generated Java file
-    problems = {p: java_structure(p, (out / p).read_text(encoding='utf-8')) for p in java_on_disk}
-    check('javaStructure', not any(problems.values()), {p: v for p, v in problems.items() if v})
     sources = {p: (out / p).read_text(encoding='utf-8') for p in java_on_disk}
+    problems = {p: java_structure(p, text) for p, text in sources.items()}
+    check('javaStructure', not any(problems.values()), {p: v for p, v in problems.items() if v})
     # planned components
     for path, entry in planned.items():
         kind, text = entry['componentType'], sources.get(path)

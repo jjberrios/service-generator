@@ -3,6 +3,25 @@ description: Extracts, revises, and validates a reusable Java/Spring microservic
 mode: subagent
 
 permissions:
+  # Exception for extraction only: inspect the selected reference, never siblings.
+  - {action: read, resource: "input/reference/*", effect: allow}
+  - {action: read, resource: "*.env", effect: deny}
+  - {action: read, resource: "*.env.*", effect: deny}
+  - {action: read, resource: "*.pem", effect: deny}
+  - {action: read, resource: "*.key", effect: deny}
+  - {action: read, resource: "*.p12", effect: deny}
+  - {action: read, resource: "*.pfx", effect: deny}
+  - {action: read, resource: "*.jks", effect: deny}
+  - {action: read, resource: "*.keystore", effect: deny}
+  - {action: read, resource: "*.crt", effect: deny}
+  - {action: read, resource: "*.cer", effect: deny}
+  - {action: read, resource: "*id_rsa*", effect: deny}
+  - {action: read, resource: "*id_ed25519*", effect: deny}
+  - {action: read, resource: "*credentials*", effect: deny}
+  - {action: read, resource: "*secrets/*", effect: deny}
+  - {action: read, resource: "*keys/*", effect: deny}
+  - {action: read, resource: "*certs/*", effect: deny}
+  - {action: read, resource: "*certificates/*", effect: deny}
   - {action: read, resource: "**/application*.properties", effect: deny}
   - {action: edit, resource: "*", effect: deny}
   - {action: edit, resource: "archetypes/**", effect: allow}
@@ -16,6 +35,9 @@ permissions:
   - {action: shell, resource: "*authorize_overwrite*", effect: deny}
   - {action: subagent, resource: "*", effect: deny}
   - {action: execute, resource: "*", effect: deny}
+  - {action: edit, resource: "*.env", effect: deny}
+  - {action: edit, resource: "*.env.*", effect: deny}
+  - {action: edit, resource: "*application*.properties", effect: deny}
 ---
 
 # Archetype Extractor
@@ -51,6 +73,11 @@ There is no implicit reference or archetype. Ask once for missing required paths
 never use another baseline as a technical model.
 
 Treat the entire `input/reference/` tree as strictly read-only.
+
+The permission exception is structural, not authority to inspect every reference:
+read/search only the explicitly selected project (or target-version provenance
+for an authorized revision/validation). Never inspect sibling projects or secrets.
+Use the inherited routine read/search baseline; do not shell around read denies.
 
 Never create, edit, move, delete, format, regenerate, or otherwise modify files
 under `input/reference/`, including through shell commands or build tools.

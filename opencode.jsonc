@@ -1,0 +1,33 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permissions": [
+    { "action": "read", "resource": "*", "effect": "allow" },
+    { "action": "glob", "resource": "*", "effect": "allow" },
+    { "action": "grep", "resource": "*", "effect": "allow" },
+    { "action": "shell", "resource": "*", "effect": "ask" },
+    { "action": "external_directory", "resource": "*", "effect": "ask" },
+    { "action": "read", "resource": "input/reference/*", "effect": "deny" },
+    { "action": "edit", "resource": "input/reference/*", "effect": "deny" },
+    { "action": "read", "resource": "*.env", "effect": "deny" },
+    { "action": "read", "resource": "*.env.*", "effect": "deny" },
+    { "action": "read", "resource": "*.pem", "effect": "deny" },
+    { "action": "read", "resource": "*.key", "effect": "deny" },
+    { "action": "read", "resource": "*.p12", "effect": "deny" },
+    { "action": "read", "resource": "*.pfx", "effect": "deny" },
+    { "action": "read", "resource": "*.jks", "effect": "deny" },
+    { "action": "read", "resource": "*.keystore", "effect": "deny" },
+    { "action": "read", "resource": "*.crt", "effect": "deny" },
+    { "action": "read", "resource": "*.cer", "effect": "deny" },
+    { "action": "read", "resource": "*id_rsa*", "effect": "deny" },
+    { "action": "read", "resource": "*id_ed25519*", "effect": "deny" },
+    { "action": "read", "resource": "*credentials*", "effect": "deny" },
+    { "action": "read", "resource": "*secrets/*", "effect": "deny" },
+    { "action": "read", "resource": "*keys/*", "effect": "deny" },
+    { "action": "read", "resource": "*certs/*", "effect": "deny" },
+    { "action": "read", "resource": "*certificates/*", "effect": "deny" },
+    { "action": "read", "resource": "*application*.properties", "effect": "deny" },
+    { "action": "edit", "resource": "*.env", "effect": "deny" },
+    { "action": "edit", "resource": "*.env.*", "effect": "deny" },
+    { "action": "edit", "resource": "*application*.properties", "effect": "deny" }
+  ]
+}

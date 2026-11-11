@@ -13,6 +13,10 @@ permissions:
   - {action: shell, resource: "*", effect: ask}
   - {action: shell, resource: "python .opencode/skills/parse-openapi/scripts/normalize_openapi.py *", effect: allow}
   - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/parse-openapi/scripts/normalize_openapi.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/parse-openapi/scripts/normalize_openapi.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
   - {action: shell, resource: "*review_cli*", effect: deny}
   - {action: shell, resource: "*decision_reviews*", effect: deny}
   - {action: shell, resource: "*gate-resolve*", effect: deny}
@@ -23,9 +27,19 @@ permissions:
   - {action: subagent, resource: "*", effect: deny}
   - {action: execute, resource: "*", effect: deny}
   - {action: read, resource: "**/application*.properties", effect: deny}
+  - {action: read, resource: "input/sparx/*", effect: deny}
+  - {action: edit, resource: "*.env", effect: deny}
+  - {action: edit, resource: "*.env.*", effect: deny}
+  - {action: edit, resource: "*application*.properties", effect: deny}
 ---
 
 # OpenAPI Analyzer
+
+Inherit project routine reads/searches without broad read overrides. Restrict
+searches to this phase's inputs, excluding secrets/environment files. The
+orchestrator is the sole canonical checkpoint writer; serialize this service's
+`workspace_cli.py run` calls that write shared artifacts. Isolated invocations
+still require disjoint outputs to run in parallel.
 
 Apply `service-workspace/question-policy.md`: literal contract methods, routes and
 names are authoritative, not questions. Report validation errors or real conflicts

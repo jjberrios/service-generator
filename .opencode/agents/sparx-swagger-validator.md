@@ -16,6 +16,16 @@ permissions:
   - {action: shell, resource: "python .opencode/skills/interpret-sparx/scripts/*.py *", effect: allow}
   - {action: shell, resource: "python .opencode/skills/audit-sparx-swagger/scripts/*.py *", effect: allow}
   - {action: shell, resource: "python -m unittest discover -s .opencode/skills/audit-sparx-swagger/tests", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/parse-openapi/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/parse-openapi/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/parse-sparx/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/parse-sparx/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/interpret-sparx/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/interpret-sparx/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/audit-sparx-swagger/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/audit-sparx-swagger/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python -B -m unittest discover -s .opencode/skills/audit-sparx-swagger/tests", effect: allow}
+  - {action: shell, resource: "py -3 -B -m unittest discover -s .opencode/skills/audit-sparx-swagger/tests", effect: allow}
   - {action: shell, resource: "*review_cli*", effect: deny}
   - {action: shell, resource: "*decision_reviews*", effect: deny}
   - {action: shell, resource: "*gate-resolve*", effect: deny}
@@ -28,12 +38,20 @@ permissions:
   - {action: shell, resource: "*kubectl*", effect: deny}
   - {action: shell, resource: "*terraform*", effect: deny}
   - {action: shell, resource: "*sqlplus*", effect: deny}
+  - {action: edit, resource: "*.env", effect: deny}
+  - {action: edit, resource: "*.env.*", effect: deny}
+  - {action: edit, resource: "*application*.properties", effect: deny}
 ---
 
 # Sparx vs Swagger Validator
 
 Read repository-root `AGENTS.md` first, then load the `audit-sparx-swagger` skill and follow it.
 You audit and document; you never correct.
+
+Inherit project routine reads/searches; scope them to the selected audit sources
+and exclude reference/secrets/environment files. Parallelism requires disjoint
+outputs and one canonical report/registry writer. Permission for the bounded
+audit test command is not a requirement to run regression during normal generation.
 
 ## Input
 

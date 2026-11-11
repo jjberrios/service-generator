@@ -39,6 +39,7 @@ import consistency_gate as gate  # noqa: E402
 import file_protection as fp  # noqa: E402
 import workspace as wsm  # noqa: E402
 import build_implementation_plan as planner_base  # noqa: E402
+from artifact_reads import read_scoped, load_yaml  # noqa: E402
 
 VERSION = 'full-materializer-6'
 MANIFEST = '.generation-manifest.yml'
@@ -81,7 +82,7 @@ def load_plan(ws: 'wsm.Workspace', repo: Path) -> tuple[dict, bytes]:
         raise MaterializationError('invalid-plan', 'the workspace has no implementation-plan.yml')
     raw = plan_file.read_bytes()
     try:
-        plan = yaml.safe_load(raw)
+        plan = load_yaml(raw)
     except yaml.YAMLError as error:
         raise MaterializationError('invalid-plan', 'implementation-plan.yml is not valid YAML') from error
     validate_contract(plan)
@@ -310,6 +311,7 @@ def classify(plan: dict, repo: Path) -> dict:
     return {'rendered': rendered, 'unsupported': unsupported, 'excluded': sorted(excluded), 'kept': sorted(kept), 'baselines': baselines, 'cov': sorted(set(cov), key=lambda c: (c[0], c[1] or ''))}
 
 
+@read_scoped
 def materialize(repo: Path, service: str, supported_only: bool = False, dry_run: bool = False, assemble: bool = True) -> dict:
     from artifact_integrity import service_lock, IntegrityError
     repo = Path(repo).resolve()

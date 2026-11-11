@@ -7,9 +7,14 @@ from copy import deepcopy
 from pathlib import Path
 import hashlib
 import json
+import sys
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'service-workspace/scripts'))
+from artifact_reads import read_scoped
 
+
+@read_scoped
 def evaluate(repo, service, *, supported_only=False, assemble=True):
     import full_materializer as fm
     from generation_context import load_mapping, resolve_context

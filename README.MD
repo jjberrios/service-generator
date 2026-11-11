@@ -96,3 +96,48 @@ Distingue contradicciones verificadas, diferencias documentales y aspectos no
 verificados. El reporte no autoriza por sí solo la generación del servicio.
 
 Consulta [AGENTS.md](AGENTS.md) para las reglas completas del proyecto.
+
+## Operación portable con OpenCode V2
+
+`opencode.jsonc` contiene la política local del repositorio; no requiere editar la
+configuración global ni rutas de usuario. Las lecturas ordinarias y búsquedas
+acotadas no piden confirmación; secretos, certificados, claves y
+`application*.properties` permanecen excluidos. La referencia solo se consulta
+por el extractor para el proyecto seleccionado, nunca durante generación normal.
+
+Antes de comenzar, revisa **sin modificar archivos** `AGENTS.md`, los agentes y
+skills de la fase, la ruta del contrato/exportación y el checkpoint
+`.factory/services/<servicio>/service-generation-state.yml` si existe. Comprueba
+que Python y las dependencias documentadas estén disponibles; no instales nada
+automáticamente. Antes de compartir el repositorio, `python -B tools/doctor.py`
+comprueba Python, PyYAML, aceleración opcional, configuración del proyecto y
+fronteras de agentes en modo solo lectura. No instala, no accede a red ni lee
+configuración global; no garantiza los permisos efectivos fusionados del runtime
+ni sustituye los gates del servicio.
+
+Ejecuta los scripts desde la raíz con rutas relativas y `/`: la forma canónica es
+`python -B .opencode/skills/<skill>/scripts/<script>.py ...`, o `py -3 -B` en
+Windows. Solo los comandos ya autorizados tienen esas variantes; shell sigue
+requiriendo aprobación para otros comandos. Los ejemplos históricos con `python`
+no implican permiso para Python arbitrario.
+
+La solicitud de servicio completo incluye el análisis e interpretación necesarios
+del servicio, sin confirmaciones entre fases. No sustituye revisiones, autorización
+de reanudación ni protección de cambios manuales. Solo una delegación explícita
+permite registrar decisiones mediante `delegated_review.py`; sobrescrituras y
+reatestaciones históricas siguen siendo manuales. Maven, BD y despliegue requieren
+autorización separada; no se ejecuta regresión global durante generación normal.
+
+Los permisos de agente se añaden al final de los del proyecto (última coincidencia).
+`glob` autoriza patrones y `grep` expresiones, no directorios: delimita las búsquedas
+y excluye archivos sensibles. Un bloqueo de lectura no protege contra shell; no
+debe eludirse con comandos. El paralelismo exige salidas disjuntas, un único escritor
+canónico; serializa llamadas del mismo servicio que escriban artefactos compartidos,
+checkpoint, manifiestos o revisiones. Invocaciones aisladas no autorizan dos escritores.
+
+Para `claro-spring-ms/1.0.1`, D-015 permite únicamente que el materializador cree
+`application.properties` ausente con placeholders `${ENV}`; nunca leer, comparar
+ni sobrescribir configuración existente. No autoriza edición directa del agente.
+
+Referencias V2: [permisos](https://opencode.ai/docs/permissions),
+[configuración](https://opencode.ai/docs/config).

@@ -29,7 +29,8 @@ def dump(path, obj):
     path.write_text(yaml.safe_dump(obj, sort_keys=False), encoding='utf-8')
 
 
-class BatchShellTests(unittest.TestCase):
+class BatchShellFixture:
+    """Shared setup/helpers only: never inherit executable tests between suites."""
     ARCH = 'archetypes/claro-java-8-shell/v1.0.0'
     FILES = 15
 
@@ -94,6 +95,8 @@ class BatchShellTests(unittest.TestCase):
     def plan(self):
         return bp.write_plan(self.repo, yaml, self.ws / 'full-planning-input.yml')
 
+
+class BatchShellTests(BatchShellFixture, unittest.TestCase):
     def test_profile_and_deterministic_plan(self):
         self.assertEqual(profiles.resolve(yaml.safe_load((self.arch / 'archetype.yml').read_bytes())), bm.PROFILE)
         self.plan()
@@ -327,7 +330,7 @@ public class SyntaxCheck {
         self.assertEqual(parsed.returncode, 0, parsed.stdout + parsed.stderr)
 
 
-class BatchFlowPackage7Tests(BatchShellTests):
+class BatchFlowPackage7Tests(BatchShellFixture, unittest.TestCase):
     def test_ungrounded_evidence_is_rejected_by_the_gate(self):
         for section in (self.spec['batch'],):
             section['steps'][0]['evidence'] = ['ea#slug-that-the-page-never-says']
@@ -373,7 +376,7 @@ class BatchFlowPackage7Tests(BatchShellTests):
         self.assertEqual(gate.current_decision(self.ws, self.repo, self.service)['status'], gate.BLOCKED)
 
 
-class BatchShellDecryptTests(BatchShellTests):
+class BatchShellDecryptTests(BatchShellFixture, unittest.TestCase):
     def decrypted_spec(self):
         spec = copy.deepcopy(self.spec)
         for prop in spec['batch']['properties']:
@@ -428,7 +431,7 @@ class BatchShellDecryptTests(BatchShellTests):
             bm.check_quality(rendered, plan, plan['batch'])
 
 
-class BatchStructureOnlyTests(BatchShellTests):
+class BatchStructureOnlyTests(BatchShellFixture, unittest.TestCase):
     def structure_spec(self):
         spec = copy.deepcopy(self.spec)
         ev = ['ea#synthetic transfer flow']
@@ -471,7 +474,7 @@ class BatchStructureOnlyTests(BatchShellTests):
             bp.build(self.repo, spec, self.cfg)
 
 
-class BatchPortsFlowTests(BatchShellTests):
+class BatchPortsFlowTests(BatchShellFixture, unittest.TestCase):
     def flow_spec(self):
         spec = copy.deepcopy(self.spec)
         ev = ['ea#synthetic transfer flow']

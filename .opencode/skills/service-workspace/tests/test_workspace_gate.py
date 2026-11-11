@@ -79,7 +79,9 @@ class WorkspaceIndependenceTests(Base):
         a, _ = self.service('svc-a')
         a.set_state(status='idle')
         stolen = wsm.Workspace(self.repo, 'svc-b').ensure()
-        stolen.write_state(a.state())
+        with self.assertRaises(wsm.WorkspaceError):
+            stolen.write_state(a.state())
+        stolen.state_file.write_bytes(a.state_file.read_bytes())
         with self.assertRaises(wsm.WorkspaceError):
             stolen.set_state(status='in-progress')
 

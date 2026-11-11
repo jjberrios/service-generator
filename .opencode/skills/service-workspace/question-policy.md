@@ -65,7 +65,13 @@ never skip live currency checks, semantic review, resume approval or file protec
 Duplicates (same kind and key) are asked once. `find_decision` only returns a human-reviewed, non-machine decision whose
 `scope` is exactly the requested one: decisions of another target or version are never reused. Gates are not weakened: an
 independent stage request is not an authorization for later stages, and a full-generation request covers only the bounded
-phases it names.
+necessary target-local analysis, attachment review, slicing and interpretation as
+well as consolidation/planning/static validation. Do not ask for a second stage
+confirmation inside that bounded request. It does not cover global interpretation,
+Maven, database access, deployments, overwrites or review/resume authorizations.
+Explicit delegation may record only finding/resume reviews through the approved
+writer with the verbatim statement; overwrite/historical reattestation stay manual.
+Never substitute a technical choice or cached artifact for a current gate/review.
 
 ## Lifecycle states (never collapsed into "ready")
 

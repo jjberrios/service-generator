@@ -31,6 +31,7 @@ use the separate manual review_cli.py. Model B does NOT close H-02.
 from pathlib import Path
 import argparse
 import json
+import subprocess
 import sys
 import yaml
 
@@ -58,6 +59,8 @@ def main(argv=None) -> int:
     lc = sub.add_parser('lifecycle')
     lc.add_argument('service')
     r = sub.add_parser('run')
+    r.add_argument('--runner-timeout', type=float, default=900,
+                   help='Seconds for child execution (1..86400); place before service/script')
     r.add_argument('service')
     r.add_argument('script')
     r.add_argument('args', nargs=argparse.REMAINDER)
@@ -154,7 +157,7 @@ def main(argv=None) -> int:
         elif args.command == 'migrate-archive':
             print(yaml.safe_dump(mig.migrate_archived_run(repo, Path(args.archive), args.service)))
         elif args.command == 'run':
-            done = wsm.run_script(ws, Path(args.script), args.args)
+            done = wsm.run_script(ws, Path(args.script), args.args, timeout=args.runner_timeout)
             sys.stdout.write(done.stdout)
             sys.stderr.write(done.stderr)
             return done.returncode
@@ -185,7 +188,6 @@ def main(argv=None) -> int:
             return 0 if report['feasible'] else 4
         elif args.command == 'materialize':
             script = Path(__file__).resolve().parents[2] / 'materialize-full-service' / 'scripts' / 'full_materializer.py'
-            import subprocess
             done = subprocess.run([sys.executable, str(script), args.service] + (['--supported-only'] if args.supported_only else []) + (['--dry-run'] if args.dry_run else []) + (['--no-assemble'] if getattr(args, 'no_assemble', False) else []), cwd=repo)
             return done.returncode
         elif args.command == 'protect-check':
@@ -199,6 +201,9 @@ def main(argv=None) -> int:
             out_dir = repo / (ws.state().get('outputDirectory') or f'output/{ws.service}')
             print(yaml.safe_dump(fp.authorize_overwrite(out_dir, args.path, ws.dir, args.by, args.reason), allow_unicode=True))
         return 0
+    except subprocess.TimeoutExpired:
+        print('workspace_cli: pipeline script timed out; inspect run metadata before retrying', file=sys.stderr)
+        return 124
     except (gate.GateError, wsm.WorkspaceError, mig.MigrationError, fp.ProtectedFileError) as error:
         print(f'workspace_cli: {type(error).__name__}: {error}', file=sys.stderr)
         return 3

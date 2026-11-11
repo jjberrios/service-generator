@@ -1,12 +1,21 @@
 ---
 name: parse-sparx
-description: Use when deterministically indexing Sparx Enterprise Architect HTML exports or, in a separately authorized future stage, interpreting indexed Sparx evidence into semantic behavior.
+description: Use when deterministically indexing Sparx Enterprise Architect HTML exports and selecting bounded evidence for separately requested or full-service-covered interpretation.
 ---
 
 # Parse Sparx
 
 This workflow separates collection of source evidence from interpretation of
-that evidence. Never combine the stages implicitly.
+that evidence. Never combine the stages implicitly. A full-service request covers
+necessary target-local discovery, attachment review, slicing and interpretation
+without per-stage confirmation; an independent indexing request does not authorize
+later interpretation. Global interpretation needs separate scope/authorization.
+Review/resume gates, live hashes and manual-file protection remain unchanged.
+In service generation all `.factory/...` paths below are the service workspace
+view through `workspace_cli.py run`, not the legacy repository-root artifacts.
+Use repository-relative `python -B` (Windows: `py -3 -B`) with the same allowlisted
+script paths/arguments. Routine reads/searches inherit project permissions but
+must exclude reference, secrets and environment files; no shell bypass of denies.
 
 ## Inputs And Invariants
 
@@ -33,8 +42,8 @@ Establish:
 - `<index-script>`: `.opencode/skills/parse-sparx/scripts/index_sparx.py`;
 - `<context-output>`: `.factory/sparx-context.yml`;
 - `<context-script>`: `.opencode/skills/parse-sparx/scripts/select_sparx_context.py`;
-- `<stage>`: `index`, `select-context`, or, only when separately authorized,
-  `interpret`.
+- `<stage>`: `index`, `select-context`, or `interpret` when explicitly requested
+  independently or covered by a bounded full-service request.
 
 Read repository-root `AGENTS.md` first. Resolve paths before reading or writing.
 Never modify `<source>`, an archetype, an OpenAPI artifact, or a generated
@@ -211,7 +220,7 @@ Report deterministically:
 
 ### Stage 1 Output
 
-Run only when Stage 1 execution is explicitly requested:
+For independent Stage 1 requests (not an implicit global-indexing step of service generation):
 
 ```text
 python .opencode/skills/parse-sparx/scripts/index_sparx.py <source-directory> .factory/sparx-index.yml
@@ -388,11 +397,12 @@ evidence counts, unresolved relevant assets, warnings, and errors.
 
 ## Stage 2: Semantic Sparx Interpretation
 
-Stage 2 is documented for future work but is not implemented or executable in
-the current phase. It must consume an approved Stage 1.5 context rather than the
-entire Stage 1 index or re-scraping HTML through LLM inference.
+Stage 2 belongs to `interpret-sparx`, not the indexer. The independent staged
+workflow consumes an approved Stage 1.5 context; target-local service generation
+uses its authoritative detail/attachment evidence and bounded semantic units.
+Neither workflow authorizes whole-index interpretation or HTML re-scraping by LLM.
 
-When separately authorized, Stage 2 will evaluate indexed evidence and produce
+When independently requested or covered by full-service bounded scope, Stage 2 evaluates evidence and produces
 `.factory/sparx-spec.yml` containing traceable semantic candidates such as:
 
 - processes and business steps;
@@ -406,7 +416,8 @@ When separately authorized, Stage 2 will evaluate indexed evidence and produce
 Stage 2 must distinguish explicit evidence, interpretation, ambiguity, and
 missing information. It must not invent behavior, and it must stop affected
 interpretations when Sparx evidence conflicts or is insufficient. Reconciliation
-with OpenAPI belongs to a later explicitly authorized workflow, not Stage 1.
+with OpenAPI belongs to reconciliation, never Stage 1. A full-service request
+covers that later phase only behind the mandatory consistency/readiness gates.
 
 ## Embedded content and endpoint-detail extraction
 

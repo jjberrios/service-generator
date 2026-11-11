@@ -44,8 +44,58 @@ permissions:
   - {action: shell, resource: "python .opencode/skills/materialize-full-service/scripts/full_materializer.py *", effect: allow}
   - {action: shell, resource: "python .opencode/skills/materialize-full-service/scripts/validate_generated_service.py *", effect: allow}
   - {action: shell, resource: "python .opencode/skills/materialize-full-service/scripts/style_lint.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/parse-openapi/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/parse-openapi/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/parse-sparx/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/parse-sparx/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/interpret-sparx/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/interpret-sparx/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/reconcile-service-spec/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/reconcile-service-spec/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/plan-service-implementation/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/plan-service-implementation/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/audit-sparx-swagger/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/audit-sparx-swagger/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/materialize-service-scaffold/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/materialize-service-scaffold/scripts/*.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py decision-request-*", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py decision-request-*", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py gate-evaluate *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py gate-evaluate *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py gate-check *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py gate-check *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py resume *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py resume *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py init *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py init *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py status *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py status *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py resolve-sparx *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py resolve-sparx *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py lifecycle *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py lifecycle *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py capability-check *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py capability-check *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py question-triage *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py question-triage *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py run *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py preflight *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py preflight *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py materialize *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py materialize *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/workspace_cli.py protect-check *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/workspace_cli.py protect-check *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/materialize-full-service/scripts/full_materializer.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/materialize-full-service/scripts/full_materializer.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/materialize-full-service/scripts/validate_generated_service.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/materialize-full-service/scripts/validate_generated_service.py *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/materialize-full-service/scripts/style_lint.py *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/materialize-full-service/scripts/style_lint.py *", effect: allow}
   - {action: shell, resource: "*review_cli*", effect: deny}
   - {action: shell, resource: "python .opencode/skills/service-workspace/scripts/delegated_review.py record *", effect: allow}
+  - {action: shell, resource: "python -B .opencode/skills/service-workspace/scripts/delegated_review.py record *", effect: allow}
+  - {action: shell, resource: "py -3 -B .opencode/skills/service-workspace/scripts/delegated_review.py record *", effect: allow}
   - {action: shell, resource: "*decision_reviews*", effect: deny}
   - {action: shell, resource: "*gate-resolve*", effect: deny}
   - {action: shell, resource: "*gate-authorize*", effect: deny}
@@ -58,6 +108,9 @@ permissions:
   - {action: shell, resource: "*kubectl*", effect: deny}
   - {action: shell, resource: "*terraform*", effect: deny}
   - {action: shell, resource: "*sqlplus*", effect: deny}
+  - {action: edit, resource: "*.env", effect: deny}
+  - {action: edit, resource: "*.env.*", effect: deny}
+  - {action: edit, resource: "*application*.properties", effect: deny}
 ---
 
 # Service Generator — orchestration only
@@ -90,10 +143,10 @@ artifacts, while retaining live gate and file-protection checks on resume.
 
 Model B: use `workspace_cli.py decision-request-prepare <service>` (or a typed
 v2 proposal) for actual blockers. Never execute review_cli, legacy approvals,
-or edit review/history records. Ask the user to run the manual review command
-outside the agent; reuse current reviews. Analysis-required needs more analysis,
-not an automatic user question. This section supersedes legacy approval examples
-below. H-02 remains open: tool restrictions are not same-user OS isolation.
+or edit review/history records. Unless the explicit delegated-decision exception
+below applies, ask the user to run the manual review command outside the agent;
+reuse current reviews. Analysis-required needs more analysis, not an automatic
+user question. H-02 remains open: tool restrictions are not same-user OS isolation.
 
 Delegated decisions: ONLY when the user explicitly states in the current
 conversation that the agent may take the decisions, the agent may record them with
@@ -117,8 +170,9 @@ and the read-only list/show/context/status/stale commands documented in
 `service-workspace/docs/decision-requests-v1.md`. Classify questions explicitly;
 do not turn missing analysis into a human approval request. Requests, hashes,
 recommendations and grouped questions grant no authority and never clear a gate.
-Stage 2A leaves legacy authorization behavior unchanged: H-02 remains open until
-2B provides authentic human approval. Do not claim this proposal layer fixes it.
+The old Stage 2A proposal-only descriptions are historical: current operational
+reviews use Model B plus the explicit delegated-decision exception. Retired legacy
+approval commands are never executable authority; H-02 remains open.
 
 Read repository-root `AGENTS.md` first. Then inspect
 the checkpoint of the target service, `.factory/services/<target_service>/service-generation-state.yml`,
@@ -206,7 +260,10 @@ paths, expected outputs, required gates, active/inactive scope, and prohibited
 reads/writes. Require the specialist to return paths, hashes, validation, gates,
 blockers and next action. Recompute hashes; do not accept prose “success” alone.
 Do not duplicate a delegated agent's work. Parallelize only independent work
-with disjoint outputs; serialize canonical `.factory/` artifact writers.
+with disjoint outputs; use one canonical checkpoint/artifact writer. Isolated
+invocations do not authorize concurrent canonical writers. Serialize same-service
+`workspace_cli.py run` calls that publish shared artifacts, including checkpoint,
+manifests and reviews. Do not run global regression suites in normal generation.
 
 ## Pipeline
 
@@ -339,8 +396,8 @@ which reuses `sparx-swagger-validator`/`audit-sparx-swagger`; do not duplicate i
 4. If blocked: STOP. Do not plan, scaffold, generate or modify Java, do not choose between Sparx and Swagger, do not invent rules. The checkpoint status is
    `BLOCKED_BY_INCONSISTENCIES` (with blockers and a pendingQuestion). Present each item (id, operation, element, what Sparx says, what Swagger says, the
    difference) in one concise question and ask for an explicit decision or a corrected source. Generating the audit Word report is allowed but authorizes nothing.
-5. Create a typed proposal with `workspace_cli.py decision-request-prepare <service>`. Present its requestId and the manual `review_cli.py review <service> <requestId>` command to the user. Never invoke the manual interface or write approval files. Legacy `gate-resolve` is retired. Current operational reviews are reused; legacy records require explicit reattestation.
-6. When nothing blocking remains the state becomes `AWAITING_RESUME_AUTHORIZATION`; prepare its explicit continuation request the same way. After the user completes manual review, run `workspace_cli.py resume <service>`. Legacy `gate-authorize` is retired. A chat answer alone is not a consumable approval.
+5. Create a typed proposal with `workspace_cli.py decision-request-prepare <service>`. Present its requestId and the manual `review_cli.py review <service> <requestId>` command, unless explicit user delegation permits `delegated_review.py record` for this finding. Never invoke the manual interface or directly write approval files. Legacy `gate-resolve` is retired. Current reviews are reused; historical reattestation stays manual.
+6. When nothing blocking remains the state becomes `AWAITING_RESUME_AUTHORIZATION`; prepare its explicit continuation request the same way. After manual review (or a permitted, explicitly delegated resume review), run `workspace_cli.py resume <service>`. Legacy `gate-authorize` is retired. Chat alone is not a consumable approval: delegation must be recorded through the approved writer with the verbatim statement.
 7. EVERY invocation, including resuming any checkpoint (also `legacy-migrated` ones), starts by `workspace_cli.py resume <service>` (recomputes the gate; a stored
    status or checkpoint is never trusted). Consolidation, planning, parameter resolution, materialization and the file-protection check refuse to run unless the
    gate is `CLEARED`; changed sources, a new finding or a changed finding invalidate the authorization.
@@ -423,7 +480,7 @@ business policy. Technical conventions come from the selected archetype and its
 scoped decisions, with provenance. Unsupported profiles are technical failures.
 
 The following ActivityLogger and Checkstyle requirements apply ONLY to
-`claro-spring-ms/1.0.0`; D-011 also preserves its JPA/Hibernate/Oracle/HikariCP
+`claro-spring-ms/1.0.1`; D-011 also preserves its JPA/Hibernate/Oracle/HikariCP
 baseline. Other profiles retain their own logging and quality rules. Missing
 Checkstyle is `not-applicable`, never `passed`.
 
@@ -439,7 +496,9 @@ no suppression/exclusion). Final validation order: expected file inventory, Java
 reference Checkstyle (only with explicit Maven authorization), manifest consistency.
 Generation is complete only when Checkstyle is `passed` with 0 violations. If it cannot run, report
 `unverified` and do not mark generation complete or claim static validation passed; a Java parse never
-substitutes for it. If it fails, fix the generated code (never the rules) and rerun.
+substitutes for it. If it fails, correct the owning plan/materializer inputs and
+regenerate through the guarded materializer (never edit output directly or weaken
+the rules), then rerun only with the required execution authorization.
 
 Produce `.factory/generation-parameters.yml` and `.factory/implementation-plan.yml`.
 Require full mode and `functionalGenerationReady == true`; verify file actions,
@@ -463,18 +522,19 @@ Before writing anything run `workspace_cli.py gate-check <service>` (must print 
 `workspace_cli.py protect-check <service> --plan .factory/implementation-plan.yml` (view of the workspace plan). Files the user
 modified or created by hand, and files listed in `user-owned-files.yml`, are preserved: if protect-check exits 3 ask the user and only
 prepare `decision-request-prepare <service> --kind overwrite --path <relative-path>` for manual review (bound to content and plan); never run retired `protect-authorize`. `src/main/resources/application*.properties` is local
-environment configuration: never read, analyzed, reported, compared with the archetype or written; it never blocks the pipeline.
-The coder verifies the complete expected pre-generation inventory/hashes before
+environment configuration: never read, analyzed, reported, compared with the archetype or overwritten; it never blocks the pipeline. For `claro-spring-ms/1.0.1` only, D-015 permits the guarded materializer to create absent `application.properties` with `${ENV}` placeholders. This does not grant the agent direct output edits.
+The guarded materializer verifies the complete expected pre-generation inventory/hashes before
 writing `output/<target_service>/`. Respect retain/update/create/remove, preserving
 unrelated files; unexpected edits stop generation for review. Never redesign an
 internally consistent plan, add behavior, or execute traceability-only pseudocode.
 Generate production code and planned tests and use the existing offline validation
 workflow (source/package/route/mapping checks, XML, syntax, manifest/tree hashes).
 Record limitations explicitly: static parsing does not prove compilation or tests.
-For `claro-spring-ms/1.0.0` only, write style-conformant Java (D-014) and, when explicitly authorized, run the reference Checkstyle gate
+For `claro-spring-ms/1.0.1` only, require materialized style-conformant Java (D-014) and, when explicitly authorized, run the reference Checkstyle gate
 over `src/main/java` and `src/test/java` (narrowest run: the generated project's
 `mvnw -o -s settings.xml validate`, which executes only `maven-checkstyle-plugin:check`; no tests,
-database or deployment). Fix violations in the generated code, never in the rules. Checkpoint
+database or deployment). Correct violations only through guarded regeneration,
+never by direct output edits or changed rules. Checkpoint
 `complete` only with a valid full manifest, matching input hashes, correct active/inactive scope,
 a passed static/offline report AND Checkstyle `passed` with 0 violations. Checkstyle `unverified`
 (not runnable, for example repository unavailable) or `failed` keeps the checkpoint incomplete.
@@ -576,4 +636,4 @@ internal phases yourself.
 The deterministic materializer also writes the planned JUnit 5/Mockito tests of the supported pattern and the workspace registers `tests-traceability.yml` and `coverage-scope.yml`. Report them as written but unexecuted: Maven, Checkstyle (D-014) and JaCoCo (80%) stay `not-verified` until separately authorized. Persistence tests are reported unsupported until a test-database dependency is authorized; never claim coverage from the scope report.
 
 ## Project assembly and official evidence (materializer v5)
-The materializer assembles the archetype technical files (pom, wrapper, configuration, security, logback, Checkstyle; deployment files only if the plan authorizes them) and stops with `missing-parameter` when a required value is absent. Classify before asking: resolve internal conventions from the selected baseline; externalize runtime configuration only through a supported mechanism; group only indispensable unresolved inputs for the user. Never invent business values or bypass a materializer rejection. `application*.properties` is never touched. Official Maven evidence is recorded only by `validation_evidence.py` with explicit user authorization; report each tool as the evidence says and treat `stale` as not verified.
+The materializer assembles the archetype technical files (pom, wrapper, configuration, security, logback, Checkstyle; deployment files only if the plan authorizes them) and stops with `missing-parameter` when a required value is absent. Classify before asking: resolve internal conventions from the selected baseline; externalize runtime configuration only through a supported mechanism; group only indispensable unresolved inputs for the user. Never invent business values or bypass a materializer rejection. Existing `application*.properties` is never inspected or changed; only D-015's absent-file creation exception applies to `claro-spring-ms/1.0.1`. Official Maven evidence is recorded only by `validation_evidence.py` with explicit user authorization; report each tool as the evidence says and treat `stale` as not verified.

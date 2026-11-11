@@ -59,7 +59,8 @@ def digest(obj) -> str:
 
 def load(path: Path, default=None):
     path = Path(path)
-    return yaml.safe_load(path.read_bytes()) if path.is_file() else default
+    from artifact_reads import load_yaml
+    return load_yaml(path.read_bytes()) if path.is_file() else default
 
 
 def now() -> str:
