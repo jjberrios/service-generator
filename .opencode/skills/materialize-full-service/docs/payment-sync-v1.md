@@ -34,6 +34,13 @@ provider contract. Its URL, credentials and timeouts are external configuration.
 Operators must confirm compatibility before production. No secret is supplied by
 the generator. The shell does not execute SQL or install its own scheduler.
 
+The generated `config/<service>.properties` and workspace `required-properties.yml`
+share one value policy: include explicit defaults retained in the reviewed Sparx
+model; otherwise emit an empty value (`key=` / YAML `value: ''`), never the literal
+`operator-required`. Secrets remain empty even if a default is present. The registry
+retains evidence and `documentedDefault` for non-secret documented values. This does
+not authorize reading or overwriting protected local application configuration.
+
 The Maven baseline comparison preserves all inherited dependencies and build
 configuration, adding only justified Jackson and Apache HttpClient dependencies.
 Inherited external `Lib` artifacts remain build prerequisites even when unused by

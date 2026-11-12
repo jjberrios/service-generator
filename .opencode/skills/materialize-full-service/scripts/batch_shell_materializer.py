@@ -43,6 +43,43 @@ def secret_keys(batch):
     return {p['key'] for p in list(batch['properties']) + adapter_properties(batch) if p['secret']}
 
 
+def documented_defaults(batch):
+    """Only values retained in the reviewed, normalized Sparx model are defaults."""
+    if batch.get('variant') == 'payment-sync-v1':
+        return {p['key']: p.get('default') for p in batch['model']['properties']}
+    return {}
+
+
+def property_records(batch):
+    declared = {p['key']: p for p in batch['properties']}
+    adapters_keys = {p['key'] for p in adapter_properties(batch)}
+    secrets, defaults = secret_keys(batch), documented_defaults(batch)
+    records = []
+    for key in required_keys(batch):
+        secret = key in secrets
+        default = defaults.get(key) if not secret else None
+        record = {'key': key, 'secret': secret, 'value': default if default is not None else ''}
+        if key in declared:
+            record['evidence'] = declared[key]['evidence']
+        else:
+            record['source'] = 'adapters-assumption' if key in adapters_keys else 'archetype'
+        if key in defaults:
+            record['source'] = 'normalized-Sparx-or-delegated-technical-configuration'
+            if default is not None:
+                record['documentedDefault'] = default
+        records.append(record)
+    return records
+
+
+def config_source(batch):
+    lines = ['# Configuracion externa del batch. Completar los valores del entorno; no versionar secretos.']
+    for prop in sorted(property_records(batch), key=lambda p: p['key']):
+        if prop['secret']:
+            lines.append('# secreta: definir fuera del control de versiones')
+        lines.append(prop['key'] + '=' + str(prop['value']))
+    return '\n'.join(lines) + '\n'
+
+
 def fill_readme(text, batch, plan):
     if batch.get('variant') == 'payment-sync-v1':
         import batch_payment_sync_java as payment
@@ -460,16 +497,7 @@ def render_project(plan, repo):
                 require(text.count('</dependencies>') == 1, 'pom must have exactly one dependencies block')
                 text = text.replace('   </dependencies>', deps + '   </dependencies>')
         elif ct == 'batch-config':
-            secrets = set(secret_keys(batch))
-            defaults = ({p['key']: p.get('default') for p in batch['model']['properties']}
-                        if batch.get('variant') == 'payment-sync-v1' else {})
-            lines = ['# Configuracion externa del batch. Completar los valores del entorno; no versionar secretos.']
-            for key in sorted(required_keys(batch)):
-                if key in secrets:
-                    lines.append('# secreta: definir fuera del control de versiones')
-                default = defaults.get(key)
-                lines.append(key + '=' + (str(default) if default is not None and key not in secrets else ''))
-            text = '\n'.join(lines) + '\n'
+            text = config_source(batch)
         elif ct == 'batch-service':
             text = service_source(plan)
         elif ct == 'batch-unit-test':
@@ -594,12 +622,7 @@ def _materialize_checked(repo, service, dry_run=False):
             'generation inputs changed during preparation; retry from current inputs')
     # Manifest is guarded too. Excluded local environment files are never enumerated/read.
     publish(output, ws.dir, payload, dump(manifest))
-    declared = [p['key'] for p in plan['batch']['properties']]
-    adapters_keys = {p['key'] for p in adapter_properties(plan['batch'])}
-    properties = {'schemaVersion': 1, 'service': service, 'keys': [
-        {'key': k, 'source': 'adapters-assumption' if k in adapters_keys else 'archetype', 'secret': k in secret_keys(plan['batch']),
-         'value': 'operator-required'} for k in required_keys(plan['batch']) if k not in declared] +
-        [{'key': p['key'], 'secret': p['secret'], 'evidence': p['evidence'], 'value': 'operator-required'} for p in plan['batch']['properties']]}
+    properties = {'schemaVersion': 1, 'service': service, 'keys': property_records(plan['batch'])}
     trace = {'schemaVersion': 1, 'service': service, 'tests': [
         {'method': 'run_cuandoFlujoExitoso_debeCerrarConexiones', 'evidence': plan['batch']['sourceBindings'], 'status': 'generated-not-executed'},
         {'method': 'run_cuandoFallaConexion_noDebePropagar', 'source': 'archetype-error-lifecycle', 'status': 'generated-not-executed'}],
@@ -625,12 +648,6 @@ def _materialize_checked(repo, service, dry_run=False):
             externalContractVerified=False) for d in plan['batch']['decisions']]
         register['rules']['owner'] = 'Sparx with separately identified delegated decisions'
         register['rules']['algorithms'] = plan['batch']['model']['algorithms']
-        defaults = {p['key']: p.get('default') for p in plan['batch']['model']['properties']}
-        for prop in properties['keys']:
-            if prop['key'] in defaults:
-                prop['source'] = 'normalized-Sparx-or-delegated-technical-configuration'
-                if not prop['secret'] and defaults[prop['key']] is not None:
-                    prop['documentedDefault'] = defaults[prop['key']]
         import xml.etree.ElementTree as ET
         pom = ET.fromstring(rendered['pom.xml'][1])
         ns = {'m': 'http://maven.apache.org/POM/4.0.0'}
